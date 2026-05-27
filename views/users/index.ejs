@@ -1,0 +1,38 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Administration</p>
+    <h1>Utilisateurs</h1>
+    <p class="muted">Registre minimal des utilisateurs applicatifs et superviseurs.</p>
+  </div>
+  <a class="button button-primary" href="/users/new">Nouvel utilisateur</a>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Registre des utilisateurs</h2>
+    <span class="muted"><%= users.length %> utilisateur(s)</span>
+  </div>
+  <% if (!users.length) { %>
+    <p class="empty">Aucun utilisateur n'est encore enregistre.</p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr><th>Utilisateur</th><th>Role</th><th>Email</th><th>Regions</th><th>Statut</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% users.forEach((user) => { %>
+          <tr>
+            <td><a href="/users/<%= user.id %>"><%= user.prenoms %> <%= user.nom %></a></td>
+            <td><%= user.role_label || user.role %></td>
+            <td><%= user.email %></td>
+            <td><%= user.regions || "-" %></td>
+            <td><span class="status status-<%= user.statut %>"><%= user.statut %></span></td>
+            <td><a href="/users/<%= user.id %>/edit">Modifier</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

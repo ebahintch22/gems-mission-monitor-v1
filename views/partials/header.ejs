@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= title %> | GEMS Mission Monitor</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <% if (typeof mapAssets !== "undefined" && mapAssets) { %>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+      <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css">
+    <% } %>
+    </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="GEMS Mission Monitor - Accueil">
+        <img class="brand-logo" src="/assets/images/Logo%20Rakall.png" alt="Rakall">
+        <span class="brand-product">GEMS Mission Monitor</span>
+      </a>
+      <nav aria-label="Navigation principale">
+        <a href="/">Dashboard</a>
+        <a href="/missions">Missions</a>
+        <a href="/equipes">Equipes</a>
+        <a href="/agents">Agents</a>
+        <a href="/users">Utilisateurs</a>
+        <a href="/cartographie">Cartographie</a>
+        <a class="button button-primary" href="/missions/new">Nouvelle mission</a>
+      </nav>
+    </header>
+    <main class="container <%= typeof wideLayout !== "undefined" && wideLayout ? "container-wide" : "" %>">

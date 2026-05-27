@@ -1,0 +1,26 @@
+<%- include("../partials/header", { title, mapAssets: true }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Collecte terrain</p>
+    <h1>Missions</h1>
+    <p class="muted">Registre des missions et localisation des activites renseignees.</p>
+  </div>
+  <a class="button button-primary" href="/missions/new">Nouvelle mission</a>
+</section>
+
+<section class="mission-layout">
+  <div class="panel">
+    <h2>Liste des missions</h2>
+    <div id="missions-table"></div>
+  </div>
+  <div class="panel">
+    <h2>Carte</h2>
+    <div id="missions-map" aria-label="Carte des missions"></div>
+  </div>
+</section>
+
+<script id="missions-data" type="application/json"><%- JSON.stringify(missions).replace(/</g, "\\u003c") %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+<script src="/js/missions.js"></script>
+<%- include("../partials/footer") %>

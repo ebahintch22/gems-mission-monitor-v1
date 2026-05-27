@@ -1,0 +1,40 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Equipe #<%= equipe.id %></p>
+    <h1><%= equipe.nom_equipe %></h1>
+    <span class="status status-<%= equipe.statut %>"><%= equipe.statut %></span>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/equipes">Retour aux equipes</a>
+    <a class="button button-primary" href="/equipes/<%= equipe.id %>/edit">Modifier</a>
+  </div>
+</section>
+
+<section class="detail-grid">
+  <article class="panel details">
+    <h2>Organisation</h2>
+    <dl>
+      <dt>Mission</dt><dd><a href="/missions/<%= equipe.mission_id %>"><%= equipe.mission_name %></a></dd>
+      <dt>Statut mission</dt><dd><%= equipe.mission_status %></dd>
+      <dt>Superviseur</dt>
+      <dd>
+        <% if (equipe.superviseur_id) { %>
+          <a href="/users/<%= equipe.superviseur_id %>"><%= equipe.superviseur_prenoms %> <%= equipe.superviseur_nom %></a>
+        <% } else { %>
+          Non affecte
+        <% } %>
+      </dd>
+      <dt>Email</dt><dd><%= equipe.superviseur_email || "-" %></dd>
+    </dl>
+  </article>
+  <article class="panel">
+    <h2>Regions d'affectation</h2>
+    <ul class="territory-list">
+      <% equipe.regions.forEach((region) => { %>
+        <li><%= region.nom_region %> <span class="muted">(<%= region.code_region %>)</span></li>
+      <% }) %>
+    </ul>
+  </article>
+</section>
+<%- include("../partials/footer") %>

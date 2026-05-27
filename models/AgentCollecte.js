@@ -1,0 +1,113 @@
+const db = require("../config/database");
+
+class AgentCollecte {
+  static all() {
+    return db.prepare(`
+      SELECT
+        a.id, a.nom, a.prenoms, a.code_agent, a.telephone, a.equipement, a.statut, a.created_at,
+        CASE
+          WHEN u.id IS NULL THEN NULL
+          ELSE u.prenoms || ' ' || u.nom
+        END AS user_name,
+        e.nom_equipe
+      FROM agents_collecte a
+      LEFT JOIN users u ON u.id = a.user_id
+      LEFT JOIN equipes e ON e.id = a.equipe_id
+      ORDER BY a.code_agent
+    `).all();
+  }
+
+  static findById(id) {
+    return db.prepare(`
+      SELECT
+        a.*,
+        u.nom AS user_nom, u.prenoms AS user_prenoms,
+        u.email AS user_email, u.role AS user_role,
+        e.nom_equipe, e.statut AS equipe_statut, e.mission_id,
+        m.name AS mission_name
+      FROM agents_collecte a
+      LEFT JOIN users u ON u.id = a.user_id
+      LEFT JOIN equipes e ON e.id = a.equipe_id
+      LEFT JOIN missions m ON m.id = e.mission_id
+      WHERE a.id = ?
+    `).get(id);
+  }
+
+  static findByCode(codeAgent, excludedId = null) {
+    if (excludedId) {
+      return db.prepare(`
+        SELECT id FROM agents_collecte WHERE code_agent = ? AND id <> ?
+      `).get(codeAgent, excludedId);
+    }
+    return db.prepare("SELECT id FROM agents_collecte WHERE code_agent = ?").get(codeAgent);
+  }
+
+  static findByUserId(userId, excludedId = null) {
+    if (excludedId) {
+      return db.prepare(`
+        SELECT id FROM agents_collecte WHERE user_id = ? AND id <> ?
+      `).get(userId, excludedId);
+    }
+    return db.prepare("SELECT id FROM agents_collecte WHERE user_id = ?").get(userId);
+  }
+
+  static availableAgentUsers() {
+    return db.prepare(`
+      SELECT id, nom, prenoms, email
+      FROM users
+      WHERE role = 'agent'
+      ORDER BY nom, prenoms
+    `).all();
+  }
+
+  static availableEquipes() {
+    return db.prepare(`
+      SELECT id, nom_equipe, statut
+      FROM equipes
+      ORDER BY nom_equipe
+    `).all();
+  }
+
+  static validAgentUserId(userId) {
+    if (userId === null) {
+      return true;
+    }
+    return Boolean(db.prepare("SELECT id FROM users WHERE id = ? AND role = 'agent'").get(userId));
+  }
+
+  static validEquipeId(equipeId) {
+    if (equipeId === null) {
+      return true;
+    }
+    return Boolean(db.prepare("SELECT id FROM equipes WHERE id = ?").get(equipeId));
+  }
+
+  static create(input) {
+    const result = db.prepare(`
+      INSERT INTO agents_collecte (
+        nom, prenoms, user_id, equipe_id, code_agent, telephone, equipement, statut
+      ) VALUES (
+        @nom, @prenoms, @user_id, @equipe_id, @code_agent, @telephone, @equipement, @statut
+      )
+    `).run(input);
+    return this.findById(result.lastInsertRowid);
+  }
+
+  static update(id, input) {
+    const result = db.prepare(`
+      UPDATE agents_collecte SET
+        nom = @nom,
+        prenoms = @prenoms,
+        user_id = @user_id,
+        equipe_id = @equipe_id,
+        code_agent = @code_agent,
+        telephone = @telephone,
+        equipement = @equipement,
+        statut = @statut
+      WHERE id = @id
+    `).run({ id, ...input });
+    return result.changes ? this.findById(id) : null;
+  }
+}
+
+module.exports = AgentCollecte;

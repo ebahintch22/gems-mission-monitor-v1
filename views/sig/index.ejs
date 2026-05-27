@@ -1,0 +1,106 @@
+<%- include("../partials/header", { title, mapAssets: true, wideLayout: true }) %>
+<section class="page-heading sig-heading">
+  <div>
+    <p class="eyebrow">Module 4</p>
+    <h1>Cartographie SIG</h1>
+    <p class="muted">Visualisation des soumissions terrain simulees et filtrage operationnel.</p>
+  </div>
+</section>
+
+<section class="sig-workspace" id="sig-workspace">
+  <aside class="sig-tools" id="sig-tools" aria-label="Outils cartographiques">
+    <div class="panel sig-panel">
+      <h2>Filtres</h2>
+      <form class="sig-filters" id="sig-filters">
+        <label>
+          Mission
+          <select id="sig-mission-filter">
+            <option value="">Toutes les missions</option>
+            <% filters.missions.forEach((mission) => { %>
+              <option value="<%= mission.id %>"><%= mission.name %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>
+          Equipe
+          <select id="sig-equipe-filter">
+            <option value="">Toutes les equipes</option>
+            <% filters.equipes.forEach((equipe) => { %>
+              <option value="<%= equipe.id %>"><%= equipe.nom_equipe %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>
+          Agent
+          <select id="sig-agent-filter">
+            <option value="">Tous les agents</option>
+            <% filters.agents.forEach((agent) => { %>
+              <option value="<%= agent.id %>"><%= agent.code_agent %> - <%= agent.prenoms %> <%= agent.nom %></option>
+            <% }) %>
+          </select>
+        </label>
+        <label>
+          Validation
+          <select id="sig-validation-filter">
+            <option value="">Tous les statuts</option>
+            <option value="validee">Validee</option>
+            <option value="a_verifier">A verifier</option>
+            <option value="rejetee">Rejetee</option>
+          </select>
+        </label>
+        <label>
+          Depuis le
+          <input id="sig-date-from" type="date">
+        </label>
+        <label>
+          Jusqu'au
+          <input id="sig-date-to" type="date">
+        </label>
+        <button class="button" id="sig-reset-filters" type="button">Reinitialiser</button>
+      </form>
+    </div>
+
+    <div class="panel sig-panel">
+      <div class="panel-header">
+        <h2>Synthese</h2>
+        <span class="sig-count" id="sig-visible-total">0</span>
+      </div>
+      <div class="sig-metrics">
+        <div><span>Validees</span><strong id="sig-count-valid">0</strong></div>
+        <div><span>A verifier</span><strong id="sig-count-check">0</strong></div>
+        <div><span>Rejetees</span><strong id="sig-count-rejected">0</strong></div>
+      </div>
+    </div>
+
+    <div class="panel sig-panel sig-table-panel">
+      <h2>Soumissions affichees</h2>
+      <div id="sig-table"></div>
+    </div>
+  </aside>
+
+  <div
+    class="sig-resizer"
+    id="sig-resizer"
+    role="separator"
+    aria-label="Redimensionner les volets"
+    aria-controls="sig-tools sig-map-pane"
+    aria-orientation="vertical"
+    tabindex="0"
+  ></div>
+
+  <section class="sig-map-pane" id="sig-map-pane" aria-label="Volet cartographique">
+    <div class="sig-map-legend">
+      <span class="legend-valid">Validee</span>
+      <span class="legend-check">A verifier</span>
+      <span class="legend-rejected">Rejetee</span>
+    </div>
+    <div id="sig-map" aria-label="Carte des soumissions de collecte"></div>
+  </section>
+</section>
+
+<script id="sig-points-data" type="application/json"><%- JSON.stringify(points).replace(/</g, "\\u003c") %></script>
+<script id="sig-regions-data" type="application/json"><%- JSON.stringify(regions).replace(/</g, "\\u003c") %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+<script src="/js/cartographie.js"></script>
+<%- include("../partials/footer") %>

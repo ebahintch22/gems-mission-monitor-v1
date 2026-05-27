@@ -1,0 +1,38 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Utilisateur #<%= user.id %></p>
+    <h1><%= user.prenoms %> <%= user.nom %></h1>
+    <span class="status status-<%= user.statut %>"><%= user.statut %></span>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/users">Retour aux utilisateurs</a>
+    <a class="button button-primary" href="/users/<%= user.id %>/edit">Modifier</a>
+  </div>
+</section>
+
+<section class="detail-grid">
+  <article class="panel details">
+    <h2>Profil applicatif</h2>
+    <dl>
+      <dt>Email</dt><dd><%= user.email %></dd>
+      <dt>Telephone</dt><dd><%= user.telephone || "-" %></dd>
+      <dt>Role</dt><dd><%= user.role_label || user.role %></dd>
+      <dt>Attributions</dt><dd><%= user.role_description || "-" %></dd>
+      <dt>Derniere connexion</dt><dd><%= user.last_login || "Jamais connecte" %></dd>
+    </dl>
+  </article>
+  <article class="panel">
+    <h2>Regions d'affectation</h2>
+    <% if (!user.regions.length) { %>
+      <p class="empty">Aucune region affectee.</p>
+    <% } else { %>
+      <ul class="territory-list">
+        <% user.regions.forEach((region) => { %>
+          <li><%= region.nom_region %> <span class="muted">(<%= region.code_region %>)</span></li>
+        <% }) %>
+      </ul>
+    <% } %>
+  </article>
+</section>
+<%- include("../partials/footer") %>

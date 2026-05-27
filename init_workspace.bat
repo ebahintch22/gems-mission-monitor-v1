@@ -1,0 +1,12 @@
+mkdir routes
+mkdir controllers
+mkdir services
+mkdir models
+mkdir views
+mkdir public
+mkdir public\css
+mkdir public\js
+mkdir public\assets
+mkdir config
+mkdir data
+mkdir tests

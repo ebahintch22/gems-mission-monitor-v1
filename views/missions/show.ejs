@@ -1,0 +1,36 @@
+<%- include("../partials/header", { title, mapAssets: mission.latitude !== null && mission.longitude !== null }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Mission #<%= mission.id %></p>
+    <h1><%= mission.name %></h1>
+    <span class="status status-<%= mission.status %>"><%= mission.status.replace("_", " ") %></span>
+  </div>
+  <a class="button" href="/missions">Retour aux missions</a>
+</section>
+
+<section class="detail-grid">
+  <article class="panel details">
+    <h2>Informations</h2>
+    <dl>
+      <dt>Region</dt><dd><%= mission.region %></dd>
+      <dt>Periode</dt><dd><%= mission.start_date || "-" %> au <%= mission.end_date || "-" %></dd>
+      <dt>Agents</dt><dd><%= mission.collectors %></dd>
+      <dt>Formulaire KoBo</dt><dd><%= mission.kobo_asset_uid || "Non configure" %></dd>
+    </dl>
+  </article>
+  <% if (mission.latitude !== null && mission.longitude !== null) { %>
+    <article class="panel">
+      <h2>Localisation</h2>
+      <div id="detail-map" class="detail-map"></div>
+    </article>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+      const map = L.map("detail-map").setView([<%= mission.latitude %>, <%= mission.longitude %>], 10);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+      L.marker([<%= mission.latitude %>, <%= mission.longitude %>]).addTo(map);
+    </script>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

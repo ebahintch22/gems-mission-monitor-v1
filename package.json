@@ -1,0 +1,40 @@
+{
+  "name": "gems-mission-monitor",
+  "version": "1.0.0",
+  "description": "Suivi GEMS des missions de collecte - socle MVP Express et SQLite",
+  "main": "app.js",
+  "scripts": {
+    "start": "node app.js",
+    "dev": "node --watch app.js",
+    "test": "node --test",
+    "report:docx": "node scripts/generate-report-docx.mjs RAPPORT_TECHNIQUE.md RAPPORT_TECHNIQUE.docx",
+    "territories:import": "node scripts/import-territories.js",
+    "roles:import": "node scripts/import-roles.js",
+    "agents:import": "node scripts/import-agents.js",
+    "submissions:seed": "node scripts/seed-submissions.js"
+  },
+  "keywords": [
+    "gems",
+    "express",
+    "sqlite",
+    "kobotoolbox"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@turf/union": "^7.3.5",
+    "better-sqlite3": "^12.4.1",
+    "csv-parse": "^6.2.1",
+    "dotenv": "^16.6.1",
+    "ejs": "^3.1.10",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "docx": "^9.7.0",
+    "marked": "^18.0.4",
+    "supertest": "^7.1.4"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

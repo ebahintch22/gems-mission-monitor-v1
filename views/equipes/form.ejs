@@ -1,0 +1,62 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Collecte terrain</p>
+    <h1><%= formHeading %></h1>
+    <p class="muted">Rattachez l'equipe a une mission et a sa zone d'intervention.</p>
+  </div>
+</section>
+
+<section class="panel form-panel">
+  <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <form action="<%= formAction %>" method="post" class="equipe-form">
+    <label>Nom de l'equipe *
+      <input name="nom_equipe" required value="<%= values.nom_equipe || "" %>">
+    </label>
+    <label>Statut *
+      <select name="statut" required>
+        <% statuses.forEach((statut) => { %>
+          <option value="<%= statut %>" <%= (values.statut || "planifiee") === statut ? "selected" : "" %>><%= statut %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Mission *
+      <select name="mission_id" required>
+        <option value="">Selectionner une mission</option>
+        <% missions.forEach((mission) => { %>
+          <option value="<%= mission.id %>" <%= Number(values.mission_id) === mission.id ? "selected" : "" %>><%= mission.name %> (<%= mission.status %>)</option>
+        <% }) %>
+      </select>
+      <% if (!missions.length) { %><small class="muted">Creez d'abord une mission.</small><% } %>
+    </label>
+    <label>Superviseur
+      <select name="superviseur_id">
+        <option value="">Affecter ulterieurement</option>
+        <% supervisors.forEach((supervisor) => { %>
+          <option value="<%= supervisor.id %>" <%= Number(values.superviseur_id) === supervisor.id ? "selected" : "" %>><%= supervisor.prenoms %> <%= supervisor.nom %></option>
+        <% }) %>
+      </select>
+      <% if (!supervisors.length) { %><small class="muted">Aucun superviseur actif disponible.</small><% } %>
+    </label>
+    <fieldset class="regions-fieldset">
+      <legend>Regions d'affectation *</legend>
+      <% if (!regions.length) { %>
+        <p class="empty">Importez le referentiel territorial avant de definir une zone.</p>
+      <% } else { %>
+        <div class="checkbox-grid">
+          <% regions.forEach((region) => { %>
+            <label class="checkbox-label">
+              <input type="checkbox" name="region_ids" value="<%= region.id %>" <%= selectedRegionIds.includes(region.id) ? "checked" : "" %>>
+              <span><%= region.nom_region %> <small>(<%= region.code_region %>)</small></span>
+            </label>
+          <% }) %>
+        </div>
+      <% } %>
+    </fieldset>
+    <div class="form-actions">
+      <a class="button" href="<%= cancelHref %>">Annuler</a>
+      <button class="button button-primary" type="submit"><%= submitLabel %></button>
+    </div>
+  </form>
+</section>
+<%- include("../partials/footer") %>

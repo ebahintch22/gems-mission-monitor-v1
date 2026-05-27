@@ -1,0 +1,43 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Suivi operationnel</p>
+    <h1>Tableau de bord</h1>
+    <p class="muted">Vue synthetique des missions de collecte enregistrees.</p>
+  </div>
+  <a class="button button-primary" href="/missions/new">Creer une mission</a>
+</section>
+
+<section class="stats" aria-label="Indicateurs">
+  <article class="stat"><span>Total missions</span><strong><%= stats.total %></strong></article>
+  <article class="stat"><span>En cours</span><strong><%= stats.ongoing %></strong></article>
+  <article class="stat"><span>Terminees</span><strong><%= stats.completed %></strong></article>
+  <article class="stat"><span>Agents mobilises</span><strong><%= stats.collectors %></strong></article>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Missions recentes</h2>
+    <a href="/missions">Voir toutes les missions</a>
+  </div>
+  <% if (!recentMissions.length) { %>
+    <p class="empty">Aucune mission n'est encore enregistree.</p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr><th>Mission</th><th>Region</th><th>Statut</th><th>Debut</th></tr>
+      </thead>
+      <tbody>
+        <% recentMissions.forEach((mission) => { %>
+          <tr>
+            <td><a href="/missions/<%= mission.id %>"><%= mission.name %></a></td>
+            <td><%= mission.region %></td>
+            <td><span class="status status-<%= mission.status %>"><%= mission.status.replace("_", " ") %></span></td>
+            <td><%= mission.start_date || "-" %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

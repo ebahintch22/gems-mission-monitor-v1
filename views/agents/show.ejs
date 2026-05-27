@@ -1,0 +1,49 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Agent #<%= agent.id %></p>
+    <h1><%= agent.prenoms %> <%= agent.nom %></h1>
+    <p class="muted"><%= agent.code_agent %></p>
+    <span class="status status-<%= agent.statut %>"><%= agent.statut %></span>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/agents">Retour aux agents</a>
+    <a class="button button-primary" href="/agents/<%= agent.id %>/edit">Modifier</a>
+  </div>
+</section>
+
+<section class="detail-grid">
+  <article class="panel details">
+    <h2>Agent</h2>
+    <dl>
+      <dt>Code agent</dt><dd><%= agent.code_agent %></dd>
+      <dt>Telephone</dt><dd><%= agent.telephone || "-" %></dd>
+      <dt>Equipement</dt><dd><%= agent.equipement || "-" %></dd>
+      <dt>Utilisateur</dt>
+      <dd>
+        <% if (agent.user_id) { %>
+          <a href="/users/<%= agent.user_id %>"><%= agent.user_prenoms %> <%= agent.user_nom %></a>
+        <% } else { %>
+          Sans compte applicatif
+        <% } %>
+      </dd>
+      <dt>Email</dt><dd><%= agent.user_email || "-" %></dd>
+    </dl>
+  </article>
+  <article class="panel details">
+    <h2>Affectation</h2>
+    <dl>
+      <dt>Equipe</dt>
+      <dd>
+        <% if (agent.equipe_id) { %>
+          <a href="/equipes/<%= agent.equipe_id %>"><%= agent.nom_equipe %></a>
+        <% } else { %>
+          Non affecte
+        <% } %>
+      </dd>
+      <dt>Mission</dt><dd><%= agent.mission_name || "-" %></dd>
+      <dt>Statut equipe</dt><dd><%= agent.equipe_statut || "-" %></dd>
+    </dl>
+  </article>
+</section>
+<%- include("../partials/footer") %>

@@ -1,0 +1,38 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Collecte terrain</p>
+    <h1>Agents de collecte</h1>
+    <p class="muted">Registre des enqueteurs et affectation aux equipes.</p>
+  </div>
+  <a class="button button-primary" href="/agents/new">Nouvel agent</a>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2>Registre des agents</h2>
+    <span class="muted"><%= agents.length %> agent(s)</span>
+  </div>
+  <% if (!agents.length) { %>
+    <p class="empty">Aucun agent de collecte n'est encore enregistre.</p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr><th>Agent</th><th>Code</th><th>Compte</th><th>Equipe</th><th>Statut</th><th></th></tr>
+      </thead>
+      <tbody>
+        <% agents.forEach((agent) => { %>
+          <tr>
+            <td><a href="/agents/<%= agent.id %>"><%= agent.prenoms %> <%= agent.nom %></a></td>
+            <td><%= agent.code_agent %></td>
+            <td><%= agent.user_name || "Sans compte" %></td>
+            <td><%= agent.nom_equipe || "Non affecte" %></td>
+            <td><span class="status status-<%= agent.statut %>"><%= agent.statut %></span></td>
+            <td><a href="/agents/<%= agent.id %>/edit">Modifier</a></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

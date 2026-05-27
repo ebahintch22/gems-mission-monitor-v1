@@ -1,0 +1,59 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Collecte terrain</p>
+    <h1><%= formHeading %></h1>
+    <p class="muted">Identifiez l'enqueteur et affectez-le a une equipe si necessaire.</p>
+  </div>
+</section>
+
+<section class="panel form-panel">
+  <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <form action="<%= formAction %>" method="post" class="agent-form">
+    <label>Nom *
+      <input name="nom" required value="<%= values.nom || "" %>">
+    </label>
+    <label>Prenoms *
+      <input name="prenoms" required value="<%= values.prenoms || "" %>">
+    </label>
+    <label>Code agent *
+      <input name="code_agent" required value="<%= values.code_agent || "" %>" placeholder="AG-001">
+    </label>
+    <label>Statut *
+      <select name="statut" required>
+        <% statuses.forEach((statut) => { %>
+          <option value="<%= statut %>" <%= (values.statut || "actif") === statut ? "selected" : "" %>><%= statut %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Telephone
+      <input type="tel" name="telephone" value="<%= values.telephone || "" %>">
+    </label>
+    <label>Equipement
+      <input name="equipement" value="<%= values.equipement || "" %>" placeholder="Tablette, smartphone...">
+    </label>
+    <label>Compte utilisateur
+      <select name="user_id">
+        <option value="">Sans compte applicatif</option>
+        <% agentUsers.forEach((user) => { %>
+          <option value="<%= user.id %>" <%= Number(values.user_id) === user.id ? "selected" : "" %>><%= user.prenoms %> <%= user.nom %></option>
+        <% }) %>
+      </select>
+      <% if (!agentUsers.length) { %><small class="muted">Aucun utilisateur avec le role agent.</small><% } %>
+    </label>
+    <label>Equipe
+      <select name="equipe_id">
+        <option value="">Affecter ulterieurement</option>
+        <% equipes.forEach((equipe) => { %>
+          <option value="<%= equipe.id %>" <%= Number(values.equipe_id) === equipe.id ? "selected" : "" %>><%= equipe.nom_equipe %> (<%= equipe.statut %>)</option>
+        <% }) %>
+      </select>
+      <% if (!equipes.length) { %><small class="muted">Aucune equipe disponible.</small><% } %>
+    </label>
+    <div class="form-actions">
+      <a class="button" href="<%= cancelHref %>">Annuler</a>
+      <button class="button button-primary" type="submit"><%= submitLabel %></button>
+    </div>
+  </form>
+</section>
+<%- include("../partials/footer") %>

@@ -1,0 +1,49 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Configuration</p>
+    <h1>Nouvelle mission</h1>
+  </div>
+</section>
+
+<section class="panel form-panel">
+  <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <form action="/missions" method="post" class="mission-form">
+    <label>Nom de la mission *
+      <input name="name" required value="<%= values.name || "" %>">
+    </label>
+    <label>Region *
+      <input name="region" required value="<%= values.region || "" %>">
+    </label>
+    <label>Statut
+      <select name="status">
+        <% statuses.forEach((status) => { %>
+          <option value="<%= status %>" <%= (values.status || "planifiee") === status ? "selected" : "" %>><%= status.replace("_", " ") %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label>Agents de collecte
+      <input type="number" name="collectors" min="0" value="<%= values.collectors ?? 0 %>">
+    </label>
+    <label>Date de debut
+      <input type="date" name="start_date" value="<%= values.start_date || "" %>">
+    </label>
+    <label>Date de fin
+      <input type="date" name="end_date" value="<%= values.end_date || "" %>">
+    </label>
+    <label>UID formulaire KoBo
+      <input name="kobo_asset_uid" value="<%= values.kobo_asset_uid || "" %>" placeholder="aBcDeF123">
+    </label>
+    <label>Latitude
+      <input type="number" step="any" name="latitude" min="-90" max="90" value="<%= values.latitude ?? "" %>">
+    </label>
+    <label>Longitude
+      <input type="number" step="any" name="longitude" min="-180" max="180" value="<%= values.longitude ?? "" %>">
+    </label>
+    <div class="form-actions">
+      <a class="button" href="/missions">Annuler</a>
+      <button class="button button-primary" type="submit">Enregistrer</button>
+    </div>
+  </form>
+</section>
+<%- include("../partials/footer") %>
