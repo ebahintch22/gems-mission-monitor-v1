@@ -681,12 +681,25 @@ test("le seed des soumissions produit des points et un raw_data_json conforme au
 
 test("GET /cartographie expose l'espace SIG et ses points cartographiques", async () => {
   const response = await request(app).get("/cartographie");
+  const scriptResponse = await request(app).get("/js/cartographie.js");
 
   assert.equal(response.status, 200);
+  assert.equal(scriptResponse.status, 200);
   assert.match(response.text, /Cartographie SIG/);
   assert.match(response.text, /id="sig-tools"/);
   assert.match(response.text, /id="sig-resizer"/);
   assert.match(response.text, /id="sig-map"/);
   assert.match(response.text, /SIM-AG-I01-001/);
   assert.match(response.text, /\/js\/cartographie\.js/);
+  assert.match(scriptResponse.text, /Couche Humanitaire/);
+  assert.match(scriptResponse.text, /Couche Routi.re/);
+  assert.match(scriptResponse.text, /Carto Positron/);
+  assert.match(scriptResponse.text, /Couche ESRI \(Satellite\)/);
+  assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
+  assert.match(scriptResponse.text, /createPane\("collectionPointsPane"\)/);
+  assert.match(scriptResponse.text, /"collectionPointsPane"\)\.style\.zIndex = 450/);
+  assert.match(scriptResponse.text, /function fitToVisiblePoints\(visiblePoints\)/);
+  assert.match(scriptResponse.text, /map\.fitBounds\(bounds/);
+  assert.match(scriptResponse.text, /renderPoints\(true\)/);
+  assert.doesNotMatch(scriptResponse.text, /http:\/\/\{s\}\.tile\.openstreetmap\.org/);
 });

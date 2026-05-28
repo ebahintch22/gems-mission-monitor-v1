@@ -1,298 +1,639 @@
-Est# Rapport technique - Socle GEMS Mission Monitor
+# Rapport technique - Architecture et etat d'implementation
 
 ## 1. Objet du document
 
-Ce document décrit le socle technique mis en place pour l'application de suivi
-GEMS des missions de collecte. Il couvre le périmètre du MVP, les choix
-d'architecture, les composants livrés et les évolutions prévues pour
-l'intégration KoBoToolbox et la migration vers PostgreSQL/PostGIS.
+Ce rapport decrit l'architecture technique de l'application **GEMS Mission
+Monitor** et synthetise les travaux realises jusqu'a ce stade
+d'implementation.
 
-## 2. Perimetre du MVP
+L'application vise le suivi des missions de collecte, la gestion progressive
+des equipes et agents, ainsi que la visualisation SIG des soumissions terrain.
+Le socle actuel est construit pour un MVP en **Node.js / Express / SQLite**,
+avec une evolution prevue vers **PostgreSQL/PostGIS** et une integration
+future a **KoBoToolbox API v2**.
 
-Le socle livré permet de :
+Le present document se limite, pour la base SQLite, a la description du schema
+et des responsabilites des tables. Il ne decrit pas les donnees chargees dans
+la base locale.
 
-- démarrer une application web Node.js/Express ;
-- afficher un tableau de bord synthétique ;
-- créer et consulter des missions de collecte ;
-- stocker les données des missions dans une base SQLite ;
-- visualiser les missions dans un tableau interactif Tabulator ;
-- afficher sur une carte Leaflet les missions disposant de coordonnées ;
-- stocker un identifiant d'actif KoBo en préparation de l'intégration API v2.
+## 2. Stack technique
 
-Le MVP ne couvre pas encore la synchronisation effective avec KoBoToolbox,
-l'authentification, la gestion des utilisateurs, ni l'exploitation avancée de
-données géospatiales.
-
-## 3. Stack technique
-
-| Composant | Technologie | Utilisation dans le socle |
+| Couche | Technologie | Role dans l'application |
 | --- | --- | --- |
-| Runtime | Node.js >= 20 | Exécution du serveur applicatif |
-| Serveur HTTP | Express 5 | Routage, middleware, rendu des pages |
-| Templates | EJS | Génération des vues serveur |
-| Base MVP | SQLite via `better-sqlite3` | Persistance locale des missions |
-| Carte | Leaflet | Affichage des missions géolocalisées |
-| Tableau | Tabulator | Consultation interactive de la liste des missions |
-| Configuration | `dotenv` | Lecture de `PORT` et `DATABASE_PATH` |
-| Tests HTTP | Node Test Runner + Supertest | Validation des routes principales |
+| Runtime | Node.js >= 20 | Execution du serveur applicatif |
+| Framework HTTP | Express 5 | Routage, middlewares, rendu serveur |
+| Vues | EJS | Generation HTML cote serveur |
+| Base MVP | SQLite via `better-sqlite3` | Persistance locale et base de test du MVP |
+| Configuration | `dotenv` | Chargement de `PORT`, `DATABASE_PATH` et chemins d'import |
+| Cartographie | Leaflet | Affichage SIG, fonds de carte, couches et points |
+| Tableaux | Tabulator | Tableaux interactifs dans les ecrans metiers |
+| Tests | Node Test Runner + Supertest | Tests fonctionnels HTTP et validation des flux |
+| Import CSV | `csv-parse` | Import des roles et agents |
+| Geometries | `@turf/union` | Aggregation GeoJSON des regions et departements |
+| Export rapport | `docx`, `marked` | Conversion du rapport Markdown vers DOCX |
 
-La cible d'évolution prévoit PostgreSQL/PostGIS afin d'assurer une persistance
-plus robuste et des requêtes géographiques adaptées à un usage en production.
+## 3. Organisation applicative
 
-## 4. Architecture applicative
-
-L'application suit une organisation MVC légère :
+L'application suit une architecture MVC legere :
 
 ```text
 gems-mission-monitor/
-|-- app.js                         # Initialisation Express et montage des routes
+|-- app.js                         # Point d'entree Express
 |-- config/
-|   `-- database.js                # Connexion SQLite et schema initial
-|-- controllers/
-|   |-- dashboardController.js     # Donnees du tableau de bord
-|   `-- missionController.js       # Actions liees aux missions
-|-- models/
-|   `-- Mission.js                 # Requetes SQLite des missions
-|-- routes/
-|   |-- dashboardRoutes.js         # Route d'accueil
-|   `-- missionRoutes.js           # Routes du module missions
-|-- views/
-|   |-- dashboard/                 # Vue du dashboard
-|   |-- missions/                  # Liste, creation et detail
-|   |-- errors/                    # Pages d'erreur
-|   `-- partials/                  # Entete et pied de page
+|   `-- database.js                # Connexion SQLite et schema
+|-- controllers/                   # Logique de presentation des modules
+|-- models/                        # Acces aux donnees SQLite
+|-- routes/                        # Routage Express par domaine fonctionnel
+|-- services/                      # Imports, generation et traitements metiers
+|-- scripts/                       # Commandes executables npm
+|-- views/                         # Vues EJS
 |-- public/
-|   |-- css/app.css                # Presentation de l'application
-|   `-- js/missions.js             # Initialisation Leaflet/Tabulator
-|-- data/                          # Fichier SQLite local genere a l'execution
-|-- tests/app.test.js              # Tests fonctionnels HTTP du socle
-|-- .env.example                   # Variables configurables
-`-- README.md                      # Instructions de demarrage
+|   |-- css/                       # Feuilles de style
+|   |-- js/                        # Scripts navigateur Leaflet/Tabulator
+|   `-- assets/                    # Images et logo
+|-- tests/                         # Tests automatises
+|-- data/                          # Base SQLite locale et donnees de travail
+|-- README.md                      # Documentation d'utilisation
+`-- RAPPORT_TECHNIQUE.md           # Rapport technique
 ```
 
-Cette séparation maintient les responsabilités suivantes :
+La separation des responsabilites est la suivante :
 
-- les routes associent les URL aux traitements ;
-- les contrôleurs préparent les données et sélectionnent les vues ;
-- le modèle encapsule les accès SQLite ;
-- les vues assurent le rendu HTML ;
-- les fichiers publics prennent en charge l'affichage côté navigateur.
+- les **routes** exposent les URL et deleguent aux controleurs ;
+- les **controleurs** preparent les donnees et selectionnent les vues ;
+- les **modeles** encapsulent les requetes SQL ;
+- les **services** portent les traitements transverses tels que les imports ou
+  la generation de soumissions simulees ;
+- les **vues EJS** assurent le rendu HTML ;
+- les scripts de `public/js` initialisent les composants Leaflet et Tabulator.
 
-## 5. Demarrage et configuration Express
+## 4. Configuration et demarrage
 
-Le point d'entrée `app.js` configure :
+Le fichier `app.js` initialise :
 
-- le moteur de vues `ejs` et le répertoire `views` ;
-- le traitement des formulaires URL-encodés et des corps JSON ;
-- la publication des ressources statiques du répertoire `public` ;
-- le montage du dashboard sur `/` et des missions sur `/missions` ;
-- le rendu des pages d'erreur HTTP 404 et 500 ;
-- l'écoute sur le port défini par l'environnement, avec `3000` par défaut.
+- `dotenv` pour la configuration d'environnement ;
+- Express et le moteur de vues EJS ;
+- le traitement des formulaires URL-encodes et du JSON ;
+- les ressources statiques du repertoire `public` ;
+- les routes principales ;
+- les pages d'erreur 404 et 500 ;
+- l'ecoute du port defini par `PORT`, avec `3000` par defaut.
 
-L'application exporte également l'instance Express, permettant aux tests
-Supertest de l'exécuter sans démarrer de serveur réseau.
+Les scripts npm disponibles sont :
 
-### Configuration d'environnement
-
-Le fichier `.env.example` expose les paramètres disponibles :
-
-```dotenv
-PORT=3000
-DATABASE_PATH=./data/gems.sqlite
+```bash
+npm start
+npm run dev
+npm test
+npm run territories:import
+npm run roles:import
+npm run agents:import
+npm run submissions:seed
+npm run report:docx
 ```
 
-`DATABASE_PATH` permet notamment d'utiliser une base en mémoire lors des tests,
-sans modifier la base de développement.
+La variable `DATABASE_PATH` permet de definir l'emplacement du fichier SQLite.
+En developpement, la valeur par defaut pointe vers `data/gems.sqlite`. Pour un
+test Render avec disque persistant, l'approche retenue est de transferer le
+fichier SQLite local deja prepare vers un chemin de type :
 
-## 6. Base de donnees SQLite
+```env
+DATABASE_PATH=/var/data/gems-mission-monitor.sqlite
+```
 
-La configuration de la base se trouve dans `config/database.js`. Au démarrage,
-le module :
+## 5. Routes disponibles
 
-- ouvre ou crée le fichier SQLite configuré ;
-- active les contraintes de clés étrangères ;
-- active le journal `WAL` pour améliorer le comportement concurrent local ;
-- initialise la table `missions` si elle n'existe pas.
-
-### Modele de donnees `missions`
-
-| Colonne | Type SQLite | Description |
+| Route | Module | Fonction |
 | --- | --- | --- |
-| `id` | `INTEGER` | Identifiant primaire auto-incrémenté |
-| `name` | `TEXT` | Nom de la mission, obligatoire |
-| `region` | `TEXT` | Zone ou région d'intervention, obligatoire |
-| `status` | `TEXT` | Statut de suivi de la mission |
-| `start_date` | `TEXT` | Date de début éventuelle |
-| `end_date` | `TEXT` | Date de fin éventuelle |
-| `collectors` | `INTEGER` | Nombre d'agents de collecte |
-| `kobo_asset_uid` | `TEXT` | Identifiant d'actif KoBoToolbox |
-| `latitude` | `REAL` | Latitude de référence de la mission |
-| `longitude` | `REAL` | Longitude de référence de la mission |
-| `created_at` | `TEXT` | Horodatage de création |
+| `GET /` | Dashboard | Tableau de bord minimal |
+| `GET /missions` | Missions | Liste Tabulator et carte des missions |
+| `GET /missions/new` | Missions | Formulaire de creation |
+| `POST /missions` | Missions | Enregistrement d'une mission |
+| `GET /missions/:id` | Missions | Fiche detaillee |
+| `GET /users` | Utilisateurs | Registre des utilisateurs applicatifs |
+| `GET /users/new` | Utilisateurs | Formulaire de creation |
+| `POST /users` | Utilisateurs | Enregistrement d'un utilisateur |
+| `GET /users/:id` | Utilisateurs | Fiche utilisateur |
+| `GET /users/:id/edit` | Utilisateurs | Formulaire de modification |
+| `POST /users/:id` | Utilisateurs | Mise a jour d'un utilisateur |
+| `GET /equipes` | Equipes | Registre des equipes de collecte |
+| `GET /equipes/new` | Equipes | Formulaire de creation |
+| `POST /equipes` | Equipes | Enregistrement d'une equipe |
+| `GET /equipes/:id` | Equipes | Fiche equipe |
+| `GET /equipes/:id/edit` | Equipes | Formulaire de modification |
+| `POST /equipes/:id` | Equipes | Mise a jour d'une equipe |
+| `GET /agents` | Agents | Registre des agents de collecte |
+| `GET /agents/new` | Agents | Formulaire de creation |
+| `POST /agents` | Agents | Enregistrement d'un agent |
+| `GET /agents/:id` | Agents | Fiche agent |
+| `GET /agents/:id/edit` | Agents | Formulaire de modification |
+| `POST /agents/:id` | Agents | Mise a jour d'un agent |
+| `GET /cartographie` | SIG | Page cartographique des soumissions |
 
-Le statut est contraint aux valeurs :
+## 6. Schema SQLite
 
-- `planifiee` ;
-- `en_cours` ;
-- `terminee` ;
-- `suspendue`.
+Le schema est initialise dans `config/database.js`. Le module active les cles
+etrangeres SQLite et le mode WAL.
 
-Le nombre d'agents est contraint à une valeur positive ou nulle. Les
-coordonnées sont validées dans le contrôleur avant persistance.
+### 6.1 Tables territoriales
 
-## 7. Modele et logique metier
+#### `regions`
 
-Le modèle `Mission` fournit les opérations requises par le MVP :
+Table de reference des regions administratives.
 
-| Methode | Usage |
-| --- | --- |
-| `all()` | Lister les missions par date de création décroissante |
-| `recent(limit)` | Extraire les dernières missions du dashboard |
-| `findById(id)` | Obtenir le détail d'une mission |
-| `create(input)` | Insérer une nouvelle mission |
-| `stats()` | Calculer les indicateurs agrégés du dashboard |
+Colonnes principales :
 
-Les indicateurs calculés sont :
+- `id`
+- `code_region`
+- `nom_region`
+- `geometry_geojson`
+- `created_at`
 
-- nombre total de missions ;
-- nombre de missions en cours ;
-- nombre de missions terminées ;
-- somme des agents mobilisés.
+La geometrie est conservee sous forme de texte GeoJSON. Les geometries de
+regions sont issues de l'agregation des sous-prefectures lors de l'import.
 
-## 8. Routes et ecrans disponibles
+#### `departements`
 
-| Methode | Route | Traitement | Vue / comportement |
-| --- | --- | --- | --- |
-| `GET` | `/` | Dashboard | Indicateurs et missions récentes |
-| `GET` | `/missions` | Liste des missions | Tableau Tabulator et carte Leaflet |
-| `GET` | `/missions/new` | Formulaire | Création d'une mission |
-| `POST` | `/missions` | Enregistrement | Validation, insertion, redirection |
-| `GET` | `/missions/:id` | Consultation | Détail et carte si coordonnées disponibles |
+Table de reference des departements.
 
-### Validation de creation
+Colonnes principales :
 
-Lors de la création d'une mission, le contrôleur vérifie :
+- `id`
+- `code_departement`
+- `nom_departement`
+- `region_id`
+- `geometry_geojson`
+- `created_at`
 
-- la présence du nom et de la région ;
-- l'appartenance du statut aux valeurs autorisées ;
-- la validité du nombre d'agents ;
-- une latitude comprise entre `-90` et `90` ;
-- une longitude comprise entre `-180` et `180`.
+Chaque departement appartient a une region.
 
-Une saisie invalide provoque un retour HTTP `400` et le réaffichage du
-formulaire accompagné d'un message d'erreur.
+#### `sous_prefectures`
 
-## 9. Interface utilisateur
+Table de reference des sous-prefectures.
 
-### Dashboard
+Colonnes principales :
 
-La page d'accueil constitue un tableau de bord minimal :
+- `id`
+- `code_sous_prefecture`
+- `nom_sous_prefecture`
+- `departement_id`
+- `geometry_geojson`
+- `created_at`
 
-- quatre cartes d'indicateurs ;
-- un tableau des cinq missions les plus récentes ;
-- un accès direct à la création d'une mission et au registre complet.
+Chaque sous-prefecture appartient a un departement. La geometrie est stockee au
+format GeoJSON texte.
 
-### Registre des missions
+### 6.2 Roles et utilisateurs
 
-La page `/missions` intègre :
+#### `roles`
 
-- Tabulator pour afficher les données en tableau ;
-- Leaflet pour afficher les marqueurs associés aux coordonnées stockées ;
-- OpenStreetMap comme fond cartographique ;
-- une navigation vers la fiche de chaque mission.
+Table de referentiel des roles applicatifs.
 
-Les données provenant de SQLite sont injectées dans la page sous forme JSON.
-Le script front-end crée les liens et infobulles avec des noeuds DOM textuels
-afin de ne pas exécuter une valeur saisie comme contenu HTML.
+Colonnes principales :
 
-### Fiche mission
+- `id`
+- `code_role`
+- `label`
+- `description`
+- `created_at`
 
-La fiche mission présente :
+Le formulaire utilisateur s'appuie sur cette table pour proposer les roles
+disponibles.
 
-- le statut opérationnel ;
-- la région et la période ;
-- le nombre d'agents ;
-- l'UID de formulaire KoBo ;
-- une carte de localisation lorsque la latitude et la longitude sont présentes.
+#### `users`
 
-## 10. Preparation de l'integration KoBoToolbox
+Table des utilisateurs applicatifs.
 
-Le champ `kobo_asset_uid` permet d'associer dès maintenant une mission à un
-formulaire KoBoToolbox. Cette première décision prépare les traitements
-suivants sans imposer leur implémentation dans le MVP :
+Colonnes principales :
 
-- configuration d'un client API KoBoToolbox v2 ;
-- récupération des soumissions liées à un actif ;
-- synchronisation périodique ou à la demande ;
-- indicateurs de collecte issus des soumissions ;
-- affichage spatial des points effectivement collectés.
+- `id`
+- `nom`
+- `prenoms`
+- `email`
+- `telephone`
+- `role`
+- `statut`
+- `password_hash`
+- `last_login`
+- `created_at`
 
-Pour la suite, il est recommandé d'isoler l'accès KoBo dans un service
-`services/koboService.js` et de ne pas placer de jeton API dans les vues ou
-dans le dépôt. Le jeton devra être injecté par variable d'environnement.
+Le champ `role` reference le code fonctionnel du role. Le champ
+`password_hash` est present pour la future authentification, mais le module
+d'authentification n'est pas encore implemente.
 
-## 11. Migration prevue vers PostgreSQL/PostGIS
+#### `user_regions`
 
-SQLite répond au besoin d'un MVP local avec un déploiement simplifié. Pour un
-usage multi-utilisateur et des volumes de collecte croissants, la migration
-prévue vers PostgreSQL/PostGIS devra traiter :
+Table d'association entre utilisateurs et regions.
 
-- remplacement de la connexion SQLite par une couche d'accès PostgreSQL ;
-- migrations versionnées du schéma ;
-- transformation des coordonnées en objets géométriques ou géographiques ;
-- index spatial pour les recherches de proximité et les agrégations par zone ;
-- stratégie de synchronisation KoBo et de reprise sur erreur ;
-- gestion des accès concurrents, des utilisateurs et des habilitations.
+Colonnes principales :
 
-Le modèle MVC actuel facilite cette évolution : les routes et les vues peuvent
-être conservées, tandis que la persistance évolue principalement dans la
-couche modèle et les futurs services.
+- `user_id`
+- `region_id`
+- `created_at`
 
-## 12. Tests et verification
+Elle permet de rattacher un utilisateur a plusieurs regions.
 
-La suite `tests/app.test.js` utilise le moteur de test natif Node.js et
-Supertest. La base est remplacée par SQLite en mémoire pendant les tests.
+### 6.3 Missions
 
-Les scénarios couverts sont :
+#### `missions`
 
-- affichage du dashboard ;
-- création d'une mission et consultation depuis la liste, la fiche et le
-  dashboard ;
-- rejet d'une création avec coordonnées invalides.
+Table des missions de collecte.
 
-Commande de validation :
+Colonnes principales :
+
+- `id`
+- `name`
+- `region`
+- `status`
+- `start_date`
+- `end_date`
+- `collectors`
+- `kobo_asset_uid`
+- `latitude`
+- `longitude`
+- `created_at`
+
+Le champ `kobo_asset_uid` prepare le rattachement futur a un formulaire
+KoBoToolbox. Les coordonnees permettent l'affichage cartographique simple des
+missions.
+
+### 6.4 Equipes de collecte
+
+#### `equipes`
+
+Table des equipes de collecte.
+
+Colonnes principales :
+
+- `id`
+- `nom_equipe`
+- `superviseur_id`
+- `mission_id`
+- `statut`
+- `created_at`
+
+Une equipe est rattachee a une mission. Le superviseur est un utilisateur
+applicatif distinct, reference par `superviseur_id`.
+
+#### `equipe_regions`
+
+Table d'association entre equipes et regions.
+
+Colonnes principales :
+
+- `equipe_id`
+- `region_id`
+- `created_at`
+
+Elle materialise les zones d'affectation des equipes.
+
+### 6.5 Agents de collecte
+
+#### `agents_collecte`
+
+Table des agents de collecte.
+
+Colonnes principales :
+
+- `id`
+- `nom`
+- `prenoms`
+- `user_id`
+- `equipe_id`
+- `code_agent`
+- `telephone`
+- `equipement`
+- `statut`
+- `created_at`
+
+L'agent peut exister independamment d'un compte utilisateur. Le lien
+`user_id` est facultatif et permet de rattacher un agent a un utilisateur
+applicatif de role `agent`.
+
+### 6.6 Soumissions de collecte
+
+#### `soumissions_collecte`
+
+Table des soumissions terrain, utilisee actuellement pour les donnees simulees
+du module SIG et prevue pour les futures synchronisations KoBo.
+
+Colonnes principales :
+
+- `id`
+- `source`
+- `source_submission_id`
+- `kobo_asset_uid`
+- `mission_id`
+- `equipe_id`
+- `agent_id`
+- `sous_prefecture_id`
+- `code_agent_source`
+- `submitted_at`
+- `latitude`
+- `longitude`
+- `precision_m`
+- `statut_validation`
+- `anomaly_count`
+- `formulaire_type`
+- `raw_data_json`
+- `synced_at`
+- `created_at`
+
+La contrainte unique `(source, source_submission_id)` rend les imports ou
+generations rejouables. Le champ `raw_data_json` conserve la charge metier
+collectee sous forme JSON, conforme a la structure principale du XLSForm cible.
+
+## 7. Modules implementes
+
+### 7.1 Socle Express et MVC
+
+Le socle initial comprend :
+
+- une application Express structuree ;
+- des vues EJS avec entete, navigation et pied de page ;
+- une feuille de style commune ;
+- une gestion des erreurs 404 et 500 ;
+- une base SQLite initialisee automatiquement ;
+- une suite de tests fonctionnels.
+
+Le logo Rakall a ete integre a l'entete global de l'application.
+
+### 7.2 Module Missions
+
+Le module missions permet :
+
+- de creer une mission ;
+- de lister les missions ;
+- de consulter une fiche mission ;
+- d'afficher une carte de localisation lorsque les coordonnees sont presentes ;
+- de stocker l'identifiant d'actif KoBo via `kobo_asset_uid`.
+
+La liste des missions utilise Tabulator et Leaflet.
+
+### 7.3 Referentiel territorial
+
+Les tables `regions`, `departements` et `sous_prefectures` ont ete ajoutees.
+
+Le service d'import territorial :
+
+- exploite un fichier GeoJSON de sous-prefectures ;
+- utilise les correspondances d'attributs suivantes :
+  - code region : `ADM1_PCODE` ;
+  - nom region : `ADM1_FR` ;
+  - code departement : `ADM2_PCODE` ;
+  - nom departement : `ADM2_FR` ;
+  - code sous-prefecture : `ADM3_PCODE` ;
+  - nom sous-prefecture : `ADM3_FR` ;
+- stocke les geometries en GeoJSON texte ;
+- agrege les geometries des departements et regions ;
+- peut etre rejoue sans creation de doublons.
+
+### 7.4 Roles applicatifs
+
+Une table `roles` a ete creee afin de sortir la definition des roles du code
+applicatif. Le service d'import des roles charge le referentiel depuis un CSV.
+
+L'interface de gestion des utilisateurs s'appuie sur cette table pour proposer
+les roles disponibles.
+
+### 7.5 Utilisateurs applicatifs
+
+Le modele utilisateur a ete ajuste au format suivant :
+
+```text
+User {
+  id,
+  nom,
+  prenoms,
+  email,
+  telephone,
+  role,
+  zone_affectation,
+  statut,
+  password_hash,
+  last_login,
+  created_at
+}
+```
+
+Dans le schema physique, `zone_affectation` est materialisee par la table
+d'association `user_regions`, afin de permettre l'affectation d'un utilisateur
+a plusieurs regions.
+
+Les operations disponibles sont :
+
+- creation ;
+- consultation ;
+- modification ;
+- affectation a une ou plusieurs regions ;
+- validation de l'unicite de l'email ;
+- validation de l'existence du role et des regions.
+
+### 7.6 Gestion des equipes de collecte
+
+Le module equipes a ete implemente avec :
+
+- creation d'une equipe ;
+- modification d'une equipe existante ;
+- rattachement obligatoire a une mission ;
+- affectation a une ou plusieurs regions ;
+- rattachement facultatif a un superviseur ;
+- controle du fait que le superviseur choisi est un utilisateur actif de role
+  `superviseur`.
+
+Le schema correspond au modele :
+
+```text
+Equipe {
+  id,
+  nom_equipe,
+  superviseur_id,
+  zone_affectation,
+  mission_id,
+  statut
+}
+```
+
+`zone_affectation` est materialisee par `equipe_regions`.
+
+### 7.7 Gestion des agents de collecte
+
+Le module agents de collecte a ete implemente avec :
+
+- creation d'un agent ;
+- modification d'un agent existant ;
+- consultation d'une fiche agent ;
+- rattachement facultatif a un compte utilisateur ;
+- rattachement facultatif a une equipe ;
+- controle d'unicite du `code_agent` ;
+- ajout des champs `nom` et `prenoms`.
+
+Le schema correspond au modele :
+
+```text
+AgentCollecte {
+  id,
+  nom,
+  prenoms,
+  user_id,
+  equipe_id,
+  code_agent,
+  telephone,
+  equipement,
+  statut
+}
+```
+
+Un service d'import CSV des agents a ete ajoute. Il rapproche les equipes par
+nom normalise et les comptes utilisateurs de role `agent` par nom et prenoms
+lorsqu'une correspondance fiable est disponible.
+
+### 7.8 Soumissions simulees
+
+Une table provisoire `soumissions_collecte` a ete ajoutee pour permettre le
+demarrage du module SIG avant l'implementation complete du suivi des
+soumissions KoBo.
+
+Le service de generation :
+
+- produit des soumissions fictives ;
+- rattache les soumissions aux missions, equipes, agents et sous-prefectures ;
+- positionne les points dans les geometries territoriales disponibles ;
+- renseigne un `raw_data_json` respectant la structure principale du XLSForm
+  `padci_survey_terrain_vf` ;
+- alimente les champs utiles aux indicateurs futurs : agent, equipe, date de
+  soumission, statut de validation, nombre d'anomalies.
+
+### 7.9 Module Cartographie SIG
+
+La page `/cartographie` constitue le premier ecran du module 4.
+
+Elle comprend :
+
+- une interface en deux volets verticaux ;
+- un volet gauche pour les outils ;
+- un volet droit Leaflet pour la carte ;
+- une largeur par defaut d'environ deux tiers pour la carte ;
+- une poignee de redimensionnement ;
+- une largeur minimale d'un tiers pour le volet cartographique ;
+- un tableau Tabulator des soumissions visibles ;
+- des filtres par mission, equipe, agent, statut et dates ;
+- une synthese des statuts ;
+- l'affichage des limites regionales ;
+- l'affichage des points de collecte ;
+- un controle de fonds de carte.
+
+Les fonds de carte disponibles sont :
+
+- Couche Humanitaire ;
+- Couche Routiere ;
+- OSM Open Topo ;
+- Carto Positron (Grayscale) ;
+- Esri Gray (WLGB) ;
+- Couche Google Maps ;
+- Couche ESRI (Satellite).
+
+Les points de collecte sont places dans un panneau Leaflet de niveau superieur
+aux limites regionales afin de rester selectionnables. La carte se recadre
+automatiquement sur l'emprise des points visibles lors d'un filtrage.
+
+## 8. Services et scripts d'import
+
+Les scripts operationnels sont :
+
+| Script npm | Service | Fonction |
+| --- | --- | --- |
+| `territories:import` | `territoryImportService` | Import des regions, departements et sous-prefectures depuis GeoJSON |
+| `roles:import` | `roleImportService` | Import du referentiel des roles depuis CSV |
+| `agents:import` | `agentImportService` | Import des agents de collecte depuis CSV |
+| `submissions:seed` | `submissionSeedService` | Generation de soumissions simulees |
+| `report:docx` | `generate-report-docx.mjs` | Conversion du rapport Markdown en DOCX |
+
+Les imports sont concus pour etre rejouables, en s'appuyant sur des cles
+fonctionnelles telles que les codes administratifs, les codes de role, les
+codes agent et les identifiants source des soumissions.
+
+## 9. Tests et verification
+
+La suite de tests se trouve dans `tests/app.test.js`.
+
+Elle couvre notamment :
+
+- le referentiel territorial et l'agregation GeoJSON ;
+- l'import des roles ;
+- le dashboard ;
+- la creation, consultation et validation des missions ;
+- la creation et modification des utilisateurs ;
+- l'affectation multiple aux regions ;
+- la creation et modification des equipes ;
+- le controle du role superviseur ;
+- la creation et modification des agents ;
+- l'import CSV des agents ;
+- la generation des soumissions simulees ;
+- le rendu de la page cartographique ;
+- la presence du selecteur de fonds de carte ;
+- l'ordre d'affichage des points et limites ;
+- le recadrage automatique de la carte lors des filtres.
+
+La commande de verification est :
 
 ```bash
 npm test
 ```
 
-Résultat constaté lors de la livraison du socle :
+## 10. Preparation du deploiement Render
 
-```text
-tests: 3
-pass: 3
-fail: 0
-```
+L'orientation retenue pour un premier test Render est :
 
-## 13. Limites actuelles et prochaines etapes
+- deployer l'application comme Web Service Node.js ;
+- utiliser `npm install` comme commande de build ;
+- utiliser `npm start` comme commande de demarrage ;
+- attacher un disque persistant Render ;
+- transferer le fichier SQLite local deja prepare vers ce disque ;
+- configurer `DATABASE_PATH` vers le chemin du disque persistant ;
+- ne pas rejouer les imports sur Render pour ce premier test.
 
-Le socle constitue une base opérationnelle de développement, mais plusieurs
-éléments sont nécessaires avant un usage de production :
+Cette approche permet de tester rapidement l'application avec le schema et la
+base SQLite existante, tout en evitant de dependre des chemins locaux Windows
+des fichiers GeoJSON et CSV.
 
-1. Ajouter l'intégration authentifiée à l'API KoBoToolbox v2.
-2. Introduire une authentification applicative et des rôles.
-3. Mettre en place des migrations de base versionnées.
-4. Préparer l'abstraction de persistance pour PostgreSQL/PostGIS.
-5. Ajouter la modification, l'archivage et la recherche filtrée des missions.
-6. Renforcer les tests sur les erreurs, la sécurité et les futurs flux KoBo.
-7. Conditionner ou héberger localement les ressources Leaflet et Tabulator si
-   l'application doit fonctionner en environnement réseau restreint.
+## 11. Limites actuelles
 
-## 14. Conclusion
+Les limites identifiees a ce stade sont :
 
-Le MVP dispose désormais d'un socle cohérent : serveur Express structuré,
-persistance SQLite, rendu EJS, module missions utilisable, tableau de bord
-minimal, affichage cartographique et tests HTTP de base. Cette architecture
-permet de poursuivre l'intégration KoBoToolbox puis la migration de la
-persistance vers PostgreSQL/PostGIS sans remettre en cause l'organisation
-générale de l'application.
+- absence d'authentification et de gestion de session ;
+- absence de controle d'acces effectif par role ;
+- absence de synchronisation reelle avec KoBoToolbox API v2 ;
+- absence de module complet de suivi des soumissions terrain ;
+- persistance encore basee sur SQLite pour le MVP ;
+- absence de migrations versionnees independantes du code de demarrage ;
+- dependance a des CDN pour Leaflet et Tabulator ;
+- fonds de carte externes soumis aux disponibilites et conditions des
+  fournisseurs.
+
+## 12. Prochaines etapes recommandees
+
+Les prochaines etapes logiques sont :
+
+1. Finaliser la sauvegarde Git du code source hors base SQLite.
+2. Preparer le fichier `render.yaml` ou la configuration Render manuelle.
+3. Tester le deploiement Render avec disque persistant et base SQLite
+   transferee.
+4. Ajouter l'authentification applicative.
+5. Mettre en place les autorisations par role.
+6. Poursuivre le module de suivi des soumissions.
+7. Ajouter les indicateurs de productivite par agent et par equipe.
+8. Preparer l'abstraction de persistance en vue de PostgreSQL/PostGIS.
+9. Integrer progressivement KoBoToolbox API v2.
+
+## 13. Conclusion
+
+L'application dispose maintenant d'un socle technique coherent et exploitable
+pour poursuivre le developpement fonctionnel. Le MVP couvre le dashboard, les
+missions, les utilisateurs, les roles, les equipes, les agents, le referentiel
+territorial et une premiere page SIG operationnelle.
+
+L'architecture MVC retenue reste simple, lisible et adaptee au stade actuel du
+projet. Elle permet de continuer l'implementation progressive des modules tout
+en conservant une trajectoire claire vers KoBoToolbox, PostgreSQL/PostGIS et un
+deploiement cloud sur Render.

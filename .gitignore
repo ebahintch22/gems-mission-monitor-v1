@@ -1,5 +1,22 @@
+# =========================
+# Dépendances Node.js
+# =========================
 node_modules/
+
+# =========================
+# Variables sensibles
+# =========================
 .env
-data/*.sqlite
-data/*.sqlite-*
+
+
+# =========================
+# Bases SQLite runtime
+# =========================
+#data/*.sqlite
+#data/*.sqlite-*
+
+# =========================
+# Logs
+# =========================
+*.log
 npm-debug.log*

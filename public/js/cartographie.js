@@ -4,18 +4,53 @@
   const workspace = document.getElementById("sig-workspace");
   const resizer = document.getElementById("sig-resizer");
   const map = L.map("sig-map").setView([7.54, -5.55], 6);
+  map.createPane("territoryPane");
+  map.getPane("territoryPane").style.zIndex = 410;
+  map.createPane("collectionPointsPane");
+  map.getPane("collectionPointsPane").style.zIndex = 450;
   const markersLayer = L.layerGroup().addTo(map);
   const colors = {
     validee: "#16856f",
     a_verifier: "#d38b13",
     rejetee: "#b84545"
   };
+  const baseLayers = {
+    "Couche Humanitaire": L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+      maxZoom: 20,
+      attribution: "&copy; OpenStreetMap contributors, Humanitarian OpenStreetMap Team"
+    }),
+    "Couche Routière": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 20,
+      attribution: "&copy; OpenStreetMap contributors"
+    }),
+    "OSM Open Topo": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+      maxZoom: 17,
+      attribution: "&copy; OpenTopoMap, données &copy; OpenStreetMap contributors"
+    }),
+    "Carto Positron (Grayscale)": L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+      attribution: "&copy; CARTO &copy; OpenStreetMap contributors",
+      subdomains: "abcd",
+      maxZoom: 19
+    }),
+    "Esri Gray (WLGB)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri, DeLorme, NAVTEQ",
+      maxZoom: 16
+    }),
+    "Couche Google Maps": L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+      attribution: "&copy; Google Maps",
+      subdomains: ["mt0", "mt1", "mt2", "mt3"],
+      maxZoom: 20
+    }),
+    "Couche ESRI (Satellite)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles &copy; Esri",
+      maxZoom: 19
+    })
+  };
 
-  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-    attribution: "&copy; OpenStreetMap contributors"
-  }).addTo(map);
+  baseLayers["Couche Routière"].addTo(map);
 
   const territoryLayer = L.geoJSON(regions, {
+    pane: "territoryPane",
     style: {
       color: "#527487",
       fillColor: "#dce7eb",
@@ -25,6 +60,14 @@
     onEachFeature: function (feature, layer) {
       layer.bindTooltip(feature.properties.nom_region);
     }
+  }).addTo(map);
+
+  L.control.layers(baseLayers, {
+    "Points de collecte": markersLayer,
+    "Limites régionales": territoryLayer
+  }, {
+    collapsed: false,
+    position: "topright"
   }).addTo(map);
 
   const table = new Tabulator("#sig-table", {
@@ -93,7 +136,26 @@
     document.getElementById("sig-count-rejected").textContent = count.rejetee;
   }
 
-  function renderPoints() {
+  function fitToVisiblePoints(visiblePoints) {
+    if (!visiblePoints.length) {
+      return;
+    }
+
+    if (visiblePoints.length === 1) {
+      map.setView([visiblePoints[0].latitude, visiblePoints[0].longitude], 13);
+      return;
+    }
+
+    const bounds = L.latLngBounds(visiblePoints.map(function (point) {
+      return [point.latitude, point.longitude];
+    }));
+    map.fitBounds(bounds, {
+      padding: [30, 30],
+      maxZoom: 13
+    });
+  }
+
+  function renderPoints(reframeMap) {
     const visiblePoints = points.filter(function (point) {
       return isVisible(point, filters());
     });
@@ -101,6 +163,7 @@
     markersLayer.clearLayers();
     visiblePoints.forEach(function (point) {
       L.circleMarker([point.latitude, point.longitude], {
+        pane: "collectionPointsPane",
         color: colors[point.statut_validation],
         fillColor: colors[point.statut_validation],
         fillOpacity: 0.8,
@@ -111,12 +174,17 @@
 
     table.setData(visiblePoints);
     updateMetrics(visiblePoints);
+    if (reframeMap) {
+      fitToVisiblePoints(visiblePoints);
+    }
   }
 
-  document.getElementById("sig-filters").addEventListener("change", renderPoints);
+  document.getElementById("sig-filters").addEventListener("change", function () {
+    renderPoints(true);
+  });
   document.getElementById("sig-reset-filters").addEventListener("click", function () {
     document.getElementById("sig-filters").reset();
-    renderPoints();
+    renderPoints(true);
   });
 
   let resizing = false;
@@ -171,5 +239,5 @@
   if (territoryLayer.getBounds().isValid()) {
     map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
   }
-  renderPoints();
+  renderPoints(false);
 }());

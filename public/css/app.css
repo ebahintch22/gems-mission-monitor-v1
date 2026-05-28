@@ -365,8 +365,8 @@ h2 {
   gap: 13px;
   padding: 8px 11px;
   position: absolute;
+  bottom: 30px;
   right: 12px;
-  top: 12px;
   z-index: 500;
 }
 
