@@ -88,12 +88,12 @@
   const mapControlToggleIcon = document.createElement("i");
   const mapControlToggleLabel = document.createElement("span");
 
-  mapControlContainer.classList.add("map-control-container");
+  mapControlContainer.classList.add("map-control-container", "is-collapsed");
   mapControlToggle.className = "map-control-toggle";
   mapControlToggle.type = "button";
-  mapControlToggle.setAttribute("aria-expanded", "true");
-  mapControlToggle.setAttribute("aria-label", "Replier les controles de carte");
-  mapControlToggleIcon.className = "fa-solid fa-chevron-up";
+  mapControlToggle.setAttribute("aria-expanded", "false");
+  mapControlToggle.setAttribute("aria-label", "Deplier les controles de carte");
+  mapControlToggleIcon.className = "fa-solid fa-chevron-down";
   mapControlToggleIcon.setAttribute("aria-hidden", "true");
   mapControlToggleLabel.textContent = "Couches";
   mapControlToggle.append(mapControlToggleIcon, mapControlToggleLabel);

@@ -1,5 +1,17 @@
 (function () {
   const menus = document.querySelectorAll(".nav-menu");
+  const siteHeader = document.querySelector(".site-header");
+  const siteNav = document.getElementById("site-nav");
+  const siteNavToggle = document.getElementById("site-nav-toggle");
+
+  function closeSiteNav() {
+    if (!siteHeader || !siteNavToggle) {
+      return;
+    }
+    siteHeader.classList.remove("is-nav-open");
+    siteNavToggle.setAttribute("aria-expanded", "false");
+    siteNavToggle.setAttribute("aria-label", "Afficher le menu de navigation");
+  }
 
   function closeMenu(menu) {
     const trigger = menu.querySelector(".nav-menu-trigger");
@@ -46,11 +58,32 @@
         closeMenu(menu);
       }
     });
+    if (siteHeader && !siteHeader.contains(event.target)) {
+      closeSiteNav();
+    }
   });
 
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") {
       menus.forEach(closeMenu);
+      closeSiteNav();
     }
   });
+
+  if (siteHeader && siteNav && siteNavToggle) {
+    siteNavToggle.addEventListener("click", function () {
+      const isOpen = siteHeader.classList.toggle("is-nav-open");
+      siteNavToggle.setAttribute("aria-expanded", String(isOpen));
+      siteNavToggle.setAttribute(
+        "aria-label",
+        isOpen ? "Masquer le menu de navigation" : "Afficher le menu de navigation"
+      );
+    });
+
+    siteNav.addEventListener("click", function (event) {
+      if (event.target.closest("a")) {
+        closeSiteNav();
+      }
+    });
+  }
 }());

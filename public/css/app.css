@@ -95,6 +95,27 @@ nav {
   justify-content: flex-end;
 }
 
+.site-nav-toggle {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--primary);
+  cursor: pointer;
+  display: none;
+  font-size: 18px;
+  height: 38px;
+  justify-content: center;
+  padding: 0;
+  width: 42px;
+}
+
+.site-nav-toggle:hover,
+.site-nav-toggle:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
 .nav-button {
   align-items: center;
   background: #fff;
@@ -627,6 +648,16 @@ h2 {
   overflow: hidden;
 }
 
+.map-control-container .leaflet-control-layers-list {
+  max-height: 420px;
+  opacity: 1;
+  overflow: hidden;
+  transition:
+    max-height 0.3s ease,
+    opacity 0.3s ease,
+    padding 0.3s ease;
+}
+
 .map-control-toggle {
   align-items: center;
   background: #fff;
@@ -649,10 +680,11 @@ h2 {
   outline: none;
 }
 
-.map-control-container.is-collapsed .leaflet-control-layers-base,
-.map-control-container.is-collapsed .leaflet-control-layers-separator,
-.map-control-container.is-collapsed .leaflet-control-layers-overlays {
-  display: none;
+.map-control-container.is-collapsed .leaflet-control-layers-list {
+  max-height: 0;
+  opacity: 0;
+  padding-bottom: 0;
+  padding-top: 0;
 }
 
 .map-control-container.is-collapsed .map-control-toggle {
@@ -890,19 +922,64 @@ select {
 }
 
 @media (max-width: 800px) {
-  .site-header,
+  .site-header {
+    align-items: center;
+    flex-direction: row;
+    min-height: 58px;
+    padding: 8px 12px;
+    position: relative;
+  }
+
   .page-heading {
     align-items: flex-start;
     flex-direction: column;
   }
 
   nav {
-    flex-wrap: wrap;
-    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: 0 8px 18px rgba(24, 43, 55, 0.16);
+    display: none;
+    gap: 8px;
+    padding: 8px;
+    position: absolute;
+    right: 12px;
+    top: calc(100% + 6px);
+    width: min(270px, calc(100vw - 24px));
+    z-index: 1200;
+  }
+
+  .site-header.is-nav-open nav {
+    display: grid;
+  }
+
+  .site-nav-toggle {
+    display: flex;
+  }
+
+  .nav-button {
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  .nav-menu {
+    width: 100%;
+  }
+
+  .nav-menu-panel {
+    box-shadow: none;
+    margin-top: 6px;
+    position: static;
+    width: 100%;
   }
 
   .brand-logo {
-    height: 38px;
+    height: 40px;
+  }
+
+  .brand-text {
+    display: none;
   }
 
   .brand-product {
@@ -921,7 +998,7 @@ select {
   }
 
   .container-wide {
-    height: calc(100vh - 126px);
+    height: calc(100vh - 58px);
     padding: 0;
   }
 
@@ -933,13 +1010,38 @@ select {
   }
 
   .sig-tools {
-    flex: 0 0 42%;
-    max-height: 42%;
+    background: rgba(255, 255, 255, 0.96);
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 8px 18px rgba(24, 43, 55, 0.14);
+    flex: 0 0 auto;
+    left: 0;
+    max-height: 24%;
     max-width: none;
     min-width: 0;
     overflow: auto;
-    padding: 0 0 10px;
+    padding: 8px;
+    position: absolute;
+    right: 0;
+    top: 0;
     width: 100%;
+    z-index: 550;
+  }
+
+  .sig-panel {
+    padding: 10px;
+  }
+
+  .sig-panel h2 {
+    font-size: 15px;
+    margin-bottom: 8px;
+  }
+
+  .sig-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .sig-table-panel {
+    display: none;
   }
 
   .site-identification {
@@ -960,6 +1062,7 @@ select {
 
   .sig-map-pane {
     flex: 1 1 auto;
+    height: 100%;
     min-height: 0;
     min-width: 0;
     width: 100%;

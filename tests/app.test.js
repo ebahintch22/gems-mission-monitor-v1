@@ -137,7 +137,7 @@ test("GET / affiche le tableau de bord", async () => {
   const response = await request(app).get("/");
   const styleResponse = await request(app).get("/css/app.css");
   const navigationScriptResponse = await request(app).get("/js/navigation.js");
-  const navigation = response.text.match(/<nav aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
+  const navigation = response.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
 
   assert.equal(response.status, 200);
   assert.equal(styleResponse.status, 200);
@@ -147,6 +147,9 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
   assert.match(response.text, /Livraison 0\.0\.1 du 01 juin 2026/);
+  assert.match(response.text, /id="site-nav-toggle"/);
+  assert.match(response.text, /aria-controls="site-nav"/);
+  assert.match(response.text, /<nav id="site-nav" aria-label="Navigation principale">/);
   assert.match(response.text, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
   assert.match(navigation, /class="nav-button" href="\/"/);
   assert.match(navigation, /fa-solid fa-chart-line/);
@@ -169,6 +172,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /trigger\.addEventListener\("click"/);
   assert.match(navigationScriptResponse.text, /aria-expanded/);
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
+  assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
+  assert.match(navigationScriptResponse.text, /closeSiteNav/);
 });
 
 test("creation et affichage d'une mission", async () => {
@@ -748,8 +753,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function showSiteIdentification\(point\)/);
   assert.match(scriptResponse.text, /rowClick: function \(event, row\)/);
   assert.match(scriptResponse.text, /siteIdentificationClose\.addEventListener\("click", hideSiteIdentification\)/);
-  assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container"\)/);
+  assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
   assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
+  assert.match(scriptResponse.text, /mapControlToggle\.setAttribute\("aria-expanded", "false"\)/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.toggle\("is-collapsed"\)/);
   assert.match(scriptResponse.text, /aria-expanded/);
   assert.match(scriptResponse.text, /mapLegend\.classList\.toggle\("is-collapsed"\)/);
@@ -759,11 +765,15 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.container-wide > \*/);
   assert.match(styleResponse.text, /overflow-y: hidden/);
   assert.match(styleResponse.text, /\.sig-workspace\s*\{[\s\S]*height: 100%/);
-  assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-base/);
-  assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-overlays/);
+  assert.match(styleResponse.text, /\.map-control-container \.leaflet-control-layers-list\s*\{[\s\S]*transition:[\s\S]*0\.3s ease/);
+  assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-list/);
   assert.match(styleResponse.text, /\.sig-map-legend-items\s*\{[\s\S]*transition:[\s\S]*0\.3s ease/);
   assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed \.sig-map-legend-items/);
-  assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*flex: 0 0 42%/);
+  assert.match(styleResponse.text, /\.site-nav-toggle\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.site-header\.is-nav-open nav\s*\{[\s\S]*display: grid/);
+  assert.match(styleResponse.text, /\.brand-text\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.container-wide\s*\{[\s\S]*height: calc\(100vh - 58px\)/);
+  assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*max-height: 24%/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
