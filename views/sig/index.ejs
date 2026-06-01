@@ -1,6 +1,25 @@
 <%- include("../partials/header", { title, mapAssets: true, wideLayout: true }) %>
 <section class="sig-workspace" id="sig-workspace">
+  <button
+    class="sig-tools-toggle"
+    id="sig-tools-toggle"
+    type="button"
+    aria-expanded="false"
+    aria-controls="sig-tools"
+    aria-label="Afficher les outils cartographiques"
+  >
+    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+    <span>Filtres</span>
+  </button>
   <aside class="sig-tools" id="sig-tools" aria-label="Outils cartographiques">
+    <button
+      class="sig-tools-close"
+      id="sig-tools-close"
+      type="button"
+      aria-label="Masquer les outils cartographiques"
+    >
+      <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+    </button>
     <div class="panel sig-panel">
       <h2>Filtres</h2>
       <form class="sig-filters" id="sig-filters">

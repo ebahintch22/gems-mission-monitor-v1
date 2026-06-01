@@ -395,6 +395,11 @@ h2 {
   width: 100%;
 }
 
+.sig-tools-toggle,
+.sig-tools-close {
+  display: none;
+}
+
 .sig-tools {
   display: flex;
   flex: 0 0 var(--sig-tools-width);
@@ -1027,27 +1032,85 @@ select {
 
   .sig-workspace {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     height: 100%;
     min-height: 0;
+    position: relative;
+  }
+
+  .sig-tools-toggle {
+    align-items: center;
+    background: rgba(255, 255, 255, 0.96);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    font: 700 13px/1 Arial, sans-serif;
+    gap: 7px;
+    left: 12px;
+    padding: 9px 11px;
+    position: absolute;
+    top: 12px;
+    z-index: 560;
+  }
+
+  .sig-tools-toggle:hover,
+  .sig-tools-toggle:focus {
+    border-color: var(--primary);
+    outline: none;
+  }
+
+  .sig-workspace.is-tools-open .sig-tools-toggle {
+    display: none;
   }
 
   .sig-tools {
     background: rgba(255, 255, 255, 0.96);
-    border-bottom: 1px solid var(--border);
-    box-shadow: 0 8px 18px rgba(24, 43, 55, 0.14);
-    flex: 0 0 auto;
+    border-right: 1px solid var(--border);
+    bottom: 0;
+    box-shadow: 8px 0 18px rgba(24, 43, 55, 0.16);
+    flex: 0 0 min(86vw, 360px);
     left: 0;
-    max-height: 24%;
+    max-height: none;
     max-width: none;
     min-width: 0;
     overflow: auto;
-    padding: 8px;
+    padding: 44px 10px 10px;
     position: absolute;
-    right: 0;
     top: 0;
-    width: 100%;
-    z-index: 550;
+    transform: translateX(-104%);
+    transition: transform 0.3s ease;
+    width: min(86vw, 360px);
+    z-index: 570;
+  }
+
+  .sig-workspace.is-tools-open .sig-tools {
+    transform: translateX(0);
+  }
+
+  .sig-tools-close {
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--ink);
+    cursor: pointer;
+    display: flex;
+    height: 30px;
+    justify-content: center;
+    padding: 0;
+    position: absolute;
+    right: 10px;
+    top: 8px;
+    width: 30px;
+  }
+
+  .sig-tools-close:hover,
+  .sig-tools-close:focus {
+    border-color: var(--primary);
+    outline: none;
   }
 
   .sig-panel {

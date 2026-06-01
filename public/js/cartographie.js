@@ -3,6 +3,8 @@
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
   const workspace = document.getElementById("sig-workspace");
   const resizer = document.getElementById("sig-resizer");
+  const toolsToggle = document.getElementById("sig-tools-toggle");
+  const toolsClose = document.getElementById("sig-tools-close");
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
@@ -272,6 +274,18 @@
     siteIdentification.setAttribute("aria-hidden", "true");
   }
 
+  function setToolsOpen(open) {
+    workspace.classList.toggle("is-tools-open", open);
+    toolsToggle.setAttribute("aria-expanded", String(open));
+    toolsToggle.setAttribute(
+      "aria-label",
+      open ? "Masquer les outils cartographiques" : "Afficher les outils cartographiques"
+    );
+    window.setTimeout(function () {
+      map.invalidateSize();
+    }, 320);
+  }
+
   function filters() {
     return {
       mission: document.getElementById("sig-mission-filter").value,
@@ -383,6 +397,12 @@
     setClustering(!clusteringEnabled);
   });
   siteIdentificationClose.addEventListener("click", hideSiteIdentification);
+  toolsToggle.addEventListener("click", function () {
+    setToolsOpen(!workspace.classList.contains("is-tools-open"));
+  });
+  toolsClose.addEventListener("click", function () {
+    setToolsOpen(false);
+  });
   mapLegendToggle.addEventListener("click", function () {
     const isCollapsed = mapLegend.classList.toggle("is-collapsed");
     mapLegendToggle.setAttribute("aria-expanded", String(!isCollapsed));
@@ -439,6 +459,12 @@
     const increment = event.key === "ArrowRight" ? 20 : -20;
     setToolWidth(workspace.getBoundingClientRect().left + currentWidth + increment);
     event.preventDefault();
+  });
+
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+      setToolsOpen(false);
+    }
   });
 
   if (territoryLayer.getBounds().isValid()) {

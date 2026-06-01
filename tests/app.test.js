@@ -729,6 +729,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.doesNotMatch(response.text, /site-footer/);
   assert.doesNotMatch(response.text, /MVP de suivi des missions de collecte GEMS/);
   assert.match(response.text, /id="sig-tools"/);
+  assert.match(response.text, /id="sig-tools-toggle"/);
+  assert.match(response.text, /aria-controls="sig-tools"/);
+  assert.match(response.text, /id="sig-tools-close"/);
   assert.match(response.text, /id="sig-resizer"/);
   assert.match(response.text, /id="sig-map"/);
   assert.match(response.text, /class="sig-map-toolbar"/);
@@ -761,6 +764,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /aria-expanded/);
   assert.match(scriptResponse.text, /mapLegend\.classList\.toggle\("is-collapsed"\)/);
   assert.match(scriptResponse.text, /Deplier la legende/);
+  assert.match(scriptResponse.text, /function setToolsOpen\(open\)/);
+  assert.match(scriptResponse.text, /workspace\.classList\.toggle\("is-tools-open", open\)/);
+  assert.match(scriptResponse.text, /toolsToggle\.addEventListener\("click"/);
+  assert.match(scriptResponse.text, /toolsClose\.addEventListener\("click"/);
   assert.match(styleResponse.text, /\.container-wide\s*\{/);
   assert.match(styleResponse.text, /height: calc\(100vh - 78px\)/);
   assert.match(styleResponse.text, /\.container-wide > \*/);
@@ -777,7 +784,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.brand-product-mobile\s*\{[\s\S]*display: block/);
   assert.match(styleResponse.text, /\.brand-release\s*\{[\s\S]*font-size: 10px/);
   assert.match(styleResponse.text, /\.container-wide\s*\{[\s\S]*height: calc\(100vh - 58px\)/);
-  assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*max-height: 24%/);
+  assert.match(styleResponse.text, /\.sig-tools-toggle\s*\{[\s\S]*display: flex/);
+  assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transform: translateX\(-104%\)/);
+  assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transition: transform 0\.3s ease/);
+  assert.match(styleResponse.text, /\.sig-workspace\.is-tools-open \.sig-tools\s*\{[\s\S]*transform: translateX\(0\)/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
