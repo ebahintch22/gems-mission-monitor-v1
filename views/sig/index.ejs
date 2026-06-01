@@ -1,12 +1,4 @@
 <%- include("../partials/header", { title, mapAssets: true, wideLayout: true }) %>
-<section class="page-heading sig-heading">
-  <div>
-    <p class="eyebrow">Module 4</p>
-    <h1>Cartographie SIG</h1>
-    <p class="muted">Visualisation des soumissions terrain simulees et filtrage operationnel.</p>
-  </div>
-</section>
-
 <section class="sig-workspace" id="sig-workspace">
   <aside class="sig-tools" id="sig-tools" aria-label="Outils cartographiques">
     <div class="panel sig-panel">
@@ -76,6 +68,29 @@
       <h2>Soumissions affichees</h2>
       <div id="sig-table"></div>
     </div>
+
+    <section
+      class="site-identification"
+      id="site-identification"
+      aria-label="Fiche d'identification du site"
+      aria-hidden="true"
+    >
+      <div class="site-identification-header">
+        <div>
+          <p class="eyebrow">Site collecte</p>
+          <h2 id="site-identification-title">Fiche d'identification</h2>
+          <p class="muted" id="site-identification-subtitle"></p>
+        </div>
+        <button
+          class="site-identification-close"
+          id="site-identification-close"
+          type="button"
+          aria-label="Fermer la fiche d'identification"
+        >x</button>
+      </div>
+      <div class="site-identification-status" id="site-identification-status"></div>
+      <div class="site-identification-body" id="site-identification-body"></div>
+    </section>
   </aside>
 
   <div
@@ -89,6 +104,15 @@
   ></div>
 
   <section class="sig-map-pane" id="sig-map-pane" aria-label="Volet cartographique">
+    <div class="sig-map-toolbar" role="toolbar" aria-label="Outils de la carte">
+      <button
+        class="sig-map-tool is-active"
+        id="sig-cluster-toggle"
+        type="button"
+        aria-pressed="true"
+        title="Activer ou desactiver le clustering des sites collectes"
+      >C</button>
+    </div>
     <div class="sig-map-legend">
       <span class="legend-valid">Validee</span>
       <span class="legend-check">A verifier</span>
@@ -101,6 +125,7 @@
 <script id="sig-points-data" type="application/json"><%- JSON.stringify(points).replace(/</g, "\\u003c") %></script>
 <script id="sig-regions-data" type="application/json"><%- JSON.stringify(regions).replace(/</g, "\\u003c") %></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
 <script src="/js/cartographie.js"></script>
 <%- include("../partials/footer") %>

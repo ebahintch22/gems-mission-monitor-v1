@@ -15,7 +15,7 @@ class SoumissionCollecte {
         s.id, s.source_submission_id, s.mission_id, s.equipe_id, s.agent_id,
         s.submitted_at,
         s.latitude, s.longitude, s.precision_m,
-        s.statut_validation, s.anomaly_count,
+        s.statut_validation, s.anomaly_count, s.raw_data_json,
         a.code_agent, a.nom AS agent_nom, a.prenoms AS agent_prenoms,
         e.nom_equipe, m.name AS mission_name,
         sp.nom_sous_prefecture, d.nom_departement, r.nom_region

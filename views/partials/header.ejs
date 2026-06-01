@@ -5,8 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= title %> | GEMS Mission Monitor</title>
     <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <% if (typeof mapAssets !== "undefined" && mapAssets) { %>
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+      <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
       <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css">
     <% } %>
     </head>
@@ -17,13 +20,33 @@
         <span class="brand-product">GEMS Mission Monitor</span>
       </a>
       <nav aria-label="Navigation principale">
-        <a href="/">Dashboard</a>
-        <a href="/missions">Missions</a>
-        <a href="/equipes">Equipes</a>
-        <a href="/agents">Agents</a>
-        <a href="/users">Utilisateurs</a>
-        <a href="/cartographie">Cartographie</a>
-        <a class="button button-primary" href="/missions/new">Nouvelle mission</a>
+        <a class="nav-button" href="/">
+          <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
+          <span>Dashboard</span>
+        </a>
+        <a class="nav-button" href="/cartographie">
+          <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+          <span>Cartographie</span>
+        </a>
+        <div class="nav-menu">
+          <button
+            class="nav-button nav-menu-trigger"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            title="Parametrages"
+          >
+            <i class="fa-solid fa-gear" aria-hidden="true"></i>
+            <span>Parametrages</span>
+            <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="nav-menu-panel" role="menu">
+            <a href="/missions" role="menuitem">Missions</a>
+            <a href="/equipes" role="menuitem">Equipes</a>
+            <a href="/agents" role="menuitem">Agents</a>
+            <a href="/users" role="menuitem">Utilisateurs</a>
+          </div>
+        </div>
       </nav>
     </header>
     <main class="container <%= typeof wideLayout !== "undefined" && wideLayout ? "container-wide" : "" %>">

@@ -135,11 +135,38 @@ test("l'import des roles alimente le referentiel utilise par les utilisateurs", 
 
 test("GET / affiche le tableau de bord", async () => {
   const response = await request(app).get("/");
+  const styleResponse = await request(app).get("/css/app.css");
+  const navigationScriptResponse = await request(app).get("/js/navigation.js");
+  const navigation = response.text.match(/<nav aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
 
   assert.equal(response.status, 200);
+  assert.equal(styleResponse.status, 200);
+  assert.equal(navigationScriptResponse.status, 200);
   assert.match(response.text, /Tableau de bord/);
   assert.match(response.text, /Total missions/);
   assert.match(response.text, /Logo%20Rakall\.png/);
+  assert.match(response.text, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
+  assert.match(navigation, /class="nav-button" href="\/"/);
+  assert.match(navigation, /fa-solid fa-chart-line/);
+  assert.match(navigation, /class="nav-button nav-menu-trigger"/);
+  assert.match(navigation, /fa-solid fa-gear/);
+  assert.match(navigation, /Parametrages/);
+  assert.match(navigation, /fa-solid fa-chevron-down nav-menu-chevron/);
+  assert.match(navigation, /class="nav-button" href="\/cartographie"/);
+  assert.match(navigation, /fa-solid fa-map-location-dot/);
+  assert.match(navigation, /Dashboard[\s\S]*Cartographie[\s\S]*Parametrages/);
+  assert.doesNotMatch(navigation, /Configuration/);
+  assert.match(response.text, /role="menuitem">Missions/);
+  assert.match(response.text, /role="menuitem">Equipes/);
+  assert.match(response.text, /role="menuitem">Agents/);
+  assert.match(response.text, /role="menuitem">Utilisateurs/);
+  assert.doesNotMatch(navigation, /href="\/missions\/new"/);
+  assert.match(response.text, /\/js\/navigation\.js/);
+  assert.match(styleResponse.text, /\.nav-menu\.is-open \.nav-menu-panel/);
+  assert.doesNotMatch(styleResponse.text, /\.nav-menu:hover \.nav-menu-panel/);
+  assert.match(navigationScriptResponse.text, /trigger\.addEventListener\("click"/);
+  assert.match(navigationScriptResponse.text, /aria-expanded/);
+  assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
 });
 
 test("creation et affichage d'une mission", async () => {
@@ -170,6 +197,8 @@ test("creation et affichage d'une mission", async () => {
   const dashboardResponse = await request(app).get("/");
   assert.match(dashboardResponse.text, /Mission pilote/);
   assert.match(dashboardResponse.text, />12</);
+  assert.doesNotMatch(dashboardResponse.text, /site-footer/);
+  assert.doesNotMatch(dashboardResponse.text, /MVP de suivi des missions de collecte GEMS/);
 });
 
 test("POST /missions refuse des coordonnees invalides", async () => {
@@ -682,19 +711,50 @@ test("le seed des soumissions produit des points et un raw_data_json conforme au
 test("GET /cartographie expose l'espace SIG et ses points cartographiques", async () => {
   const response = await request(app).get("/cartographie");
   const scriptResponse = await request(app).get("/js/cartographie.js");
+  const styleResponse = await request(app).get("/css/app.css");
 
   assert.equal(response.status, 200);
   assert.equal(scriptResponse.status, 200);
+  assert.equal(styleResponse.status, 200);
   assert.match(response.text, /Cartographie SIG/);
+  assert.doesNotMatch(response.text, /page-heading sig-heading/);
+  assert.doesNotMatch(response.text, /site-footer/);
+  assert.doesNotMatch(response.text, /MVP de suivi des missions de collecte GEMS/);
   assert.match(response.text, /id="sig-tools"/);
   assert.match(response.text, /id="sig-resizer"/);
   assert.match(response.text, /id="sig-map"/);
+  assert.match(response.text, /class="sig-map-toolbar"/);
+  assert.match(response.text, /id="sig-cluster-toggle"/);
+  assert.match(response.text, /aria-pressed="true"/);
+  assert.match(response.text, /id="site-identification"/);
+  assert.match(response.text, /id="site-identification-body"/);
   assert.match(response.text, /SIM-AG-I01-001/);
+  assert.match(response.text, /raw_data_json/);
+  assert.match(response.text, /leaflet\.markercluster@1\.5\.3/);
   assert.match(response.text, /\/js\/cartographie\.js/);
   assert.match(scriptResponse.text, /Couche Humanitaire/);
   assert.match(scriptResponse.text, /Couche Routi.re/);
   assert.match(scriptResponse.text, /Carto Positron/);
   assert.match(scriptResponse.text, /Couche ESRI \(Satellite\)/);
+  assert.match(scriptResponse.text, /L\.markerClusterGroup/);
+  assert.match(scriptResponse.text, /disableClusteringAtZoom: 14/);
+  assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
+  assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
+  assert.match(scriptResponse.text, /function showSiteIdentification\(point\)/);
+  assert.match(scriptResponse.text, /rowClick: function \(event, row\)/);
+  assert.match(scriptResponse.text, /siteIdentificationClose\.addEventListener\("click", hideSiteIdentification\)/);
+  assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container"\)/);
+  assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
+  assert.match(scriptResponse.text, /mapControlContainer\.classList\.toggle\("is-collapsed"\)/);
+  assert.match(scriptResponse.text, /aria-expanded/);
+  assert.match(styleResponse.text, /\.container-wide\s*\{/);
+  assert.match(styleResponse.text, /height: calc\(100vh - 78px\)/);
+  assert.match(styleResponse.text, /\.container-wide > \*/);
+  assert.match(styleResponse.text, /overflow-y: hidden/);
+  assert.match(styleResponse.text, /\.sig-workspace\s*\{[\s\S]*height: 100%/);
+  assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-base/);
+  assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-overlays/);
+  assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
   assert.match(scriptResponse.text, /createPane\("collectionPointsPane"\)/);
   assert.match(scriptResponse.text, /"collectionPointsPane"\)\.style\.zIndex = 450/);
