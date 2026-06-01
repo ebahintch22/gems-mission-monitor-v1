@@ -33,7 +33,13 @@ a:hover {
 
 .site-header {
   align-items: center;
-  background: var(--panel);
+  background: linear-gradient(
+    90deg,
+    #000000 0%,
+    #000000 25%,
+    #00a6b4 50%,
+    #ffffff 100%
+  );
   border-bottom: 1px solid var(--border);
   display: flex;
   justify-content: space-between;
@@ -61,13 +67,24 @@ a:hover {
   width: auto;
 }
 
-.brand-product {
+.brand-text {
   border-left: 1px solid var(--border);
-  color: var(--ink);
-  font-size: 17px;
-  font-weight: 700;
+  display: flex;
+  flex-direction: column;
   line-height: 1.2;
   padding-left: 18px;
+}
+
+.brand-product {
+  color: #fff;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.brand-release {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+  margin-top: 3px;
 }
 
 nav {
@@ -861,10 +878,13 @@ select {
   }
 
   .sig-tools {
+    flex: 0 0 42%;
+    max-height: 42%;
     max-width: none;
     min-width: 0;
-    overflow: visible;
-    padding: 0 0 16px;
+    overflow: auto;
+    padding: 0 0 10px;
+    width: 100%;
   }
 
   .site-identification {
@@ -881,6 +901,13 @@ select {
 
   .sig-resizer {
     display: none;
+  }
+
+  .sig-map-pane {
+    flex: 1 1 auto;
+    min-height: 0;
+    min-width: 0;
+    width: 100%;
   }
 
   #sig-map {

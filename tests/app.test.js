@@ -145,6 +145,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Tableau de bord/);
   assert.match(response.text, /Total missions/);
   assert.match(response.text, /Logo%20Rakall\.png/);
+  assert.match(response.text, /GEMS Mission Monitor/);
+  assert.match(response.text, /Livraison 0\.0\.1 du 01 juin 2026/);
   assert.match(response.text, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
   assert.match(navigation, /class="nav-button" href="\/"/);
   assert.match(navigation, /fa-solid fa-chart-line/);
@@ -754,6 +756,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-workspace\s*\{[\s\S]*height: 100%/);
   assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-base/);
   assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-overlays/);
+  assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*flex: 0 0 42%/);
+  assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
   assert.match(scriptResponse.text, /createPane\("collectionPointsPane"\)/);
