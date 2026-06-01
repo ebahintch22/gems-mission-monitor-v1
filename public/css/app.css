@@ -1053,7 +1053,7 @@ select {
     padding: 9px 11px;
     position: absolute;
     top: 12px;
-    z-index: 560;
+    z-index: 1200;
   }
 
   .sig-tools-toggle:hover,
@@ -1083,7 +1083,7 @@ select {
     transform: translateX(-104%);
     transition: transform 0.3s ease;
     width: min(86vw, 360px);
-    z-index: 570;
+    z-index: 1300;
   }
 
   .sig-workspace.is-tools-open .sig-tools {
