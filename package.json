@@ -5,7 +5,7 @@
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
-    "dev": "node --watch app.js",
+    "dev": "nodemon app.js",
     "test": "node --test",
     "report:docx": "node scripts/generate-report-docx.mjs RAPPORT_TECHNIQUE.md RAPPORT_TECHNIQUE.docx",
     "territories:import": "node scripts/import-territories.js",
@@ -32,9 +32,31 @@
   "devDependencies": {
     "docx": "^9.7.0",
     "marked": "^18.0.4",
+    "nodemon": "^3.1.14",
     "supertest": "^7.1.4"
   },
   "engines": {
     "node": ">=20"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "app.js",
+      "config",
+      "controllers",
+      "models",
+      "routes",
+      "services",
+      "views",
+      "public/js",
+      "public/css"
+    ],
+    "ext": "js,json,ejs,css",
+    "ignore": [
+      "node_modules",
+      "data",
+      "*.docx",
+      "*.md",
+      "*.log"
+    ]
   }
 }
