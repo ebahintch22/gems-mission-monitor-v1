@@ -785,10 +785,13 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.brand-release\s*\{[\s\S]*font-size: 10px/);
   assert.match(styleResponse.text, /\.container-wide\s*\{[\s\S]*height: calc\(100vh - 58px\)/);
   assert.match(styleResponse.text, /\.sig-tools-toggle\s*\{[\s\S]*display: flex/);
+  assert.match(styleResponse.text, /\.sig-tools-toggle\s*\{[\s\S]*bottom: 12px/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transform: translateX\(-104%\)/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transition: transform 0\.3s ease/);
   assert.match(styleResponse.text, /\.sig-workspace\.is-tools-open \.sig-tools\s*\{[\s\S]*transform: translateX\(0\)/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
+  assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*bottom: 12px/);
+  assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*top: auto/);
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
   assert.match(scriptResponse.text, /createPane\("collectionPointsPane"\)/);

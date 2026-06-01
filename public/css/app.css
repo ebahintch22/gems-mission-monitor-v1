@@ -1049,10 +1049,10 @@ select {
     display: flex;
     font: 700 13px/1 Arial, sans-serif;
     gap: 7px;
+    bottom: 12px;
     left: 12px;
     padding: 9px 11px;
     position: absolute;
-    top: 12px;
     z-index: 1200;
   }
 
@@ -1152,6 +1152,11 @@ select {
     min-height: 0;
     min-width: 0;
     width: 100%;
+  }
+
+  #sig-map .leaflet-top.leaflet-right {
+    bottom: 12px;
+    top: auto;
   }
 
   #sig-map {
