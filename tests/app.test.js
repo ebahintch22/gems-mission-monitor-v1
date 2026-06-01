@@ -728,6 +728,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /class="sig-map-toolbar"/);
   assert.match(response.text, /id="sig-cluster-toggle"/);
   assert.match(response.text, /aria-pressed="true"/);
+  assert.match(response.text, /class="sig-map-legend is-collapsed"/);
+  assert.match(response.text, /id="sig-map-legend-toggle"/);
+  assert.match(response.text, /aria-expanded="false"/);
   assert.match(response.text, /id="site-identification"/);
   assert.match(response.text, /id="site-identification-body"/);
   assert.match(response.text, /SIM-AG-I01-001/);
@@ -749,6 +752,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.toggle\("is-collapsed"\)/);
   assert.match(scriptResponse.text, /aria-expanded/);
+  assert.match(scriptResponse.text, /mapLegend\.classList\.toggle\("is-collapsed"\)/);
+  assert.match(scriptResponse.text, /Deplier la legende/);
   assert.match(styleResponse.text, /\.container-wide\s*\{/);
   assert.match(styleResponse.text, /height: calc\(100vh - 78px\)/);
   assert.match(styleResponse.text, /\.container-wide > \*/);
@@ -756,6 +761,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-workspace\s*\{[\s\S]*height: 100%/);
   assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-base/);
   assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-overlays/);
+  assert.match(styleResponse.text, /\.sig-map-legend-items\s*\{[\s\S]*transition:[\s\S]*0\.3s ease/);
+  assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed \.sig-map-legend-items/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*flex: 0 0 42%/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);

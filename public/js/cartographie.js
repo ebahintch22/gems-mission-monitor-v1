@@ -3,6 +3,8 @@
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
   const workspace = document.getElementById("sig-workspace");
   const resizer = document.getElementById("sig-resizer");
+  const mapLegend = document.getElementById("sig-map-legend");
+  const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
@@ -381,6 +383,14 @@
     setClustering(!clusteringEnabled);
   });
   siteIdentificationClose.addEventListener("click", hideSiteIdentification);
+  mapLegendToggle.addEventListener("click", function () {
+    const isCollapsed = mapLegend.classList.toggle("is-collapsed");
+    mapLegendToggle.setAttribute("aria-expanded", String(!isCollapsed));
+    mapLegendToggle.setAttribute(
+      "aria-label",
+      isCollapsed ? "Deplier la legende" : "Replier la legende"
+    );
+  });
 
   let resizing = false;
 

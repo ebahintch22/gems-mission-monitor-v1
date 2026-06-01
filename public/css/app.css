@@ -664,23 +664,78 @@ h2 {
   background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--border);
   border-radius: 6px;
-  display: flex;
-  gap: 13px;
-  padding: 8px 11px;
+  display: grid;
+  overflow: hidden;
+  padding: 0;
   position: absolute;
   bottom: 30px;
   right: 12px;
+  transition: box-shadow 0.3s ease;
   z-index: 500;
 }
 
-.sig-map-legend span {
+.sig-map-legend-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: 700 12px/1 Arial, sans-serif;
+  gap: 7px;
+  justify-content: space-between;
+  padding: 8px 11px;
+  width: 100%;
+}
+
+.sig-map-legend-toggle:hover,
+.sig-map-legend-toggle:focus {
+  color: var(--primary);
+  outline: none;
+}
+
+.sig-map-legend-chevron {
+  color: var(--muted);
+  transition: transform 0.3s ease;
+}
+
+.sig-map-legend-items {
+  align-items: center;
+  display: flex;
+  gap: 13px;
+  max-height: 80px;
+  opacity: 1;
+  overflow: hidden;
+  padding: 0 11px 8px;
+  transition:
+    max-height 0.3s ease,
+    opacity 0.3s ease,
+    padding 0.3s ease;
+}
+
+.sig-map-legend.is-collapsed {
+  box-shadow: var(--shadow);
+}
+
+.sig-map-legend.is-collapsed .sig-map-legend-items {
+  max-height: 0;
+  opacity: 0;
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.sig-map-legend.is-collapsed .sig-map-legend-chevron {
+  transform: rotate(180deg);
+}
+
+.sig-map-legend-items span {
   align-items: center;
   display: flex;
   font-size: 12px;
   gap: 5px;
 }
 
-.sig-map-legend span::before {
+.sig-map-legend-items span::before {
   border-radius: 50%;
   content: "";
   display: inline-block;

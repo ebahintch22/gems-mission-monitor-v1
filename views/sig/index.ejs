@@ -113,10 +113,24 @@
         title="Activer ou desactiver le clustering des sites collectes"
       >C</button>
     </div>
-    <div class="sig-map-legend">
-      <span class="legend-valid">Validee</span>
-      <span class="legend-check">A verifier</span>
-      <span class="legend-rejected">Rejetee</span>
+    <div class="sig-map-legend is-collapsed" id="sig-map-legend">
+      <button
+        class="sig-map-legend-toggle"
+        id="sig-map-legend-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="sig-map-legend-items"
+        aria-label="Deplier la legende"
+      >
+        <i class="fa-solid fa-list" aria-hidden="true"></i>
+        <span>Legende</span>
+        <i class="fa-solid fa-chevron-up sig-map-legend-chevron" aria-hidden="true"></i>
+      </button>
+      <div class="sig-map-legend-items" id="sig-map-legend-items">
+        <span class="legend-valid">Validee</span>
+        <span class="legend-check">A verifier</span>
+        <span class="legend-rejected">Rejetee</span>
+      </div>
     </div>
     <div id="sig-map" aria-label="Carte des soumissions de collecte"></div>
   </section>
