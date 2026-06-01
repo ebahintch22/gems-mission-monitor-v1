@@ -1031,6 +1031,7 @@ select {
   }
 
   .sig-workspace {
+    --mobile-map-control-bottom: max(76px, env(safe-area-inset-bottom));
     display: flex;
     flex-direction: row;
     height: 100%;
@@ -1049,7 +1050,7 @@ select {
     display: flex;
     font: 700 13px/1 Arial, sans-serif;
     gap: 7px;
-    bottom: 12px;
+    bottom: var(--mobile-map-control-bottom);
     left: 12px;
     padding: 9px 11px;
     position: absolute;
@@ -1155,7 +1156,7 @@ select {
   }
 
   #sig-map .leaflet-top.leaflet-right {
-    bottom: 12px;
+    bottom: var(--mobile-map-control-bottom);
     top: auto;
   }
 
