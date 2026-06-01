@@ -146,6 +146,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Total missions/);
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
+  assert.match(response.text, /G2M/);
   assert.match(response.text, /Livraison 0\.0\.1 du 01 juin 2026/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);
@@ -771,7 +772,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed \.sig-map-legend-items/);
   assert.match(styleResponse.text, /\.site-nav-toggle\s*\{[\s\S]*display: none/);
   assert.match(styleResponse.text, /\.site-header\.is-nav-open nav\s*\{[\s\S]*display: grid/);
-  assert.match(styleResponse.text, /\.brand-text\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.brand-logo\s*\{[\s\S]*height: 30px/);
+  assert.match(styleResponse.text, /\.brand-product\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.brand-product-mobile\s*\{[\s\S]*display: block/);
+  assert.match(styleResponse.text, /\.brand-release\s*\{[\s\S]*font-size: 10px/);
   assert.match(styleResponse.text, /\.container-wide\s*\{[\s\S]*height: calc\(100vh - 58px\)/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*max-height: 24%/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);

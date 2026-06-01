@@ -81,6 +81,13 @@ a:hover {
   font-weight: 700;
 }
 
+.brand-product-mobile {
+  color: #fff;
+  display: none;
+  font-size: 16px;
+  font-weight: 700;
+}
+
 .brand-release {
   color: rgba(255, 255, 255, 0.82);
   font-size: 12px;
@@ -975,15 +982,31 @@ select {
   }
 
   .brand-logo {
-    height: 40px;
+    height: 30px;
   }
 
   .brand-text {
+    border-left-color: rgba(255, 255, 255, 0.35);
+    display: flex;
+    padding-left: 10px;
+  }
+
+  .brand-product {
     display: none;
+  }
+
+  .brand-product-mobile {
+    display: block;
   }
 
   .brand-product {
     font-size: 15px;
+  }
+
+  .brand-release {
+    display: block;
+    font-size: 10px;
+    margin-top: 1px;
   }
 
   .stats,
