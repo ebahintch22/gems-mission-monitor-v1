@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes");
 const equipeRoutes = require("./routes/equipeRoutes");
 const agentCollecteRoutes = require("./routes/agentCollecteRoutes");
 const sigRoutes = require("./routes/sigRoutes");
+const koboAdminRoutes = require("./routes/koboAdminRoutes");
 require("./config/database");
 
 const app = express();
@@ -25,6 +26,7 @@ app.use("/users", userRoutes);
 app.use("/equipes", equipeRoutes);
 app.use("/agents", agentCollecteRoutes);
 app.use("/cartographie", sigRoutes);
+app.use("/parametrages/kobo", koboAdminRoutes);
 
 app.use((req, res) => {
   res.status(404).render("errors/404", { title: "Page introuvable" });

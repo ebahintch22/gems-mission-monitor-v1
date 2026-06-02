@@ -1,6 +1,27 @@
 const db = require("../config/database");
 
 class SoumissionCollecte {
+  static insertKobo(input) {
+    const result = db.prepare(`
+      INSERT OR IGNORE INTO soumissions_collecte (
+        source, source_submission_id, kobo_asset_uid, mission_id, equipe_id,
+        agent_id, sous_prefecture_id, code_agent_source, submitted_at,
+        latitude, longitude, precision_m, statut_validation, anomaly_count,
+        formulaire_type, raw_data_json
+      ) VALUES (
+        @source, @source_submission_id, @kobo_asset_uid, @mission_id, @equipe_id,
+        @agent_id, @sous_prefecture_id, @code_agent_source, @submitted_at,
+        @latitude, @longitude, @precision_m, @statut_validation, @anomaly_count,
+        @formulaire_type, @raw_data_json
+      )
+    `).run(input);
+
+    return {
+      inserted: result.changes === 1,
+      id: result.lastInsertRowid
+    };
+  }
+
   static countBySource(source = "simulation") {
     return db.prepare(`
       SELECT COUNT(*) AS total

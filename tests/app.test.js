@@ -166,6 +166,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /role="menuitem">Equipes/);
   assert.match(response.text, /role="menuitem">Agents/);
   assert.match(response.text, /role="menuitem">Utilisateurs/);
+  assert.match(response.text, /href="\/parametrages\/kobo" role="menuitem">KoboToolbox/);
   assert.doesNotMatch(navigation, /href="\/missions\/new"/);
   assert.match(response.text, /\/js\/navigation\.js/);
   assert.match(styleResponse.text, /\.nav-menu\.is-open \.nav-menu-panel/);
@@ -175,6 +176,24 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
+});
+
+test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => {
+  const response = await request(app).get("/parametrages/kobo");
+  const styleResponse = await request(app).get("/css/app.css");
+
+  assert.equal(response.status, 200);
+  assert.equal(styleResponse.status, 200);
+  assert.match(response.text, /Administration KoboToolbox/);
+  assert.match(response.text, /Tester la connexion/);
+  assert.match(response.text, /Charger les formulaires/);
+  assert.match(response.text, /Synchroniser les soumissions/);
+  assert.match(response.text, /name="asset_uid"/);
+  assert.match(response.text, /name="mission_id"/);
+  assert.match(response.text, /name="dry_run"/);
+  assert.match(styleResponse.text, /\.kobo-layout\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-sync-form\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-summary\s*\{/);
 });
 
 test("creation et affichage d'une mission", async () => {

@@ -11,7 +11,8 @@
     "territories:import": "node scripts/import-territories.js",
     "roles:import": "node scripts/import-roles.js",
     "agents:import": "node scripts/import-agents.js",
-    "submissions:seed": "node scripts/seed-submissions.js"
+    "submissions:seed": "node scripts/seed-submissions.js",
+    "kobo:sync": "node scripts/sync-kobo.js"
   },
   "keywords": [
     "gems",
