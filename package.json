@@ -7,7 +7,7 @@
     "start": "node app.js",
     "dev": "nodemon app.js",
     "test": "node --test",
-    "report:docx": "node scripts/generate-report-docx.mjs RAPPORT_TECHNIQUE.md RAPPORT_TECHNIQUE.docx",
+    "report:docx": "node scripts/generate-report-docx.mjs KBase-docs/RAPPORT_TECHNIQUE.md KBase-docs/RAPPORT_TECHNIQUE.docx",
     "territories:import": "node scripts/import-territories.js",
     "roles:import": "node scripts/import-roles.js",
     "agents:import": "node scripts/import-agents.js",
