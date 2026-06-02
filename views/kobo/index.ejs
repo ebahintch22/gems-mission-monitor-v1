@@ -29,6 +29,39 @@
       <dd><%= config.defaultMissionId || "Non renseignee" %></dd>
     </dl>
 
+    <form action="/parametrages/kobo/config" method="post" class="kobo-config-form">
+      <label>URL KoboToolbox *
+        <input
+          type="url"
+          name="base_url"
+          value="<%= config.baseUrl %>"
+          placeholder="https://kf.kobotoolbox.org"
+          required
+        >
+      </label>
+      <label>Jeton API *
+        <input
+          type="password"
+          name="api_token"
+          placeholder="<%= config.tokenConfigured ? "Jeton deja renseigne" : "Coller le jeton API" %>"
+          autocomplete="off"
+          <%= config.tokenConfigured ? "" : "required" %>
+        >
+        <% if (config.maskedToken) { %>
+          <span class="form-hint">Jeton actif : <%= config.maskedToken %></span>
+        <% } %>
+      </label>
+      <p class="form-note">
+        Ces valeurs sont conservees en memoire pour l'execution courante. En production Render, declarez-les aussi comme variables d'environnement.
+      </p>
+      <div class="form-actions">
+        <button class="button button-primary" type="submit">
+          <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+          Enregistrer les parametres
+        </button>
+      </div>
+    </form>
+
     <div class="kobo-actions">
       <form action="/parametrages/kobo/test" method="post">
         <button class="button button-primary" type="submit">

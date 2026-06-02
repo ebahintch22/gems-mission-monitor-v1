@@ -2,30 +2,51 @@ const Mission = require("../models/Mission");
 const SoumissionCollecte = require("../models/SoumissionCollecte");
 const { KoboClient, extractResults } = require("./koboClient");
 const { mapKoboSubmission } = require("./koboPayloadMapper");
+const { getEffectiveKoboConfig, maskSecret } = require("./koboRuntimeConfig");
 
 function getKoboConfigStatus(env = process.env) {
+  const effectiveConfig = getEffectiveKoboConfig(env);
+
   return {
-    baseUrlConfigured: Boolean(env.KOBO_BASE_URL),
-    tokenConfigured: Boolean(env.KOBO_API_TOKEN),
-    defaultAssetUid: env.KOBO_ASSET_UID || "",
-    defaultMissionId: env.KOBO_MISSION_ID || "",
-    gpsField: env.KOBO_GPS_FIELD || "",
-    agentCodeField: env.KOBO_AGENT_CODE_FIELD || "",
-    formType: env.KOBO_FORM_TYPE || "site",
-    ready: Boolean(env.KOBO_BASE_URL && env.KOBO_API_TOKEN)
+    baseUrl: effectiveConfig.baseUrl,
+    maskedToken: maskSecret(effectiveConfig.apiToken),
+    baseUrlConfigured: Boolean(effectiveConfig.baseUrl),
+    tokenConfigured: Boolean(effectiveConfig.apiToken),
+    runtimeBaseUrlConfigured: effectiveConfig.runtimeBaseUrlConfigured,
+    runtimeTokenConfigured: effectiveConfig.runtimeTokenConfigured,
+    defaultAssetUid: effectiveConfig.defaultAssetUid,
+    defaultMissionId: effectiveConfig.defaultMissionId,
+    gpsField: effectiveConfig.gpsField,
+    agentCodeField: effectiveConfig.agentCodeField,
+    formType: effectiveConfig.formType,
+    ready: Boolean(effectiveConfig.baseUrl && effectiveConfig.apiToken)
   };
 }
 
-async function testKoboConnection({ client = new KoboClient() } = {}) {
-  const payload = await client.listAssets({ limit: 1 });
+function createKoboClient(client) {
+  if (client) {
+    return client;
+  }
+
+  const effectiveConfig = getEffectiveKoboConfig();
+  return new KoboClient({
+    baseUrl: effectiveConfig.baseUrl,
+    apiToken: effectiveConfig.apiToken
+  });
+}
+
+async function testKoboConnection({ client } = {}) {
+  const koboClient = createKoboClient(client);
+  const payload = await koboClient.listAssets({ limit: 1 });
   return {
     ok: true,
     assetsPreviewCount: extractResults(payload).length
   };
 }
 
-async function listKoboAssets({ client = new KoboClient(), limit = 25 } = {}) {
-  const payload = await client.listAssets({ limit });
+async function listKoboAssets({ client, limit = 25 } = {}) {
+  const koboClient = createKoboClient(client);
+  const payload = await koboClient.listAssets({ limit });
   return extractResults(payload).map((asset) => ({
     uid: asset.uid || asset.id || "",
     name: asset.name || asset.asset_type || "Formulaire sans nom",
@@ -35,7 +56,7 @@ async function listKoboAssets({ client = new KoboClient(), limit = 25 } = {}) {
 }
 
 async function syncKoboSubmissions({
-  client = new KoboClient(),
+  client,
   assetUid,
   missionId,
   limit = 100,
@@ -45,6 +66,7 @@ async function syncKoboSubmissions({
   agentCodeField,
   formType
 } = {}) {
+  const koboClient = createKoboClient(client);
   const normalizedMissionId = Number(missionId);
 
   if (!assetUid) {
@@ -69,7 +91,7 @@ async function syncKoboSubmissions({
     params.query = JSON.stringify(query);
   }
 
-  const payload = await client.listAssetData(assetUid, params);
+  const payload = await koboClient.listAssetData(assetUid, params);
   const submissions = extractResults(payload);
   const summary = {
     assetUid,

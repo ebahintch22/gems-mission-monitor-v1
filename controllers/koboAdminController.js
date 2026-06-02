@@ -5,9 +5,27 @@ const {
   syncKoboSubmissions,
   testKoboConnection
 } = require("../services/koboSyncService");
+const { setRuntimeKoboConfig } = require("../services/koboRuntimeConfig");
 
 exports.index = (req, res) => {
   renderKoboAdmin(res);
+};
+
+exports.updateConfig = (req, res) => {
+  try {
+    setRuntimeKoboConfig({
+      baseUrl: req.body.base_url,
+      apiToken: req.body.api_token
+    });
+
+    renderKoboAdmin(res, {
+      notice: "Parametres KoboToolbox enregistres pour l'execution courante du serveur."
+    });
+  } catch (error) {
+    renderKoboAdmin(res, {
+      error: sanitizeError(error)
+    }, 400);
+  }
 };
 
 exports.testConnection = async (req, res) => {

@@ -188,12 +188,30 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(response.text, /Tester la connexion/);
   assert.match(response.text, /Charger les formulaires/);
   assert.match(response.text, /Synchroniser les soumissions/);
+  assert.match(response.text, /name="base_url"/);
+  assert.match(response.text, /name="api_token"/);
   assert.match(response.text, /name="asset_uid"/);
   assert.match(response.text, /name="mission_id"/);
   assert.match(response.text, /name="dry_run"/);
   assert.match(styleResponse.text, /\.kobo-layout\s*\{/);
   assert.match(styleResponse.text, /\.kobo-sync-form\s*\{/);
   assert.match(styleResponse.text, /\.kobo-summary\s*\{/);
+});
+
+test("POST /parametrages/kobo/config conserve le jeton masque dans l'interface", async () => {
+  const response = await request(app)
+    .post("/parametrages/kobo/config")
+    .type("form")
+    .send({
+      base_url: "https://kf.kobotoolbox.org",
+      api_token: "token-test-secret"
+    });
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Parametres KoboToolbox enregistres/);
+  assert.match(response.text, /https:\/\/kf\.kobotoolbox\.org/);
+  assert.match(response.text, /toke\*\*\*\*cret/);
+  assert.doesNotMatch(response.text, /token-test-secret/);
 });
 
 test("creation et affichage d'une mission", async () => {
