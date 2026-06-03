@@ -147,7 +147,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
   assert.match(response.text, /G2M/);
-  assert.match(response.text, /Livraison 0\.0\.1 du 01 juin 2026/);
+  assert.match(response.text, /Livraison v0\.2 du 03 juin 2026/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);
   assert.match(response.text, /<nav id="site-nav" aria-label="Navigation principale">/);
