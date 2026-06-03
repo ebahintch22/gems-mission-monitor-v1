@@ -13,12 +13,12 @@ function normalizedId(value) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function renderForm(res, values, error, options = {}) {
+function renderForm(req, res, values, error, options = {}) {
   return res.status(options.status || 200).render("equipes/form", {
-    title: options.title || "Nouvelle equipe",
-    formHeading: options.formHeading || "Nouvelle equipe",
+    title: options.title || req.t("teams.form.newTitle"),
+    formHeading: options.formHeading || req.t("teams.form.newHeading"),
     formAction: options.formAction || "/equipes",
-    submitLabel: options.submitLabel || "Enregistrer",
+    submitLabel: options.submitLabel || req.t("common.save"),
     cancelHref: options.cancelHref || "/equipes",
     statuses,
     missions: Equipe.availableMissions(),
@@ -32,13 +32,13 @@ function renderForm(res, values, error, options = {}) {
 
 exports.index = (req, res) => {
   res.render("equipes/index", {
-    title: "Equipes de collecte",
+    title: req.t("teams.title"),
     equipes: Equipe.all()
   });
 };
 
 exports.new = (req, res) => {
-  renderForm(res, { statut: "planifiee" }, null);
+  renderForm(req, res, { statut: "planifiee" }, null);
 };
 
 exports.create = (req, res) => {
@@ -56,16 +56,16 @@ exports.create = (req, res) => {
   };
 
   if (!values.nom_equipe || !missionId || !statuses.includes(values.statut)) {
-    return renderForm(res, req.body, "Verifiez le nom, la mission et le statut de l'equipe.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidMain"), { status: 400 });
   }
   if (!Equipe.validMissionId(missionId)) {
-    return renderForm(res, req.body, "La mission selectionnee n'existe pas.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidMission"), { status: 400 });
   }
   if (!regionIds.length || validRegionIds.length !== regionIds.length) {
-    return renderForm(res, req.body, "Selectionnez au moins une region valide.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidRegion"), { status: 400 });
   }
   if ((hasSupervisorSelection && !superviseurId) || !Equipe.validSupervisorId(superviseurId)) {
-    return renderForm(res, req.body, "Le superviseur selectionne doit etre un superviseur actif.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidSupervisor"), { status: 400 });
   }
 
   const equipe = Equipe.create({
@@ -95,14 +95,14 @@ exports.edit = (req, res, next) => {
     return next();
   }
 
-  return renderForm(res, {
+  return renderForm(req, res, {
     ...equipe,
     region_ids: equipe.regions.map((region) => String(region.id))
   }, null, {
-    title: `Modifier ${equipe.nom_equipe}`,
-    formHeading: "Modifier l'equipe",
+    title: req.t("teams.form.editTitle", { name: equipe.nom_equipe }),
+    formHeading: req.t("teams.form.editHeading"),
     formAction: `/equipes/${equipe.id}`,
-    submitLabel: "Mettre a jour",
+    submitLabel: req.t("common.update"),
     cancelHref: `/equipes/${equipe.id}`
   });
 };
@@ -126,25 +126,25 @@ exports.update = (req, res, next) => {
     region_ids: req.body.region_ids
   };
   const renderOptions = {
-    title: `Modifier ${equipe.nom_equipe}`,
-    formHeading: "Modifier l'equipe",
+    title: req.t("teams.form.editTitle", { name: equipe.nom_equipe }),
+    formHeading: req.t("teams.form.editHeading"),
     formAction: `/equipes/${equipe.id}`,
-    submitLabel: "Mettre a jour",
+    submitLabel: req.t("common.update"),
     cancelHref: `/equipes/${equipe.id}`,
     status: 400
   };
 
   if (!values.nom_equipe || !missionId || !statuses.includes(values.statut)) {
-    return renderForm(res, req.body, "Verifiez le nom, la mission et le statut de l'equipe.", renderOptions);
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidMain"), renderOptions);
   }
   if (!Equipe.validMissionId(missionId)) {
-    return renderForm(res, req.body, "La mission selectionnee n'existe pas.", renderOptions);
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidMission"), renderOptions);
   }
   if (!regionIds.length || validRegionIds.length !== regionIds.length) {
-    return renderForm(res, req.body, "Selectionnez au moins une region valide.", renderOptions);
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidRegion"), renderOptions);
   }
   if ((hasSupervisorSelection && !superviseurId) || !Equipe.validSupervisorId(superviseurId)) {
-    return renderForm(res, req.body, "Le superviseur selectionne doit etre un superviseur actif.", renderOptions);
+    return renderForm(req, res, req.body, req.t("teams.errors.invalidSupervisor"), renderOptions);
   }
 
   Equipe.update(equipe.id, {

@@ -1,47 +1,47 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Collecte terrain</p>
+    <p class="eyebrow"><%= t("teams.eyebrow") %></p>
     <h1><%= formHeading %></h1>
-    <p class="muted">Rattachez l'equipe a une mission et a sa zone d'intervention.</p>
+    <p class="muted"><%= t("teams.form.description") %></p>
   </div>
 </section>
 
 <section class="panel form-panel">
   <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
   <form action="<%= formAction %>" method="post" class="equipe-form">
-    <label>Nom de l'equipe *
+    <label><%= t("teams.fields.name") %>
       <input name="nom_equipe" required value="<%= values.nom_equipe || "" %>">
     </label>
-    <label>Statut *
+    <label><%= t("teams.fields.status") %>
       <select name="statut" required>
         <% statuses.forEach((statut) => { %>
-          <option value="<%= statut %>" <%= (values.statut || "planifiee") === statut ? "selected" : "" %>><%= statut %></option>
+          <option value="<%= statut %>" <%= (values.statut || "planifiee") === statut ? "selected" : "" %>><%= t(`status.${statut}`) %></option>
         <% }) %>
       </select>
     </label>
-    <label>Mission *
+    <label><%= t("teams.fields.mission") %>
       <select name="mission_id" required>
-        <option value="">Selectionner une mission</option>
+        <option value=""><%= t("teams.fields.selectMission") %></option>
         <% missions.forEach((mission) => { %>
-          <option value="<%= mission.id %>" <%= Number(values.mission_id) === mission.id ? "selected" : "" %>><%= mission.name %> (<%= mission.status %>)</option>
+          <option value="<%= mission.id %>" <%= Number(values.mission_id) === mission.id ? "selected" : "" %>><%= mission.name %> (<%= t(`status.${mission.status}`) %>)</option>
         <% }) %>
       </select>
-      <% if (!missions.length) { %><small class="muted">Creez d'abord une mission.</small><% } %>
+      <% if (!missions.length) { %><small class="muted"><%= t("teams.fields.noMission") %></small><% } %>
     </label>
-    <label>Superviseur
+    <label><%= t("teams.fields.supervisor") %>
       <select name="superviseur_id">
-        <option value="">Affecter ulterieurement</option>
+        <option value=""><%= t("agents.fields.assignLater") %></option>
         <% supervisors.forEach((supervisor) => { %>
           <option value="<%= supervisor.id %>" <%= Number(values.superviseur_id) === supervisor.id ? "selected" : "" %>><%= supervisor.prenoms %> <%= supervisor.nom %></option>
         <% }) %>
       </select>
-      <% if (!supervisors.length) { %><small class="muted">Aucun superviseur actif disponible.</small><% } %>
+      <% if (!supervisors.length) { %><small class="muted"><%= t("teams.fields.noSupervisor") %></small><% } %>
     </label>
     <fieldset class="regions-fieldset">
-      <legend>Regions d'affectation *</legend>
+      <legend><%= t("teams.fields.assignedRegions") %></legend>
       <% if (!regions.length) { %>
-        <p class="empty">Importez le referentiel territorial avant de definir une zone.</p>
+        <p class="empty"><%= t("teams.fields.noRegions") %></p>
       <% } else { %>
         <div class="checkbox-grid">
           <% regions.forEach((region) => { %>
@@ -54,7 +54,7 @@
       <% } %>
     </fieldset>
     <div class="form-actions">
-      <a class="button" href="<%= cancelHref %>">Annuler</a>
+      <a class="button" href="<%= cancelHref %>"><%= t("common.cancel") %></a>
       <button class="button button-primary" type="submit"><%= submitLabel %></button>
     </div>
   </form>

@@ -1,34 +1,34 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Collecte terrain</p>
-    <h1>Equipes de collecte</h1>
-    <p class="muted">Equipes rattachees aux missions, superviseurs et zones regionales.</p>
+    <p class="eyebrow"><%= t("teams.eyebrow") %></p>
+    <h1><%= t("teams.title") %></h1>
+    <p class="muted"><%= t("teams.description") %></p>
   </div>
-  <a class="button button-primary" href="/equipes/new">Nouvelle equipe</a>
+  <a class="button button-primary" href="/equipes/new"><%= t("teams.actions.new") %></a>
 </section>
 
 <section class="panel">
   <div class="panel-header">
-    <h2>Registre des equipes</h2>
-    <span class="muted"><%= equipes.length %> equipe(s)</span>
+    <h2><%= t("teams.list.title") %></h2>
+    <span class="muted"><%= t("teams.list.count", { count: equipes.length }) %></span>
   </div>
   <% if (!equipes.length) { %>
-    <p class="empty">Aucune equipe n'est encore enregistree.</p>
+    <p class="empty"><%= t("teams.list.empty") %></p>
   <% } else { %>
     <table class="simple-table">
       <thead>
-        <tr><th>Equipe</th><th>Mission</th><th>Superviseur</th><th>Regions</th><th>Statut</th><th></th></tr>
+        <tr><th><%= t("common.team") %></th><th><%= t("common.mission") %></th><th><%= t("teams.common.supervisor") %></th><th><%= t("teams.common.regions") %></th><th><%= t("common.status") %></th><th></th></tr>
       </thead>
       <tbody>
         <% equipes.forEach((equipe) => { %>
           <tr>
             <td><a href="/equipes/<%= equipe.id %>"><%= equipe.nom_equipe %></a></td>
             <td><%= equipe.mission_name %></td>
-            <td><%= equipe.superviseur_name || "Non affecte" %></td>
+            <td><%= equipe.superviseur_name || t("common.notAssigned") %></td>
             <td><%= equipe.regions || "-" %></td>
-            <td><span class="status status-<%= equipe.statut %>"><%= equipe.statut %></span></td>
-            <td><a href="/equipes/<%= equipe.id %>/edit">Modifier</a></td>
+            <td><span class="status status-<%= equipe.statut %>"><%= t(`status.${equipe.statut}`) %></span></td>
+            <td><a href="/equipes/<%= equipe.id %>/edit"><%= t("common.edit") %></a></td>
           </tr>
         <% }) %>
       </tbody>

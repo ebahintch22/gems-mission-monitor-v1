@@ -1,35 +1,35 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Equipe #<%= equipe.id %></p>
+    <p class="eyebrow"><%= t("teams.show.eyebrow", { id: equipe.id }) %></p>
     <h1><%= equipe.nom_equipe %></h1>
-    <span class="status status-<%= equipe.statut %>"><%= equipe.statut %></span>
+    <span class="status status-<%= equipe.statut %>"><%= t(`status.${equipe.statut}`) %></span>
   </div>
   <div class="heading-actions">
-    <a class="button" href="/equipes">Retour aux equipes</a>
-    <a class="button button-primary" href="/equipes/<%= equipe.id %>/edit">Modifier</a>
+    <a class="button" href="/equipes"><%= t("teams.actions.back") %></a>
+    <a class="button button-primary" href="/equipes/<%= equipe.id %>/edit"><%= t("common.edit") %></a>
   </div>
 </section>
 
 <section class="detail-grid">
   <article class="panel details">
-    <h2>Organisation</h2>
+    <h2><%= t("teams.show.organization") %></h2>
     <dl>
-      <dt>Mission</dt><dd><a href="/missions/<%= equipe.mission_id %>"><%= equipe.mission_name %></a></dd>
-      <dt>Statut mission</dt><dd><%= equipe.mission_status %></dd>
-      <dt>Superviseur</dt>
+      <dt><%= t("common.mission") %></dt><dd><a href="/missions/<%= equipe.mission_id %>"><%= equipe.mission_name %></a></dd>
+      <dt><%= t("teams.show.missionStatus") %></dt><dd><%= t(`status.${equipe.mission_status}`) %></dd>
+      <dt><%= t("teams.common.supervisor") %></dt>
       <dd>
         <% if (equipe.superviseur_id) { %>
           <a href="/users/<%= equipe.superviseur_id %>"><%= equipe.superviseur_prenoms %> <%= equipe.superviseur_nom %></a>
         <% } else { %>
-          Non affecte
+          <%= t("common.notAssigned") %>
         <% } %>
       </dd>
-      <dt>Email</dt><dd><%= equipe.superviseur_email || "-" %></dd>
+      <dt><%= t("common.email") %></dt><dd><%= equipe.superviseur_email || "-" %></dd>
     </dl>
   </article>
   <article class="panel">
-    <h2>Regions d'affectation</h2>
+    <h2><%= t("teams.show.assignedRegions") %></h2>
     <ul class="territory-list">
       <% equipe.regions.forEach((region) => { %>
         <li><%= region.nom_region %> <span class="muted">(<%= region.code_region %>)</span></li>

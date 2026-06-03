@@ -320,6 +320,19 @@ test("GET /users/new?lang=en utilise les ressources anglaises Utilisateurs", asy
   assert.match(response.text, /Password access will be enabled/);
 });
 
+test("GET /equipes/new?lang=en utilise les ressources anglaises Equipes", async () => {
+  const response = await request(app).get("/equipes/new?lang=en");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /New team/);
+  assert.match(response.text, /Link the team to a mission and its intervention area/);
+  assert.match(response.text, /Team name \*/);
+  assert.match(response.text, /Select a mission/);
+  assert.match(response.text, /Supervisor/);
+  assert.match(response.text, /Assigned regions \*/);
+});
+
 test("GET /route-inconnue localise la page 404", async () => {
   const frenchResponse = await request(app).get("/route-inconnue");
   const englishResponse = await request(app).get("/route-inconnue?lang=en");
@@ -612,7 +625,7 @@ test("POST /equipes exige une region et refuse un non-superviseur", async () => 
     });
 
   assert.equal(noRegionResponse.status, 400);
-  assert.match(noRegionResponse.text, /au moins une region valide/);
+  assert.match(noRegionResponse.text, /au moins une région valide/);
   assert.equal(invalidSupervisorResponse.status, 400);
   assert.match(invalidSupervisorResponse.text, /superviseur actif/);
 });
@@ -624,7 +637,7 @@ test("modification d'une equipe remplace son affectation et peut retirer le supe
 
   const editResponse = await request(app).get(`/equipes/${equipe.id}/edit`);
   assert.equal(editResponse.status, 200);
-  assert.match(editResponse.text, /Modifier l&#39;equipe/);
+  assert.match(editResponse.text, /Modifier l&#39;équipe/);
   assert.match(editResponse.text, /Equipe Centre 1/);
 
   const updateResponse = await request(app)
@@ -644,7 +657,7 @@ test("modification d'une equipe remplace son affectation et peut retirer le supe
   const detailResponse = await request(app).get(`/equipes/${equipe.id}`);
   assert.match(detailResponse.text, /Equipe Centre Revisee/);
   assert.match(detailResponse.text, /suspendue/);
-  assert.match(detailResponse.text, /Non affecte/);
+  assert.match(detailResponse.text, /Non affecté/);
   assert.doesNotMatch(detailResponse.text, /District Autonome d&#39;Abidjan/);
 
   const persisted = db.prepare("SELECT superviseur_id FROM equipes WHERE id = ?").get(equipe.id);
