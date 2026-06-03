@@ -144,6 +144,10 @@ test("GET / affiche le tableau de bord", async () => {
   assert.equal(navigationScriptResponse.status, 200);
   assert.match(response.text, /Tableau de bord/);
   assert.match(response.text, /Total missions/);
+  assert.match(response.text, /Suivi opérationnel/);
+  assert.match(response.text, /Vue synthétique des missions de collecte enregistrées/);
+  assert.match(response.text, /Créer une mission/);
+  assert.match(response.text, /Missions récentes/);
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
   assert.match(response.text, /G2M/);
@@ -176,6 +180,19 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
+});
+
+test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => {
+  const response = await request(app).get("/?lang=en");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /Operational monitoring/);
+  assert.match(response.text, /Synthetic view of registered collection missions/);
+  assert.match(response.text, /Create a mission/);
+  assert.match(response.text, /Ongoing/);
+  assert.match(response.text, /Completed/);
+  assert.match(response.text, /Recent missions/);
 });
 
 test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => {
