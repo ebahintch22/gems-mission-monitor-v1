@@ -156,14 +156,14 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigation, /fa-solid fa-chart-line/);
   assert.match(navigation, /class="nav-button nav-menu-trigger"/);
   assert.match(navigation, /fa-solid fa-gear/);
-  assert.match(navigation, /Parametrages/);
+  assert.match(navigation, /Paramétrages/);
   assert.match(navigation, /fa-solid fa-chevron-down nav-menu-chevron/);
   assert.match(navigation, /class="nav-button" href="\/cartographie"/);
   assert.match(navigation, /fa-solid fa-map-location-dot/);
-  assert.match(navigation, /Dashboard[\s\S]*Cartographie[\s\S]*Parametrages/);
+  assert.match(navigation, /Dashboard[\s\S]*Cartographie[\s\S]*Paramétrages/);
   assert.doesNotMatch(navigation, /Configuration/);
   assert.match(response.text, /role="menuitem">Missions/);
-  assert.match(response.text, /role="menuitem">Equipes/);
+  assert.match(response.text, /role="menuitem">Équipes/);
   assert.match(response.text, /role="menuitem">Agents/);
   assert.match(response.text, /role="menuitem">Utilisateurs/);
   assert.match(response.text, /href="\/parametrages\/kobo" role="menuitem">KoboToolbox/);
@@ -198,6 +198,19 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(styleResponse.text, /\.kobo-summary\s*\{/);
 });
 
+test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async () => {
+  const response = await request(app).get("/parametrages/kobo?lang=en");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /KoboToolbox Administration/);
+  assert.match(response.text, /Settings/);
+  assert.match(response.text, /Test connection/);
+  assert.match(response.text, /Load forms/);
+  assert.match(response.text, /Synchronize submissions/);
+  assert.match(response.text, /Simulate without writing to database/);
+});
+
 test("POST /parametrages/kobo/config conserve le jeton masque dans l'interface", async () => {
   const response = await request(app)
     .post("/parametrages/kobo/config")
@@ -208,7 +221,7 @@ test("POST /parametrages/kobo/config conserve le jeton masque dans l'interface",
     });
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /Parametres KoboToolbox enregistres/);
+  assert.match(response.text, /Paramètres KoboToolbox enregistrés/);
   assert.match(response.text, /https:\/\/kf\.kobotoolbox\.org/);
   assert.match(response.text, /toke\*\*\*\*cret/);
   assert.doesNotMatch(response.text, /token-test-secret/);

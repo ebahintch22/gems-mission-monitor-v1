@@ -9,6 +9,7 @@ const equipeRoutes = require("./routes/equipeRoutes");
 const agentCollecteRoutes = require("./routes/agentCollecteRoutes");
 const sigRoutes = require("./routes/sigRoutes");
 const koboAdminRoutes = require("./routes/koboAdminRoutes");
+const { i18nMiddleware } = require("./services/i18nService");
 require("./config/database");
 
 const app = express();
@@ -19,6 +20,7 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
+app.use(i18nMiddleware);
 
 app.use("/", dashboardRoutes);
 app.use("/missions", missionRoutes);

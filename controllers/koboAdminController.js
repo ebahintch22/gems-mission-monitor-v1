@@ -8,7 +8,7 @@ const {
 const { setRuntimeKoboConfig } = require("../services/koboRuntimeConfig");
 
 exports.index = (req, res) => {
-  renderKoboAdmin(res);
+  renderKoboAdmin(req, res);
 };
 
 exports.updateConfig = (req, res) => {
@@ -18,11 +18,11 @@ exports.updateConfig = (req, res) => {
       apiToken: req.body.api_token
     });
 
-    renderKoboAdmin(res, {
-      notice: "Parametres KoboToolbox enregistres pour l'execution courante du serveur."
+    renderKoboAdmin(req, res, {
+      notice: req.t("kobo.notice.configSaved")
     });
   } catch (error) {
-    renderKoboAdmin(res, {
+    renderKoboAdmin(req, res, {
       error: sanitizeError(error)
     }, 400);
   }
@@ -31,11 +31,11 @@ exports.updateConfig = (req, res) => {
 exports.testConnection = async (req, res) => {
   try {
     const result = await testKoboConnection();
-    renderKoboAdmin(res, {
-      notice: `Connexion KoboToolbox valide. ${result.assetsPreviewCount} formulaire verifie.`
+    renderKoboAdmin(req, res, {
+      notice: req.t("kobo.notice.connectionOk", { count: result.assetsPreviewCount })
     });
   } catch (error) {
-    renderKoboAdmin(res, {
+    renderKoboAdmin(req, res, {
       error: sanitizeError(error)
     }, 400);
   }
@@ -44,12 +44,12 @@ exports.testConnection = async (req, res) => {
 exports.listAssets = async (req, res) => {
   try {
     const assets = await listKoboAssets({ limit: req.body.limit || 25 });
-    renderKoboAdmin(res, {
+    renderKoboAdmin(req, res, {
       assets,
-      notice: `${assets.length} formulaire(s) KoboToolbox recupere(s).`
+      notice: req.t("kobo.notice.assetsLoaded", { count: assets.length })
     });
   } catch (error) {
-    renderKoboAdmin(res, {
+    renderKoboAdmin(req, res, {
       error: sanitizeError(error)
     }, 400);
   }
@@ -68,21 +68,21 @@ exports.sync = async (req, res) => {
       formType: req.body.form_type
     });
 
-    renderKoboAdmin(res, {
+    renderKoboAdmin(req, res, {
       summary,
       notice: summary.dryRun
-        ? "Simulation de synchronisation terminee."
-        : "Synchronisation KoboToolbox terminee."
+        ? req.t("kobo.notice.syncDryRunDone")
+        : req.t("kobo.notice.syncDone")
     });
   } catch (error) {
-    renderKoboAdmin(res, {
+    renderKoboAdmin(req, res, {
       error: sanitizeError(error),
       values: req.body
     }, 400);
   }
 };
 
-function renderKoboAdmin(res, options = {}, statusCode = 200) {
+function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
   const config = getKoboConfigStatus();
   const values = {
     asset_uid: options.values?.asset_uid || config.defaultAssetUid,
@@ -96,7 +96,7 @@ function renderKoboAdmin(res, options = {}, statusCode = 200) {
   };
 
   res.status(statusCode).render("kobo/index", {
-    title: "Administration KoboToolbox",
+    title: req.t("kobo.admin.title"),
     config,
     missions: Mission.all(),
     assets: options.assets || [],
