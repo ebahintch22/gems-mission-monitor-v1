@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const request = require("supertest");
 const app = require("../app");
 const db = require("../config/database");
+const { LOCALE_COOKIE } = require("../services/i18nService");
 const { importTerritories } = require("../services/territoryImportService");
 const { importRoles } = require("../services/roleImportService");
 const { importAgents } = require("../services/agentImportService");
@@ -154,10 +155,16 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Livraison v0\.2 du 03 juin 2026/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);
+  assert.match(response.text, /data-label-open="Afficher le menu de navigation"/);
+  assert.match(response.text, /data-label-close="Masquer le menu de navigation"/);
   assert.match(response.text, /<nav id="site-nav" aria-label="Navigation principale">/);
   assert.match(response.text, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
   assert.match(navigation, /class="nav-button" href="\/"/);
   assert.match(navigation, /fa-solid fa-chart-line/);
+  assert.match(navigation, /fa-solid fa-language/);
+  assert.match(navigation, /title="Langue"/);
+  assert.match(navigation, /href="\/\?lang=fr"[\s\S]*Français/);
+  assert.match(navigation, /href="\/\?lang=en"[\s\S]*English/);
   assert.match(navigation, /class="nav-button nav-menu-trigger"/);
   assert.match(navigation, /fa-solid fa-gear/);
   assert.match(navigation, /Paramétrages/);
@@ -177,6 +184,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.doesNotMatch(styleResponse.text, /\.nav-menu:hover \.nav-menu-panel/);
   assert.match(navigationScriptResponse.text, /trigger\.addEventListener\("click"/);
   assert.match(navigationScriptResponse.text, /aria-expanded/);
+  assert.match(navigationScriptResponse.text, /dataset\.labelOpen/);
+  assert.match(navigationScriptResponse.text, /dataset\.labelClose/);
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
@@ -187,12 +196,31 @@ test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => 
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /data-label-open="Show navigation menu"/);
+  assert.match(response.text, /data-label-close="Hide navigation menu"/);
+  assert.match(response.text, /title="Language"/);
+  assert.match(response.text, /class="is-active"[\s\S]*href="\/\?lang=en"[\s\S]*English/);
   assert.match(response.text, /Operational monitoring/);
   assert.match(response.text, /Synthetic view of registered collection missions/);
   assert.match(response.text, /Create a mission/);
   assert.match(response.text, /Ongoing/);
   assert.match(response.text, /Completed/);
   assert.match(response.text, /Recent missions/);
+});
+
+test("le choix de langue est conserve dans un cookie", async () => {
+  const languageResponse = await request(app).get("/?lang=en");
+  const cookie = languageResponse.headers["set-cookie"]
+    .find((entry) => entry.startsWith(`${LOCALE_COOKIE}=en`));
+  const dashboardResponse = await request(app)
+    .get("/")
+    .set("Cookie", cookie);
+
+  assert.match(cookie, /Path=\//);
+  assert.match(cookie, /SameSite=Lax/);
+  assert.equal(dashboardResponse.status, 200);
+  assert.match(dashboardResponse.text, /<html lang="en">/);
+  assert.match(dashboardResponse.text, /Operational monitoring/);
 });
 
 test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => {

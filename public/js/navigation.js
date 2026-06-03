@@ -10,7 +10,7 @@
     }
     siteHeader.classList.remove("is-nav-open");
     siteNavToggle.setAttribute("aria-expanded", "false");
-    siteNavToggle.setAttribute("aria-label", "Afficher le menu de navigation");
+    siteNavToggle.setAttribute("aria-label", siteNavToggle.dataset.labelOpen || "");
   }
 
   function closeMenu(menu) {
@@ -76,7 +76,9 @@
       siteNavToggle.setAttribute("aria-expanded", String(isOpen));
       siteNavToggle.setAttribute(
         "aria-label",
-        isOpen ? "Masquer le menu de navigation" : "Afficher le menu de navigation"
+        isOpen
+          ? siteNavToggle.dataset.labelClose || ""
+          : siteNavToggle.dataset.labelOpen || ""
       );
     });
 
