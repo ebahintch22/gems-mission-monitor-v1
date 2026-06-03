@@ -2,6 +2,8 @@ process.env.DATABASE_PATH = ":memory:";
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const request = require("supertest");
 const app = require("../app");
 const db = require("../config/database");
@@ -25,6 +27,21 @@ const roleCsv = [
 importRoles(db, roleCsv);
 
 test.after(() => db.close());
+
+test("les favicons G2M locale et en ligne sont disponibles", () => {
+  [
+    "g2m-favicon-online.ico",
+    "g2m-favicon-online.png",
+    "g2m-favicon-online-source.png",
+    "g2m-favicon-local.ico",
+    "g2m-favicon-local.png",
+    "g2m-favicon-local-source.png"
+  ].forEach((fileName) => {
+    const filePath = path.join(__dirname, "..", "public", "assets", "favicons", fileName);
+    assert.equal(fs.existsSync(filePath), true);
+    assert.equal(fs.statSync(filePath).size > 0, true);
+  });
+});
 
 test("le referentiel territorial stocke la hierarchie et la geometrie GeoJSON", () => {
   const geometry = JSON.stringify({
@@ -152,6 +169,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
   assert.match(response.text, /G2M/);
+  assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.ico"/);
+  assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.png"/);
   assert.match(response.text, /Livraison v0\.2 du 03 juin 2026/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);

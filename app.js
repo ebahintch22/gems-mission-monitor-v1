@@ -13,6 +13,7 @@ const { i18nMiddleware } = require("./services/i18nService");
 require("./config/database");
 
 const app = express();
+const faviconVariant = resolveFaviconVariant();
 
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
@@ -21,6 +22,11 @@ app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(i18nMiddleware);
+app.use((req, res, next) => {
+  res.locals.faviconPath = `/assets/favicons/g2m-favicon-${faviconVariant}.ico`;
+  res.locals.faviconPngPath = `/assets/favicons/g2m-favicon-${faviconVariant}.png`;
+  next();
+});
 
 app.use("/", dashboardRoutes);
 app.use("/missions", missionRoutes);
@@ -47,3 +53,14 @@ if (require.main === module) {
 }
 
 module.exports = app;
+
+function resolveFaviconVariant() {
+  const configuredVariant = String(process.env.G2M_FAVICON_VARIANT || "").toLowerCase();
+  if (["online", "local"].includes(configuredVariant)) {
+    return configuredVariant;
+  }
+
+  return process.env.RENDER || process.env.NODE_ENV === "production"
+    ? "online"
+    : "local";
+}
