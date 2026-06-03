@@ -7,12 +7,12 @@ function normalizedId(value) {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
-function renderForm(res, values, error, options = {}) {
+function renderForm(req, res, values, error, options = {}) {
   return res.status(options.status || 200).render("agents/form", {
-    title: options.title || "Nouvel agent",
-    formHeading: options.formHeading || "Nouvel agent de collecte",
+    title: options.title || req.t("agents.form.newTitle"),
+    formHeading: options.formHeading || req.t("agents.form.newHeading"),
     formAction: options.formAction || "/agents",
-    submitLabel: options.submitLabel || "Enregistrer",
+    submitLabel: options.submitLabel || req.t("common.save"),
     cancelHref: options.cancelHref || "/agents",
     statuses,
     agentUsers: AgentCollecte.availableAgentUsers(),
@@ -35,42 +35,42 @@ function submittedValues(body) {
   };
 }
 
-function validationError(values, body, excludedId = null) {
+function validationError(req, values, body, excludedId = null) {
   if (!values.nom || !values.prenoms || !values.code_agent || !statuses.includes(values.statut)) {
-    return "Verifiez le nom, les prenoms, le code agent et le statut.";
+    return req.t("agents.errors.invalidMain");
   }
   if ((body.user_id && !values.user_id) || !AgentCollecte.validAgentUserId(values.user_id)) {
-    return "L'utilisateur associe doit avoir le role agent.";
+    return req.t("agents.errors.invalidUser");
   }
   if ((body.equipe_id && !values.equipe_id) || !AgentCollecte.validEquipeId(values.equipe_id)) {
-    return "L'equipe selectionnee n'existe pas.";
+    return req.t("agents.errors.invalidTeam");
   }
   if (AgentCollecte.findByCode(values.code_agent, excludedId)) {
-    return "Ce code agent est deja utilise.";
+    return req.t("agents.errors.duplicateCode");
   }
   if (values.user_id && AgentCollecte.findByUserId(values.user_id, excludedId)) {
-    return "Cet utilisateur est deja rattache a un agent de collecte.";
+    return req.t("agents.errors.duplicateUser");
   }
   return null;
 }
 
 exports.index = (req, res) => {
   res.render("agents/index", {
-    title: "Agents de collecte",
+    title: req.t("agents.title"),
     agents: AgentCollecte.all()
   });
 };
 
 exports.new = (req, res) => {
-  renderForm(res, { statut: "actif" }, null);
+  renderForm(req, res, { statut: "actif" }, null);
 };
 
 exports.create = (req, res) => {
   const values = submittedValues(req.body);
-  const error = validationError(values, req.body);
+  const error = validationError(req, values, req.body);
 
   if (error) {
-    return renderForm(res, req.body, error, { status: 400 });
+    return renderForm(req, res, req.body, error, { status: 400 });
   }
 
   const agent = AgentCollecte.create(values);
@@ -95,11 +95,11 @@ exports.edit = (req, res, next) => {
     return next();
   }
 
-  return renderForm(res, agent, null, {
-    title: `Modifier ${agent.code_agent}`,
-    formHeading: "Modifier l'agent de collecte",
+  return renderForm(req, res, agent, null, {
+    title: req.t("agents.form.editTitle", { code: agent.code_agent }),
+    formHeading: req.t("agents.form.editHeading"),
     formAction: `/agents/${agent.id}`,
-    submitLabel: "Mettre a jour",
+    submitLabel: req.t("common.update"),
     cancelHref: `/agents/${agent.id}`
   });
 };
@@ -111,18 +111,18 @@ exports.update = (req, res, next) => {
   }
 
   const values = submittedValues(req.body);
-  const error = validationError(values, req.body, agent.id);
+  const error = validationError(req, values, req.body, agent.id);
   const options = {
-    title: `Modifier ${agent.code_agent}`,
-    formHeading: "Modifier l'agent de collecte",
+    title: req.t("agents.form.editTitle", { code: agent.code_agent }),
+    formHeading: req.t("agents.form.editHeading"),
     formAction: `/agents/${agent.id}`,
-    submitLabel: "Mettre a jour",
+    submitLabel: req.t("common.update"),
     cancelHref: `/agents/${agent.id}`,
     status: 400
   };
 
   if (error) {
-    return renderForm(res, req.body, error, options);
+    return renderForm(req, res, req.body, error, options);
   }
 
   AgentCollecte.update(agent.id, values);

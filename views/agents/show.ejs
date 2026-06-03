@@ -1,48 +1,48 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Agent #<%= agent.id %></p>
+    <p class="eyebrow"><%= t("agents.show.eyebrow", { id: agent.id }) %></p>
     <h1><%= agent.prenoms %> <%= agent.nom %></h1>
     <p class="muted"><%= agent.code_agent %></p>
-    <span class="status status-<%= agent.statut %>"><%= agent.statut %></span>
+    <span class="status status-<%= agent.statut %>"><%= t(`status.${agent.statut}`) %></span>
   </div>
   <div class="heading-actions">
-    <a class="button" href="/agents">Retour aux agents</a>
-    <a class="button button-primary" href="/agents/<%= agent.id %>/edit">Modifier</a>
+    <a class="button" href="/agents"><%= t("agents.actions.back") %></a>
+    <a class="button button-primary" href="/agents/<%= agent.id %>/edit"><%= t("common.edit") %></a>
   </div>
 </section>
 
 <section class="detail-grid">
   <article class="panel details">
-    <h2>Agent</h2>
+    <h2><%= t("sig.table.agent") %></h2>
     <dl>
-      <dt>Code agent</dt><dd><%= agent.code_agent %></dd>
-      <dt>Telephone</dt><dd><%= agent.telephone || "-" %></dd>
-      <dt>Equipement</dt><dd><%= agent.equipement || "-" %></dd>
-      <dt>Utilisateur</dt>
+      <dt><%= t("agents.fields.code").replace(" *", "") %></dt><dd><%= agent.code_agent %></dd>
+      <dt><%= t("common.phone") %></dt><dd><%= agent.telephone || "-" %></dd>
+      <dt><%= t("common.equipment") %></dt><dd><%= agent.equipement || "-" %></dd>
+      <dt><%= t("common.user") %></dt>
       <dd>
         <% if (agent.user_id) { %>
           <a href="/users/<%= agent.user_id %>"><%= agent.user_prenoms %> <%= agent.user_nom %></a>
         <% } else { %>
-          Sans compte applicatif
+          <%= t("common.noAppAccount") %>
         <% } %>
       </dd>
-      <dt>Email</dt><dd><%= agent.user_email || "-" %></dd>
+      <dt><%= t("common.email") %></dt><dd><%= agent.user_email || "-" %></dd>
     </dl>
   </article>
   <article class="panel details">
-    <h2>Affectation</h2>
+    <h2><%= t("common.assignment") %></h2>
     <dl>
-      <dt>Equipe</dt>
+      <dt><%= t("common.team") %></dt>
       <dd>
         <% if (agent.equipe_id) { %>
           <a href="/equipes/<%= agent.equipe_id %>"><%= agent.nom_equipe %></a>
         <% } else { %>
-          Non affecte
+          <%= t("common.notAssigned") %>
         <% } %>
       </dd>
-      <dt>Mission</dt><dd><%= agent.mission_name || "-" %></dd>
-      <dt>Statut equipe</dt><dd><%= agent.equipe_statut || "-" %></dd>
+      <dt><%= t("common.mission") %></dt><dd><%= agent.mission_name || "-" %></dd>
+      <dt><%= t("agents.show.teamStatus") %></dt><dd><%= agent.equipe_statut ? t(`status.${agent.equipe_statut}`) : "-" %></dd>
     </dl>
   </article>
 </section>

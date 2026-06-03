@@ -9,12 +9,12 @@ function normalizedRegionIds(bodyValue) {
     .filter((value) => Number.isInteger(value) && value > 0))];
 }
 
-function renderForm(res, values, error, options = {}) {
+function renderForm(req, res, values, error, options = {}) {
   return res.status(options.status || 200).render("users/form", {
-    title: options.title || "Nouvel utilisateur",
-    formHeading: options.formHeading || "Nouvel utilisateur",
+    title: options.title || req.t("users.form.newTitle"),
+    formHeading: options.formHeading || req.t("users.form.newHeading"),
     formAction: options.formAction || "/users",
-    submitLabel: options.submitLabel || "Enregistrer",
+    submitLabel: options.submitLabel || req.t("common.save"),
     cancelHref: options.cancelHref || "/users",
     roles: Role.all(),
     statuses,
@@ -27,13 +27,13 @@ function renderForm(res, values, error, options = {}) {
 
 exports.index = (req, res) => {
   res.render("users/index", {
-    title: "Utilisateurs",
+    title: req.t("users.title"),
     users: User.all()
   });
 };
 
 exports.new = (req, res) => {
-  renderForm(res, { role: "superviseur", statut: "actif" }, null);
+  renderForm(req, res, { role: "superviseur", statut: "actif" }, null);
 };
 
 exports.create = (req, res) => {
@@ -53,13 +53,13 @@ exports.create = (req, res) => {
 
   if (!values.nom || !values.prenoms || !validEmail
       || !Role.exists(values.role) || !statuses.includes(values.statut)) {
-    return renderForm(res, req.body, "Verifiez les informations obligatoires de l'utilisateur.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("users.errors.invalidMain"), { status: 400 });
   }
   if (validRegionIds.length !== regionIds.length) {
-    return renderForm(res, req.body, "Une region selectionnee n'existe pas.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("users.errors.invalidRegion"), { status: 400 });
   }
   if (User.findByEmail(values.email)) {
-    return renderForm(res, req.body, "Un utilisateur possede deja cette adresse email.", { status: 400 });
+    return renderForm(req, res, req.body, req.t("users.errors.duplicateEmail"), { status: 400 });
   }
 
   const user = User.create({
@@ -92,14 +92,14 @@ exports.edit = (req, res, next) => {
     return next();
   }
 
-  return renderForm(res, {
+  return renderForm(req, res, {
     ...user,
     region_ids: user.regions.map((region) => String(region.id))
   }, null, {
-    title: `Modifier ${user.prenoms} ${user.nom}`,
-    formHeading: "Modifier l'utilisateur",
+    title: req.t("users.form.editTitle", { name: `${user.prenoms} ${user.nom}` }),
+    formHeading: req.t("users.form.editHeading"),
     formAction: `/users/${user.id}`,
-    submitLabel: "Mettre a jour",
+    submitLabel: req.t("common.update"),
     cancelHref: `/users/${user.id}`
   });
 };
@@ -123,23 +123,23 @@ exports.update = (req, res, next) => {
   const validRegionIds = User.validRegionIds(regionIds);
   const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(values.email || "");
   const renderOptions = {
-    title: `Modifier ${user.prenoms} ${user.nom}`,
-    formHeading: "Modifier l'utilisateur",
+    title: req.t("users.form.editTitle", { name: `${user.prenoms} ${user.nom}` }),
+    formHeading: req.t("users.form.editHeading"),
     formAction: `/users/${user.id}`,
-    submitLabel: "Mettre a jour",
+    submitLabel: req.t("common.update"),
     cancelHref: `/users/${user.id}`,
     status: 400
   };
 
   if (!values.nom || !values.prenoms || !validEmail
       || !Role.exists(values.role) || !statuses.includes(values.statut)) {
-    return renderForm(res, values, "Verifiez les informations obligatoires de l'utilisateur.", renderOptions);
+    return renderForm(req, res, values, req.t("users.errors.invalidMain"), renderOptions);
   }
   if (validRegionIds.length !== regionIds.length) {
-    return renderForm(res, values, "Une region selectionnee n'existe pas.", renderOptions);
+    return renderForm(req, res, values, req.t("users.errors.invalidRegion"), renderOptions);
   }
   if (User.findByEmail(values.email, user.id)) {
-    return renderForm(res, values, "Un utilisateur possede deja cette adresse email.", renderOptions);
+    return renderForm(req, res, values, req.t("users.errors.duplicateEmail"), renderOptions);
   }
 
   User.update(user.id, {

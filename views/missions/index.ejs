@@ -1,25 +1,35 @@
 <%- include("../partials/header", { title, mapAssets: true }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Collecte terrain</p>
-    <h1>Missions</h1>
-    <p class="muted">Registre des missions et localisation des activites renseignees.</p>
+    <p class="eyebrow"><%= t("missions.eyebrow") %></p>
+    <h1><%= t("missions.title") %></h1>
+    <p class="muted"><%= t("missions.description") %></p>
   </div>
-  <a class="button button-primary" href="/missions/new">Nouvelle mission</a>
+  <a class="button button-primary" href="/missions/new"><%= t("missions.actions.new") %></a>
 </section>
 
 <section class="mission-layout">
   <div class="panel">
-    <h2>Liste des missions</h2>
+    <h2><%= t("missions.list.title") %></h2>
     <div id="missions-table"></div>
   </div>
   <div class="panel">
-    <h2>Carte</h2>
-    <div id="missions-map" aria-label="Carte des missions"></div>
+    <h2><%= t("missions.map.title") %></h2>
+    <div id="missions-map" aria-label="<%= t("missions.map.aria") %>"></div>
   </div>
 </section>
 
 <script id="missions-data" type="application/json"><%- JSON.stringify(missions).replace(/</g, "\\u003c") %></script>
+<script id="missions-i18n-data" type="application/json"><%- JSON.stringify({
+  messages: {
+    tableEmpty: t("missions.table.empty"),
+    mission: t("common.mission"),
+    region: t("common.region"),
+    status: t("common.status"),
+    agents: t("nav.agents"),
+    start: t("common.start")
+  }
+}).replace(/</g, "\\u003c") %></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
 <script src="/js/missions.js"></script>

@@ -1,31 +1,31 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Utilisateur #<%= user.id %></p>
+    <p class="eyebrow"><%= t("users.show.eyebrow", { id: user.id }) %></p>
     <h1><%= user.prenoms %> <%= user.nom %></h1>
-    <span class="status status-<%= user.statut %>"><%= user.statut %></span>
+    <span class="status status-<%= user.statut %>"><%= t(`status.${user.statut}`) %></span>
   </div>
   <div class="heading-actions">
-    <a class="button" href="/users">Retour aux utilisateurs</a>
-    <a class="button button-primary" href="/users/<%= user.id %>/edit">Modifier</a>
+    <a class="button" href="/users"><%= t("users.actions.back") %></a>
+    <a class="button button-primary" href="/users/<%= user.id %>/edit"><%= t("common.edit") %></a>
   </div>
 </section>
 
 <section class="detail-grid">
   <article class="panel details">
-    <h2>Profil applicatif</h2>
+    <h2><%= t("users.show.profile") %></h2>
     <dl>
-      <dt>Email</dt><dd><%= user.email %></dd>
-      <dt>Telephone</dt><dd><%= user.telephone || "-" %></dd>
-      <dt>Role</dt><dd><%= user.role_label || user.role %></dd>
-      <dt>Attributions</dt><dd><%= user.role_description || "-" %></dd>
-      <dt>Derniere connexion</dt><dd><%= user.last_login || "Jamais connecte" %></dd>
+      <dt><%= t("common.email") %></dt><dd><%= user.email %></dd>
+      <dt><%= t("common.phone") %></dt><dd><%= user.telephone || "-" %></dd>
+      <dt><%= t("users.fields.role").replace(" *", "") %></dt><dd><%= user.role_label || user.role %></dd>
+      <dt><%= t("users.show.assignments") %></dt><dd><%= user.role_description || "-" %></dd>
+      <dt><%= t("users.show.lastLogin") %></dt><dd><%= user.last_login || t("users.show.neverConnected") %></dd>
     </dl>
   </article>
   <article class="panel">
-    <h2>Regions d'affectation</h2>
+    <h2><%= t("users.fields.assignedRegions") %></h2>
     <% if (!user.regions.length) { %>
-      <p class="empty">Aucune region affectee.</p>
+      <p class="empty"><%= t("users.show.noRegion") %></p>
     <% } else { %>
       <ul class="territory-list">
         <% user.regions.forEach((region) => { %>

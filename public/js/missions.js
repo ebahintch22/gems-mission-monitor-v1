@@ -1,14 +1,19 @@
 (function () {
   const dataElement = document.getElementById("missions-data");
   const missions = JSON.parse(dataElement.textContent);
+  const i18nElement = document.getElementById("missions-i18n-data");
+  const messages = i18nElement ? JSON.parse(i18nElement.textContent).messages : {};
+  function t(key) {
+    return messages[key] || key;
+  }
 
   new Tabulator("#missions-table", {
     data: missions,
     layout: "fitColumns",
-    placeholder: "Aucune mission enregistree",
+    placeholder: t("tableEmpty"),
     columns: [
       {
-        title: "Mission",
+        title: t("mission"),
         field: "name",
         minWidth: 160,
         formatter: function (cell) {
@@ -18,10 +23,10 @@
           return link;
         }
       },
-      { title: "Region", field: "region" },
-      { title: "Statut", field: "status" },
-      { title: "Agents", field: "collectors", hozAlign: "right" },
-      { title: "Debut", field: "start_date" }
+      { title: t("region"), field: "region" },
+      { title: t("status"), field: "status" },
+      { title: t("agents"), field: "collectors", hozAlign: "right" },
+      { title: t("start"), field: "start_date" }
     ]
   });
 

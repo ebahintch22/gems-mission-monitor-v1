@@ -1,57 +1,57 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Collecte terrain</p>
+    <p class="eyebrow"><%= t("agents.eyebrow") %></p>
     <h1><%= formHeading %></h1>
-    <p class="muted">Identifiez l'enqueteur et affectez-le a une equipe si necessaire.</p>
+    <p class="muted"><%= t("agents.form.description") %></p>
   </div>
 </section>
 
 <section class="panel form-panel">
   <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
   <form action="<%= formAction %>" method="post" class="agent-form">
-    <label>Nom *
+    <label><%= t("agents.fields.lastName") %>
       <input name="nom" required value="<%= values.nom || "" %>">
     </label>
-    <label>Prenoms *
+    <label><%= t("agents.fields.firstNames") %>
       <input name="prenoms" required value="<%= values.prenoms || "" %>">
     </label>
-    <label>Code agent *
+    <label><%= t("agents.fields.code") %>
       <input name="code_agent" required value="<%= values.code_agent || "" %>" placeholder="AG-001">
     </label>
-    <label>Statut *
+    <label><%= t("agents.fields.status") %>
       <select name="statut" required>
         <% statuses.forEach((statut) => { %>
-          <option value="<%= statut %>" <%= (values.statut || "actif") === statut ? "selected" : "" %>><%= statut %></option>
+          <option value="<%= statut %>" <%= (values.statut || "actif") === statut ? "selected" : "" %>><%= t(`status.${statut}`) %></option>
         <% }) %>
       </select>
     </label>
-    <label>Telephone
+    <label><%= t("agents.fields.phone") %>
       <input type="tel" name="telephone" value="<%= values.telephone || "" %>">
     </label>
-    <label>Equipement
+    <label><%= t("agents.fields.equipment") %>
       <input name="equipement" value="<%= values.equipement || "" %>" placeholder="Tablette, smartphone...">
     </label>
-    <label>Compte utilisateur
+    <label><%= t("agents.fields.userAccount") %>
       <select name="user_id">
-        <option value="">Sans compte applicatif</option>
+        <option value=""><%= t("common.noAppAccount") %></option>
         <% agentUsers.forEach((user) => { %>
           <option value="<%= user.id %>" <%= Number(values.user_id) === user.id ? "selected" : "" %>><%= user.prenoms %> <%= user.nom %></option>
         <% }) %>
       </select>
-      <% if (!agentUsers.length) { %><small class="muted">Aucun utilisateur avec le role agent.</small><% } %>
+      <% if (!agentUsers.length) { %><small class="muted"><%= t("agents.fields.noAgentUser") %></small><% } %>
     </label>
-    <label>Equipe
+    <label><%= t("common.team") %>
       <select name="equipe_id">
-        <option value="">Affecter ulterieurement</option>
+        <option value=""><%= t("agents.fields.assignLater") %></option>
         <% equipes.forEach((equipe) => { %>
-          <option value="<%= equipe.id %>" <%= Number(values.equipe_id) === equipe.id ? "selected" : "" %>><%= equipe.nom_equipe %> (<%= equipe.statut %>)</option>
+          <option value="<%= equipe.id %>" <%= Number(values.equipe_id) === equipe.id ? "selected" : "" %>><%= equipe.nom_equipe %> (<%= t(`status.${equipe.statut}`) %>)</option>
         <% }) %>
       </select>
-      <% if (!equipes.length) { %><small class="muted">Aucune equipe disponible.</small><% } %>
+      <% if (!equipes.length) { %><small class="muted"><%= t("agents.fields.noTeam") %></small><% } %>
     </label>
     <div class="form-actions">
-      <a class="button" href="<%= cancelHref %>">Annuler</a>
+      <a class="button" href="<%= cancelHref %>"><%= t("common.cancel") %></a>
       <button class="button button-primary" type="submit"><%= submitLabel %></button>
     </div>
   </form>

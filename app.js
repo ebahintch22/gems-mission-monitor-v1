@@ -31,12 +31,12 @@ app.use("/cartographie", sigRoutes);
 app.use("/parametrages/kobo", koboAdminRoutes);
 
 app.use((req, res) => {
-  res.status(404).render("errors/404", { title: "Page introuvable" });
+  res.status(404).render("errors/404", { title: req.t("errors.404.title") });
 });
 
 app.use((err, req, res, next) => {
   console.error(err);
-  res.status(500).render("errors/500", { title: "Erreur serveur" });
+  res.status(500).render("errors/500", { title: req.t("errors.500.title") });
 });
 
 if (require.main === module) {

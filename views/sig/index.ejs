@@ -6,105 +6,105 @@
     type="button"
     aria-expanded="false"
     aria-controls="sig-tools"
-    aria-label="Afficher les outils cartographiques"
+    aria-label="<%= t("sig.tools.show") %>"
   >
     <i class="fa-solid fa-sliders" aria-hidden="true"></i>
-    <span>Filtres</span>
+    <span><%= t("sig.tools.filters") %></span>
   </button>
-  <aside class="sig-tools" id="sig-tools" aria-label="Outils cartographiques">
+  <aside class="sig-tools" id="sig-tools" aria-label="<%= t("sig.tools.aria") %>">
     <button
       class="sig-tools-close"
       id="sig-tools-close"
       type="button"
-      aria-label="Masquer les outils cartographiques"
+      aria-label="<%= t("sig.tools.hide") %>"
     >
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </button>
     <div class="panel sig-panel">
-      <h2>Filtres</h2>
+      <h2><%= t("sig.tools.filters") %></h2>
       <form class="sig-filters" id="sig-filters">
         <label>
-          Mission
+          <%= t("sig.filters.mission") %>
           <select id="sig-mission-filter">
-            <option value="">Toutes les missions</option>
+            <option value=""><%= t("sig.filters.allMissions") %></option>
             <% filters.missions.forEach((mission) => { %>
               <option value="<%= mission.id %>"><%= mission.name %></option>
             <% }) %>
           </select>
         </label>
         <label>
-          Equipe
+          <%= t("sig.filters.team") %>
           <select id="sig-equipe-filter">
-            <option value="">Toutes les equipes</option>
+            <option value=""><%= t("sig.filters.allTeams") %></option>
             <% filters.equipes.forEach((equipe) => { %>
               <option value="<%= equipe.id %>"><%= equipe.nom_equipe %></option>
             <% }) %>
           </select>
         </label>
         <label>
-          Agent
+          <%= t("sig.filters.agent") %>
           <select id="sig-agent-filter">
-            <option value="">Tous les agents</option>
+            <option value=""><%= t("sig.filters.allAgents") %></option>
             <% filters.agents.forEach((agent) => { %>
               <option value="<%= agent.id %>"><%= agent.code_agent %> - <%= agent.prenoms %> <%= agent.nom %></option>
             <% }) %>
           </select>
         </label>
         <label>
-          Validation
+          <%= t("sig.filters.validation") %>
           <select id="sig-validation-filter">
-            <option value="">Tous les statuts</option>
-            <option value="validee">Validee</option>
-            <option value="a_verifier">A verifier</option>
-            <option value="rejetee">Rejetee</option>
+            <option value=""><%= t("sig.filters.allStatuses") %></option>
+            <option value="validee"><%= t("status.validee") %></option>
+            <option value="a_verifier"><%= t("status.a_verifier") %></option>
+            <option value="rejetee"><%= t("status.rejetee") %></option>
           </select>
         </label>
         <label>
-          Depuis le
+          <%= t("sig.filters.from") %>
           <input id="sig-date-from" type="date">
         </label>
         <label>
-          Jusqu'au
+          <%= t("sig.filters.to") %>
           <input id="sig-date-to" type="date">
         </label>
-        <button class="button" id="sig-reset-filters" type="button">Reinitialiser</button>
+        <button class="button" id="sig-reset-filters" type="button"><%= t("sig.filters.reset") %></button>
       </form>
     </div>
 
     <div class="panel sig-panel">
       <div class="panel-header">
-        <h2>Synthese</h2>
+        <h2><%= t("sig.summary.title") %></h2>
         <span class="sig-count" id="sig-visible-total">0</span>
       </div>
       <div class="sig-metrics">
-        <div><span>Validees</span><strong id="sig-count-valid">0</strong></div>
-        <div><span>A verifier</span><strong id="sig-count-check">0</strong></div>
-        <div><span>Rejetees</span><strong id="sig-count-rejected">0</strong></div>
+        <div><span><%= t("sig.summary.valid") %></span><strong id="sig-count-valid">0</strong></div>
+        <div><span><%= t("sig.summary.check") %></span><strong id="sig-count-check">0</strong></div>
+        <div><span><%= t("sig.summary.rejected") %></span><strong id="sig-count-rejected">0</strong></div>
       </div>
     </div>
 
     <div class="panel sig-panel sig-table-panel">
-      <h2>Soumissions affichees</h2>
+      <h2><%= t("sig.table.title") %></h2>
       <div id="sig-table"></div>
     </div>
 
     <section
       class="site-identification"
       id="site-identification"
-      aria-label="Fiche d'identification du site"
+      aria-label="<%= t("sig.site.aria") %>"
       aria-hidden="true"
     >
       <div class="site-identification-header">
         <div>
-          <p class="eyebrow">Site collecte</p>
-          <h2 id="site-identification-title">Fiche d'identification</h2>
+          <p class="eyebrow"><%= t("sig.site.eyebrow") %></p>
+          <h2 id="site-identification-title"><%= t("sig.site.title") %></h2>
           <p class="muted" id="site-identification-subtitle"></p>
         </div>
         <button
           class="site-identification-close"
           id="site-identification-close"
           type="button"
-          aria-label="Fermer la fiche d'identification"
+          aria-label="<%= t("sig.site.close") %>"
         >x</button>
       </div>
       <div class="site-identification-status" id="site-identification-status"></div>
@@ -116,20 +116,20 @@
     class="sig-resizer"
     id="sig-resizer"
     role="separator"
-    aria-label="Redimensionner les volets"
+    aria-label="<%= t("sig.resizer.aria") %>"
     aria-controls="sig-tools sig-map-pane"
     aria-orientation="vertical"
     tabindex="0"
   ></div>
 
-  <section class="sig-map-pane" id="sig-map-pane" aria-label="Volet cartographique">
-    <div class="sig-map-toolbar" role="toolbar" aria-label="Outils de la carte">
+  <section class="sig-map-pane" id="sig-map-pane" aria-label="<%= t("sig.mapPane.aria") %>">
+    <div class="sig-map-toolbar" role="toolbar" aria-label="<%= t("sig.mapTools.aria") %>">
       <button
         class="sig-map-tool is-active"
         id="sig-cluster-toggle"
         type="button"
         aria-pressed="true"
-        title="Activer ou desactiver le clustering des sites collectes"
+        title="<%= t("sig.cluster.disable") %>"
       >C</button>
     </div>
     <div class="sig-map-legend is-collapsed" id="sig-map-legend">
@@ -139,24 +139,91 @@
         type="button"
         aria-expanded="false"
         aria-controls="sig-map-legend-items"
-        aria-label="Deplier la legende"
+        aria-label="<%= t("sig.legend.expand") %>"
       >
         <i class="fa-solid fa-list" aria-hidden="true"></i>
-        <span>Legende</span>
+        <span><%= t("sig.legend.title") %></span>
         <i class="fa-solid fa-chevron-up sig-map-legend-chevron" aria-hidden="true"></i>
       </button>
       <div class="sig-map-legend-items" id="sig-map-legend-items">
-        <span class="legend-valid">Validee</span>
-        <span class="legend-check">A verifier</span>
-        <span class="legend-rejected">Rejetee</span>
+        <span class="legend-valid"><%= t("status.validee") %></span>
+        <span class="legend-check"><%= t("status.a_verifier") %></span>
+        <span class="legend-rejected"><%= t("status.rejetee") %></span>
       </div>
     </div>
-    <div id="sig-map" aria-label="Carte des soumissions de collecte"></div>
+    <div id="sig-map" aria-label="<%= t("sig.map.aria") %>"></div>
   </section>
 </section>
 
 <script id="sig-points-data" type="application/json"><%- JSON.stringify(points).replace(/</g, "\\u003c") %></script>
 <script id="sig-regions-data" type="application/json"><%- JSON.stringify(regions).replace(/</g, "\\u003c") %></script>
+<script id="sig-i18n-data" type="application/json"><%- JSON.stringify({
+  locale,
+  messages: {
+    tableEmpty: t("sig.table.empty"),
+    tableAgent: t("sig.table.agent"),
+    tableTeam: t("sig.table.team"),
+    tableSubpref: t("sig.table.subpref"),
+    status: t("common.status"),
+    statusValidee: t("status.validee"),
+    statusAVerifier: t("status.a_verifier"),
+    statusRejetee: t("status.rejetee"),
+    layerHumanitarian: t("sig.layers.humanitarian"),
+    layerRoad: t("sig.layers.road"),
+    layerOpenTopo: t("sig.layers.openTopo"),
+    layerPositron: t("sig.layers.positron"),
+    layerEsriGray: t("sig.layers.esriGray"),
+    layerGoogle: t("sig.layers.google"),
+    layerEsriSatellite: t("sig.layers.esriSatellite"),
+    layerCollectionPoints: t("sig.layers.collectionPoints"),
+    layerRegionalBoundaries: t("sig.layers.regionalBoundaries"),
+    layersTitle: t("sig.layers.title"),
+    layersExpand: t("sig.layers.expand"),
+    layersCollapse: t("sig.layers.collapse"),
+    legendExpand: t("sig.legend.expand"),
+    legendCollapse: t("sig.legend.collapse"),
+    toolsShow: t("sig.tools.show"),
+    toolsHide: t("sig.tools.hide"),
+    clusterEnable: t("sig.cluster.enable"),
+    clusterDisable: t("sig.cluster.disable"),
+    unlinkedAgent: t("sig.site.unlinkedAgent"),
+    noTeam: t("sig.site.noTeam"),
+    validationPrefix: t("sig.site.validation", { status: "{{status}}" }),
+    identification: t("sig.site.sections.identification"),
+    location: t("sig.site.sections.location"),
+    collection: t("sig.site.sections.collection"),
+    characteristics: t("sig.site.sections.characteristics"),
+    sheetId: t("sig.site.fields.sheetId"),
+    entityId: t("sig.site.fields.entityId"),
+    officialName: t("sig.site.fields.officialName"),
+    ministry: t("sig.site.fields.ministry"),
+    type: t("sig.site.fields.type"),
+    condition: t("sig.site.fields.condition"),
+    region: t("common.region"),
+    department: t("sig.site.fields.department"),
+    subpref: t("sig.site.fields.subpref"),
+    commune: t("sig.site.fields.commune"),
+    environment: t("sig.site.fields.environment"),
+    latitude: t("sig.site.fields.latitude"),
+    longitude: t("sig.site.fields.longitude"),
+    precision: t("sig.site.fields.precision"),
+    mission: t("common.mission"),
+    team: t("sig.filters.team"),
+    agent: t("sig.filters.agent"),
+    submittedAt: t("sig.site.fields.submittedAt"),
+    anomalies: t("sig.site.fields.anomalies"),
+    buildings: t("sig.site.fields.buildings"),
+    staff: t("sig.site.fields.staff"),
+    targetPublic: t("sig.site.fields.targetPublic"),
+    electricity: t("sig.site.fields.electricity"),
+    powerSource: t("sig.site.fields.powerSource"),
+    availability: t("sig.site.fields.availability"),
+    operators: t("sig.site.fields.operators"),
+    orangeQuality: t("sig.site.fields.orangeQuality"),
+    mobileSpeed: t("sig.site.fields.mobileSpeed"),
+    observations: t("sig.site.fields.observations")
+  }
+}).replace(/</g, "\\u003c") %></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>

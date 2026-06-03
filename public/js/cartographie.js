@@ -1,6 +1,12 @@
 (function () {
   const points = JSON.parse(document.getElementById("sig-points-data").textContent);
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
+  const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
+  const messages = i18nPayload.messages || {};
+  const locale = i18nPayload.locale || "fr";
+  function t(key) {
+    return messages[key] || key;
+  }
   const workspace = document.getElementById("sig-workspace");
   const resizer = document.getElementById("sig-resizer");
   const toolsToggle = document.getElementById("sig-tools-toggle");
@@ -31,39 +37,39 @@
     rejetee: "#b84545"
   };
   const baseLayers = {
-    "Couche Humanitaire": L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
+    [t("layerHumanitarian")]: L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
       maxZoom: 20,
       attribution: "&copy; OpenStreetMap contributors, Humanitarian OpenStreetMap Team"
     }),
-    "Couche Routière": L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    [t("layerRoad")]: L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 20,
       attribution: "&copy; OpenStreetMap contributors"
     }),
-    "OSM Open Topo": L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
+    [t("layerOpenTopo")]: L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
       maxZoom: 17,
       attribution: "&copy; OpenTopoMap, données &copy; OpenStreetMap contributors"
     }),
-    "Carto Positron (Grayscale)": L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
+    [t("layerPositron")]: L.tileLayer("https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png", {
       attribution: "&copy; CARTO &copy; OpenStreetMap contributors",
       subdomains: "abcd",
       maxZoom: 19
     }),
-    "Esri Gray (WLGB)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
+    [t("layerEsriGray")]: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}", {
       attribution: "Tiles &copy; Esri, DeLorme, NAVTEQ",
       maxZoom: 16
     }),
-    "Couche Google Maps": L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+    [t("layerGoogle")]: L.tileLayer("https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
       attribution: "&copy; Google Maps",
       subdomains: ["mt0", "mt1", "mt2", "mt3"],
       maxZoom: 20
     }),
-    "Couche ESRI (Satellite)": L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+    [t("layerEsriSatellite")]: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
       attribution: "Tiles &copy; Esri",
       maxZoom: 19
     })
   };
 
-  baseLayers["Couche Routière"].addTo(map);
+  baseLayers[t("layerRoad")].addTo(map);
 
   const territoryLayer = L.geoJSON(regions, {
     pane: "territoryPane",
@@ -79,8 +85,8 @@
   }).addTo(map);
 
   const layerControl = L.control.layers(baseLayers, {
-    "Points de collecte": collectionLayer,
-    "Limites régionales": territoryLayer
+    [t("layerCollectionPoints")]: collectionLayer,
+    [t("layerRegionalBoundaries")]: territoryLayer
   }, {
     collapsed: false,
     position: "topright"
@@ -94,10 +100,10 @@
   mapControlToggle.className = "map-control-toggle";
   mapControlToggle.type = "button";
   mapControlToggle.setAttribute("aria-expanded", "false");
-  mapControlToggle.setAttribute("aria-label", "Deplier les controles de carte");
+  mapControlToggle.setAttribute("aria-label", t("layersExpand"));
   mapControlToggleIcon.className = "fa-solid fa-chevron-down";
   mapControlToggleIcon.setAttribute("aria-hidden", "true");
-  mapControlToggleLabel.textContent = "Couches";
+  mapControlToggleLabel.textContent = t("layersTitle");
   mapControlToggle.append(mapControlToggleIcon, mapControlToggleLabel);
   mapControlContainer.prepend(mapControlToggle);
   L.DomEvent.disableClickPropagation(mapControlContainer);
@@ -108,7 +114,7 @@
     mapControlToggle.setAttribute("aria-expanded", String(!isCollapsed));
     mapControlToggle.setAttribute(
       "aria-label",
-      isCollapsed ? "Deplier les controles de carte" : "Replier les controles de carte"
+      isCollapsed ? t("layersExpand") : t("layersCollapse")
     );
     mapControlToggleIcon.className = isCollapsed
       ? "fa-solid fa-chevron-down"
@@ -126,12 +132,12 @@
     data: [],
     height: 270,
     layout: "fitColumns",
-    placeholder: "Aucune soumission pour ces criteres",
+    placeholder: t("tableEmpty"),
     columns: [
-      { title: "Agent", field: "code_agent", minWidth: 80 },
-      { title: "Equipe", field: "nom_equipe", minWidth: 115 },
-      { title: "Sous-pref.", field: "nom_sous_prefecture", minWidth: 115 },
-      { title: "Statut", field: "statut_validation", minWidth: 95 }
+      { title: t("tableAgent"), field: "code_agent", minWidth: 80 },
+      { title: t("tableTeam"), field: "nom_equipe", minWidth: 115 },
+      { title: t("tableSubpref"), field: "nom_sous_prefecture", minWidth: 115 },
+      { title: t("status"), field: "statut_validation", minWidth: 95 }
     ],
     rowClick: function (event, row) {
       showSiteIdentification(row.getData());
@@ -147,14 +153,14 @@
     const status = document.createElement("div");
 
     heading.textContent = point.source_submission_id;
-    agent.textContent = `${point.code_agent || "Agent non rattache"} - ${point.nom_equipe || "Sans equipe"}`;
+    agent.textContent = `${point.code_agent || t("unlinkedAgent")} - ${point.nom_equipe || t("noTeam")}`;
     locality.textContent = [
       point.nom_sous_prefecture,
       point.nom_departement,
       point.nom_region
     ].filter(Boolean).join(", ");
-    date.textContent = new Date(point.submitted_at).toLocaleString("fr-FR");
-    status.textContent = `Validation : ${point.statut_validation.replace("_", " ")}`;
+    date.textContent = new Date(point.submitted_at).toLocaleString(locale);
+    status.textContent = t("validationPrefix").replace("{{status}}", statusLabel(point.statut_validation));
     content.append(heading, agent, locality, date, status);
     return content;
   }
@@ -179,9 +185,9 @@
 
   function statusLabel(status) {
     return {
-      validee: "Validee",
-      a_verifier: "A verifier",
-      rejetee: "Rejetee"
+      validee: t("statusValidee"),
+      a_verifier: t("statusAVerifier"),
+      rejetee: t("statusRejetee")
     }[status] || valueOrDash(status);
   }
 
@@ -226,43 +232,43 @@
     siteIdentificationStatus.textContent = statusLabel(point.statut_validation);
     siteIdentificationBody.replaceChildren();
 
-    addSection("Identification", [
-      ["ID fiche", modA.fiche_id || point.source_submission_id],
-      ["ID entite", modA.id_entite],
-      ["Nom officiel", modB.nom_officiel],
-      ["Ministere", modB.ministere],
-      ["Type", modB.type_infra],
-      ["Statut", modB.statut_fonct],
-      ["Condition", modA.conditions]
+    addSection(t("identification"), [
+      [t("sheetId"), modA.fiche_id || point.source_submission_id],
+      [t("entityId"), modA.id_entite],
+      [t("officialName"), modB.nom_officiel],
+      [t("ministry"), modB.ministere],
+      [t("type"), modB.type_infra],
+      [t("status"), modB.statut_fonct],
+      [t("condition"), modA.conditions]
     ]);
-    addSection("Localisation", [
-      ["Region", modB.region || point.nom_region],
-      ["Departement", modB.departement || point.nom_departement],
-      ["Sous-pref.", modB.sous_prefecture || point.nom_sous_prefecture],
-      ["Commune", modB.commune],
-      ["Milieu", modB.milieu],
-      ["Latitude", latitude],
-      ["Longitude", longitude],
-      ["Precision", `${valueOrDash(point.precision_m)} m`]
+    addSection(t("location"), [
+      [t("region"), modB.region || point.nom_region],
+      [t("department"), modB.departement || point.nom_departement],
+      [t("subpref"), modB.sous_prefecture || point.nom_sous_prefecture],
+      [t("commune"), modB.commune],
+      [t("environment"), modB.milieu],
+      [t("latitude"), latitude],
+      [t("longitude"), longitude],
+      [t("precision"), `${valueOrDash(point.precision_m)} m`]
     ]);
-    addSection("Collecte", [
-      ["Mission", point.mission_name],
-      ["Equipe", point.nom_equipe],
-      ["Agent", point.code_agent],
-      ["Soumis le", new Date(point.submitted_at).toLocaleString("fr-FR")],
-      ["Anomalies", point.anomaly_count]
+    addSection(t("collection"), [
+      [t("mission"), point.mission_name],
+      [t("team"), point.nom_equipe],
+      [t("agent"), point.code_agent],
+      [t("submittedAt"), new Date(point.submitted_at).toLocaleString(locale)],
+      [t("anomalies"), point.anomaly_count]
     ]);
-    addSection("Caracteristiques", [
-      ["Batiments", modC.nb_batiments],
-      ["Personnel", modC.personnel],
-      ["Public cible", modC.utilisateurs_cible],
-      ["Electricite", modD.electricite],
-      ["Source elec.", modD.source_elec],
-      ["Disponibilite", modD.dispo_jour],
-      ["Operateurs", modE.operateurs],
-      ["Qualite Orange", modE.orange_qual],
-      ["Debit mobile", modE.debit_mob_desc],
-      ["Observations", modN.observations]
+    addSection(t("characteristics"), [
+      [t("buildings"), modC.nb_batiments],
+      [t("staff"), modC.personnel],
+      [t("targetPublic"), modC.utilisateurs_cible],
+      [t("electricity"), modD.electricite],
+      [t("powerSource"), modD.source_elec],
+      [t("availability"), modD.dispo_jour],
+      [t("operators"), modE.operateurs],
+      [t("orangeQuality"), modE.orange_qual],
+      [t("mobileSpeed"), modE.debit_mob_desc],
+      [t("observations"), modN.observations]
     ]);
 
     siteIdentification.classList.add("is-open");
@@ -279,7 +285,7 @@
     toolsToggle.setAttribute("aria-expanded", String(open));
     toolsToggle.setAttribute(
       "aria-label",
-      open ? "Masquer les outils cartographiques" : "Afficher les outils cartographiques"
+      open ? t("toolsHide") : t("toolsShow")
     );
     window.setTimeout(function () {
       map.invalidateSize();
@@ -382,8 +388,8 @@
     clusterToggle.setAttribute("aria-pressed", String(clusteringEnabled));
     clusterToggle.classList.toggle("is-active", clusteringEnabled);
     clusterToggle.title = clusteringEnabled
-      ? "Desactiver le clustering des sites collectes"
-      : "Activer le clustering des sites collectes";
+      ? t("clusterDisable")
+      : t("clusterEnable");
   }
 
   document.getElementById("sig-filters").addEventListener("change", function () {
@@ -408,7 +414,7 @@
     mapLegendToggle.setAttribute("aria-expanded", String(!isCollapsed));
     mapLegendToggle.setAttribute(
       "aria-label",
-      isCollapsed ? "Deplier la legende" : "Replier la legende"
+      isCollapsed ? t("legendExpand") : t("legendCollapse")
     );
   });
 

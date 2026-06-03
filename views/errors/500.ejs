@@ -1,7 +1,7 @@
 <%- include("../partials/header", { title }) %>
 <section class="empty-state">
-  <h1>Erreur serveur</h1>
-  <p>Une erreur inattendue a empeche le traitement de la demande.</p>
-  <a class="button button-primary" href="/">Retour au dashboard</a>
+  <h1><%= t("errors.500.title") %></h1>
+  <p><%= t("errors.500.message") %></p>
+  <a class="button button-primary" href="/"><%= t("errors.actions.backDashboard") %></a>
 </section>
 <%- include("../partials/footer") %>

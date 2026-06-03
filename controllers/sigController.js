@@ -13,7 +13,7 @@ exports.index = (req, res) => {
   }));
 
   res.render("sig/index", {
-    title: "Cartographie SIG",
+    title: req.t("sig.title"),
     points,
     regions,
     filters: SoumissionCollecte.mapFilters()

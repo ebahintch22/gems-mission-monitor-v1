@@ -1,7 +1,7 @@
 <%- include("../partials/header", { title }) %>
 <section class="empty-state">
-  <h1>Page introuvable</h1>
-  <p>La ressource demandee n'existe pas.</p>
-  <a class="button button-primary" href="/">Retour au dashboard</a>
+  <h1><%= t("errors.404.title") %></h1>
+  <p><%= t("errors.404.message") %></p>
+  <a class="button button-primary" href="/"><%= t("errors.actions.backDashboard") %></a>
 </section>
 <%- include("../partials/footer") %>

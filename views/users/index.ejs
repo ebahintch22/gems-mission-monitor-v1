@@ -1,24 +1,31 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Administration</p>
-    <h1>Utilisateurs</h1>
-    <p class="muted">Registre minimal des utilisateurs applicatifs et superviseurs.</p>
+    <p class="eyebrow"><%= t("users.eyebrow") %></p>
+    <h1><%= t("users.title") %></h1>
+    <p class="muted"><%= t("users.description") %></p>
   </div>
-  <a class="button button-primary" href="/users/new">Nouvel utilisateur</a>
+  <a class="button button-primary" href="/users/new"><%= t("users.actions.new") %></a>
 </section>
 
 <section class="panel">
   <div class="panel-header">
-    <h2>Registre des utilisateurs</h2>
-    <span class="muted"><%= users.length %> utilisateur(s)</span>
+    <h2><%= t("users.list.title") %></h2>
+    <span class="muted"><%= t("users.list.count", { count: users.length }) %></span>
   </div>
   <% if (!users.length) { %>
-    <p class="empty">Aucun utilisateur n'est encore enregistre.</p>
+    <p class="empty"><%= t("users.list.empty") %></p>
   <% } else { %>
     <table class="simple-table">
       <thead>
-        <tr><th>Utilisateur</th><th>Role</th><th>Email</th><th>Regions</th><th>Statut</th><th></th></tr>
+        <tr>
+          <th><%= t("common.user") %></th>
+          <th><%= t("users.fields.role").replace(" *", "") %></th>
+          <th><%= t("common.email") %></th>
+          <th><%= t("users.fields.assignedRegions") %></th>
+          <th><%= t("common.status") %></th>
+          <th></th>
+        </tr>
       </thead>
       <tbody>
         <% users.forEach((user) => { %>
@@ -27,8 +34,8 @@
             <td><%= user.role_label || user.role %></td>
             <td><%= user.email %></td>
             <td><%= user.regions || "-" %></td>
-            <td><span class="status status-<%= user.statut %>"><%= user.statut %></span></td>
-            <td><a href="/users/<%= user.id %>/edit">Modifier</a></td>
+            <td><span class="status status-<%= user.statut %>"><%= t(`status.${user.statut}`) %></span></td>
+            <td><a href="/users/<%= user.id %>/edit"><%= t("common.edit") %></a></td>
           </tr>
         <% }) %>
       </tbody>

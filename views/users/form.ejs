@@ -1,46 +1,46 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Administration</p>
+    <p class="eyebrow"><%= t("users.eyebrow") %></p>
     <h1><%= formHeading %></h1>
-    <p class="muted">Un superviseur pourra ensuite etre rattache a une equipe.</p>
+    <p class="muted"><%= t("users.form.description") %></p>
   </div>
 </section>
 
 <section class="panel form-panel">
   <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
   <form action="<%= formAction %>" method="post" class="user-form">
-    <label>Nom *
+    <label><%= t("users.fields.lastName") %>
       <input name="nom" required value="<%= values.nom || "" %>">
     </label>
-    <label>Prenoms *
+    <label><%= t("users.fields.firstNames") %>
       <input name="prenoms" required value="<%= values.prenoms || "" %>">
     </label>
-    <label>Email *
+    <label><%= t("users.fields.email") %>
       <input type="email" name="email" required value="<%= values.email || "" %>">
     </label>
-    <label>Telephone
+    <label><%= t("users.fields.phone") %>
       <input type="tel" name="telephone" value="<%= values.telephone || "" %>">
     </label>
-    <label>Role *
+    <label><%= t("users.fields.role") %>
       <select name="role" required>
         <% roles.forEach((role) => { %>
           <option value="<%= role.code_role %>" <%= values.role === role.code_role ? "selected" : "" %>><%= role.label %></option>
         <% }) %>
       </select>
-      <% if (!roles.length) { %><small class="muted">Importez d'abord le referentiel des roles.</small><% } %>
+      <% if (!roles.length) { %><small class="muted"><%= t("users.fields.noRoles") %></small><% } %>
     </label>
-    <label>Statut *
+    <label><%= t("users.fields.status") %>
       <select name="statut" required>
         <% statuses.forEach((statut) => { %>
-          <option value="<%= statut %>" <%= values.statut === statut ? "selected" : "" %>><%= statut %></option>
+          <option value="<%= statut %>" <%= values.statut === statut ? "selected" : "" %>><%= t(`status.${statut}`) %></option>
         <% }) %>
       </select>
     </label>
     <fieldset class="regions-fieldset">
-      <legend>Regions d'affectation</legend>
+      <legend><%= t("users.fields.assignedRegions") %></legend>
       <% if (!regions.length) { %>
-        <p class="empty">Importez le referentiel territorial avant d'affecter des regions.</p>
+        <p class="empty"><%= t("users.fields.noRegions") %></p>
       <% } else { %>
         <div class="checkbox-grid">
           <% regions.forEach((region) => { %>
@@ -52,9 +52,9 @@
         </div>
       <% } %>
     </fieldset>
-    <p class="form-note">L'acces par mot de passe sera active avec le futur module d'authentification.</p>
+    <p class="form-note"><%= t("users.form.authNote") %></p>
     <div class="form-actions">
-      <a class="button" href="<%= cancelHref %>">Annuler</a>
+      <a class="button" href="<%= cancelHref %>"><%= t("common.cancel") %></a>
       <button class="button button-primary" type="submit"><%= submitLabel %></button>
     </div>
   </form>

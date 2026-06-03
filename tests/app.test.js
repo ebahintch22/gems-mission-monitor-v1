@@ -228,6 +228,67 @@ test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async ()
   assert.match(response.text, /Simulate without writing to database/);
 });
 
+test("GET /missions?lang=en utilise les ressources anglaises Missions", async () => {
+  const response = await request(app).get("/missions?lang=en");
+  const scriptResponse = await request(app).get("/js/missions.js");
+
+  assert.equal(response.status, 200);
+  assert.equal(scriptResponse.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /Field collection/);
+  assert.match(response.text, /Mission register and location/);
+  assert.match(response.text, /New mission/);
+  assert.match(response.text, /Mission list/);
+  assert.match(response.text, /Mission map/);
+  assert.match(response.text, /id="missions-i18n-data"/);
+  assert.match(scriptResponse.text, /missions-i18n-data/);
+  assert.match(scriptResponse.text, /t\("tableEmpty"\)/);
+});
+
+test("GET /agents/new?lang=en utilise les ressources anglaises Agents", async () => {
+  const response = await request(app).get("/agents/new?lang=en");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /New collection agent/);
+  assert.match(response.text, /Identify the enumerator/);
+  assert.match(response.text, /Last name \*/);
+  assert.match(response.text, /First names \*/);
+  assert.match(response.text, /Agent code \*/);
+  assert.match(response.text, /No application account/);
+  assert.match(response.text, /Assign later/);
+});
+
+test("GET /users/new?lang=en utilise les ressources anglaises Utilisateurs", async () => {
+  const response = await request(app).get("/users/new?lang=en");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /New user/);
+  assert.match(response.text, /A supervisor can then be linked to a team/);
+  assert.match(response.text, /Last name \*/);
+  assert.match(response.text, /First names \*/);
+  assert.match(response.text, /Role \*/);
+  assert.match(response.text, /Assigned regions/);
+  assert.match(response.text, /Password access will be enabled/);
+});
+
+test("GET /route-inconnue localise la page 404", async () => {
+  const frenchResponse = await request(app).get("/route-inconnue");
+  const englishResponse = await request(app).get("/route-inconnue?lang=en");
+
+  assert.equal(frenchResponse.status, 404);
+  assert.match(frenchResponse.text, /Page introuvable/);
+  assert.match(frenchResponse.text, /La ressource demandée n&#39;existe pas/);
+  assert.match(frenchResponse.text, /Retour au dashboard/);
+
+  assert.equal(englishResponse.status, 404);
+  assert.match(englishResponse.text, /<html lang="en">/);
+  assert.match(englishResponse.text, /Page not found/);
+  assert.match(englishResponse.text, /The requested resource does not exist/);
+  assert.match(englishResponse.text, /Back to dashboard/);
+});
+
 test("POST /parametrages/kobo/config conserve le jeton masque dans l'interface", async () => {
   const response = await request(app)
     .post("/parametrages/kobo/config")
@@ -283,7 +344,7 @@ test("POST /missions refuse des coordonnees invalides", async () => {
     .send({ name: "Erreur", region: "Nord", latitude: "100" });
 
   assert.equal(response.status, 400);
-  assert.match(response.text, /Verifiez/);
+  assert.match(response.text, /Vérifiez/);
 });
 
 test("creation d'un superviseur avec plusieurs regions", async () => {
@@ -356,9 +417,9 @@ test("POST /users refuse un email duplique et une region inexistante", async () 
     });
 
   assert.equal(duplicateResponse.status, 400);
-  assert.match(duplicateResponse.text, /possede deja cette adresse email/);
+  assert.match(duplicateResponse.text, /possède déjà cette adresse email/);
   assert.equal(invalidRegionResponse.status, 400);
-  assert.match(invalidRegionResponse.text, /region selectionnee n&#39;existe pas/);
+  assert.match(invalidRegionResponse.text, /région sélectionnée n&#39;existe pas/);
   assert.equal(invalidRoleResponse.status, 400);
 });
 
@@ -426,7 +487,7 @@ test("modification d'un utilisateur refuse l'email d'un autre compte", async () 
     });
 
   assert.equal(updateResponse.status, 400);
-  assert.match(updateResponse.text, /possede deja cette adresse email/);
+  assert.match(updateResponse.text, /possède déjà cette adresse email/);
 });
 
 test("creation d'une equipe rattachee a une mission, un superviseur et des regions", async () => {
@@ -640,9 +701,9 @@ test("POST /agents refuse un code duplique et un utilisateur non agent", async (
     });
 
   assert.equal(duplicateResponse.status, 400);
-  assert.match(duplicateResponse.text, /code agent est deja utilise/);
+  assert.match(duplicateResponse.text, /code agent est déjà utilisé/);
   assert.equal(invalidUserResponse.status, 400);
-  assert.match(invalidUserResponse.text, /role agent/);
+  assert.match(invalidUserResponse.text, /rôle agent/);
 });
 
 test("modification d'un agent permet de retirer son compte et son equipe", async () => {
@@ -672,7 +733,7 @@ test("modification d'un agent permet de retirer son compte et son equipe", async
   assert.match(detailResponse.text, /AG-001-M/);
   assert.match(detailResponse.text, /Smartphone B02/);
   assert.match(detailResponse.text, /Sans compte applicatif/);
-  assert.match(detailResponse.text, /Non affecte/);
+  assert.match(detailResponse.text, /Non affecté/);
 
   const persisted = db.prepare(`
     SELECT nom, prenoms, user_id, equipe_id, statut FROM agents_collecte WHERE id = ?
@@ -705,7 +766,7 @@ test("POST /agents exige le nom et les prenoms meme sans compte utilisateur", as
     });
 
   assert.equal(invalidResponse.status, 400);
-  assert.match(invalidResponse.text, /nom, les prenoms/);
+  assert.match(invalidResponse.text, /nom, les prénoms/);
   assert.equal(createResponse.status, 302);
 
   const detailResponse = await request(app).get(createResponse.headers.location);
@@ -807,16 +868,22 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /class="sig-map-legend is-collapsed"/);
   assert.match(response.text, /id="sig-map-legend-toggle"/);
   assert.match(response.text, /aria-expanded="false"/);
+  assert.match(response.text, /id="sig-i18n-data"/);
+  assert.match(response.text, /Couche Humanitaire/);
+  assert.match(response.text, /Couche Routière/);
+  assert.match(response.text, /Déplier la légende/);
+  assert.match(response.text, /Réinitialiser/);
   assert.match(response.text, /id="site-identification"/);
   assert.match(response.text, /id="site-identification-body"/);
   assert.match(response.text, /SIM-AG-I01-001/);
   assert.match(response.text, /raw_data_json/);
   assert.match(response.text, /leaflet\.markercluster@1\.5\.3/);
   assert.match(response.text, /\/js\/cartographie\.js/);
-  assert.match(scriptResponse.text, /Couche Humanitaire/);
-  assert.match(scriptResponse.text, /Couche Routi.re/);
-  assert.match(scriptResponse.text, /Carto Positron/);
-  assert.match(scriptResponse.text, /Couche ESRI \(Satellite\)/);
+  assert.match(scriptResponse.text, /sig-i18n-data/);
+  assert.match(scriptResponse.text, /t\("layerHumanitarian"\)/);
+  assert.match(scriptResponse.text, /t\("layerRoad"\)/);
+  assert.match(scriptResponse.text, /t\("layerPositron"\)/);
+  assert.match(scriptResponse.text, /t\("layerEsriSatellite"\)/);
   assert.match(scriptResponse.text, /L\.markerClusterGroup/);
   assert.match(scriptResponse.text, /disableClusteringAtZoom: 14/);
   assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
@@ -830,7 +897,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.toggle\("is-collapsed"\)/);
   assert.match(scriptResponse.text, /aria-expanded/);
   assert.match(scriptResponse.text, /mapLegend\.classList\.toggle\("is-collapsed"\)/);
-  assert.match(scriptResponse.text, /Deplier la legende/);
+  assert.match(scriptResponse.text, /t\("legendExpand"\)/);
   assert.match(scriptResponse.text, /function setToolsOpen\(open\)/);
   assert.match(scriptResponse.text, /workspace\.classList\.toggle\("is-tools-open", open\)/);
   assert.match(scriptResponse.text, /toolsToggle\.addEventListener\("click"/);
@@ -868,4 +935,21 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /map\.fitBounds\(bounds/);
   assert.match(scriptResponse.text, /renderPoints\(true\)/);
   assert.doesNotMatch(scriptResponse.text, /http:\/\/\{s\}\.tile\.openstreetmap\.org/);
+});
+
+test("GET /cartographie?lang=en utilise les ressources anglaises SIG", async () => {
+  const response = await request(app).get("/cartographie?lang=en");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /GIS Mapping/);
+  assert.match(response.text, /Filters/);
+  assert.match(response.text, /All missions/);
+  assert.match(response.text, /Summary/);
+  assert.match(response.text, /Displayed submissions/);
+  assert.match(response.text, /Identification sheet/);
+  assert.match(response.text, /Humanitarian layer/);
+  assert.match(response.text, /Road layer/);
+  assert.match(response.text, /Expand legend/);
+  assert.match(response.text, /Collection submissions map/);
 });

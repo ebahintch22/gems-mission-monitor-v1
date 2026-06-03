@@ -4,14 +4,14 @@ const statuses = ["planifiee", "en_cours", "terminee", "suspendue"];
 
 exports.index = (req, res) => {
   res.render("missions/index", {
-    title: "Missions",
+    title: req.t("missions.title"),
     missions: Mission.all()
   });
 };
 
 exports.new = (req, res) => {
   res.render("missions/new", {
-    title: "Nouvelle mission",
+    title: req.t("missions.form.title"),
     statuses,
     values: {},
     error: null
@@ -40,10 +40,10 @@ exports.create = (req, res) => {
 
   if (!values.name || !values.region || !statuses.includes(values.status) || invalidNumbers) {
     return res.status(400).render("missions/new", {
-      title: "Nouvelle mission",
+      title: req.t("missions.form.title"),
       statuses,
       values: req.body,
-      error: "Verifiez le nom, la region, le statut, le nombre d'agents et les coordonnees."
+      error: req.t("missions.errors.invalidCreate")
     });
   }
 

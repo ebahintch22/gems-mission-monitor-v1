@@ -1,34 +1,41 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Collecte terrain</p>
-    <h1>Agents de collecte</h1>
-    <p class="muted">Registre des enqueteurs et affectation aux equipes.</p>
+    <p class="eyebrow"><%= t("agents.eyebrow") %></p>
+    <h1><%= t("agents.title") %></h1>
+    <p class="muted"><%= t("agents.description") %></p>
   </div>
-  <a class="button button-primary" href="/agents/new">Nouvel agent</a>
+  <a class="button button-primary" href="/agents/new"><%= t("agents.actions.new") %></a>
 </section>
 
 <section class="panel">
   <div class="panel-header">
-    <h2>Registre des agents</h2>
-    <span class="muted"><%= agents.length %> agent(s)</span>
+    <h2><%= t("agents.list.title") %></h2>
+    <span class="muted"><%= t("agents.list.count", { count: agents.length }) %></span>
   </div>
   <% if (!agents.length) { %>
-    <p class="empty">Aucun agent de collecte n'est encore enregistre.</p>
+    <p class="empty"><%= t("agents.list.empty") %></p>
   <% } else { %>
     <table class="simple-table">
       <thead>
-        <tr><th>Agent</th><th>Code</th><th>Compte</th><th>Equipe</th><th>Statut</th><th></th></tr>
+        <tr>
+          <th><%= t("sig.table.agent") %></th>
+          <th><%= t("common.code") %></th>
+          <th><%= t("common.account") %></th>
+          <th><%= t("common.team") %></th>
+          <th><%= t("common.status") %></th>
+          <th></th>
+        </tr>
       </thead>
       <tbody>
         <% agents.forEach((agent) => { %>
           <tr>
             <td><a href="/agents/<%= agent.id %>"><%= agent.prenoms %> <%= agent.nom %></a></td>
             <td><%= agent.code_agent %></td>
-            <td><%= agent.user_name || "Sans compte" %></td>
-            <td><%= agent.nom_equipe || "Non affecte" %></td>
-            <td><span class="status status-<%= agent.statut %>"><%= agent.statut %></span></td>
-            <td><a href="/agents/<%= agent.id %>/edit">Modifier</a></td>
+            <td><%= agent.user_name || t("common.noAccount") %></td>
+            <td><%= agent.nom_equipe || t("common.notAssigned") %></td>
+            <td><span class="status status-<%= agent.statut %>"><%= t(`status.${agent.statut}`) %></span></td>
+            <td><a href="/agents/<%= agent.id %>/edit"><%= t("common.edit") %></a></td>
           </tr>
         <% }) %>
       </tbody>

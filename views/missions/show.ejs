@@ -1,26 +1,26 @@
 <%- include("../partials/header", { title, mapAssets: mission.latitude !== null && mission.longitude !== null }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Mission #<%= mission.id %></p>
+    <p class="eyebrow"><%= t("missions.show.eyebrow", { id: mission.id }) %></p>
     <h1><%= mission.name %></h1>
-    <span class="status status-<%= mission.status %>"><%= mission.status.replace("_", " ") %></span>
+    <span class="status status-<%= mission.status %>"><%= t(`status.${mission.status}`) %></span>
   </div>
-  <a class="button" href="/missions">Retour aux missions</a>
+  <a class="button" href="/missions"><%= t("missions.show.back") %></a>
 </section>
 
 <section class="detail-grid">
   <article class="panel details">
-    <h2>Informations</h2>
+    <h2><%= t("common.information") %></h2>
     <dl>
-      <dt>Region</dt><dd><%= mission.region %></dd>
-      <dt>Periode</dt><dd><%= mission.start_date || "-" %> au <%= mission.end_date || "-" %></dd>
-      <dt>Agents</dt><dd><%= mission.collectors %></dd>
-      <dt>Formulaire KoBo</dt><dd><%= mission.kobo_asset_uid || "Non configure" %></dd>
+      <dt><%= t("common.region") %></dt><dd><%= mission.region %></dd>
+      <dt><%= t("common.period") %></dt><dd><%= t("missions.show.periodValue", { start: mission.start_date || "-", end: mission.end_date || "-" }) %></dd>
+      <dt><%= t("nav.agents") %></dt><dd><%= mission.collectors %></dd>
+      <dt><%= t("missions.show.koboForm") %></dt><dd><%= mission.kobo_asset_uid || t("missions.show.notConfigured") %></dd>
     </dl>
   </article>
   <% if (mission.latitude !== null && mission.longitude !== null) { %>
     <article class="panel">
-      <h2>Localisation</h2>
+      <h2><%= t("common.location") %></h2>
       <div id="detail-map" class="detail-map"></div>
     </article>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

@@ -1,48 +1,48 @@
 <%- include("../partials/header", { title }) %>
 <section class="page-heading">
   <div>
-    <p class="eyebrow">Configuration</p>
-    <h1>Nouvelle mission</h1>
+    <p class="eyebrow"><%= t("missions.form.eyebrow") %></p>
+    <h1><%= t("missions.form.title") %></h1>
   </div>
 </section>
 
 <section class="panel form-panel">
   <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
   <form action="/missions" method="post" class="mission-form">
-    <label>Nom de la mission *
+    <label><%= t("missions.fields.name") %>
       <input name="name" required value="<%= values.name || "" %>">
     </label>
-    <label>Region *
+    <label><%= t("missions.fields.region") %>
       <input name="region" required value="<%= values.region || "" %>">
     </label>
-    <label>Statut
+    <label><%= t("missions.fields.status") %>
       <select name="status">
         <% statuses.forEach((status) => { %>
-          <option value="<%= status %>" <%= (values.status || "planifiee") === status ? "selected" : "" %>><%= status.replace("_", " ") %></option>
+          <option value="<%= status %>" <%= (values.status || "planifiee") === status ? "selected" : "" %>><%= t(`status.${status}`) %></option>
         <% }) %>
       </select>
     </label>
-    <label>Agents de collecte
+    <label><%= t("missions.fields.collectors") %>
       <input type="number" name="collectors" min="0" value="<%= values.collectors ?? 0 %>">
     </label>
-    <label>Date de debut
+    <label><%= t("missions.fields.startDate") %>
       <input type="date" name="start_date" value="<%= values.start_date || "" %>">
     </label>
-    <label>Date de fin
+    <label><%= t("missions.fields.endDate") %>
       <input type="date" name="end_date" value="<%= values.end_date || "" %>">
     </label>
-    <label>UID formulaire KoBo
+    <label><%= t("missions.fields.koboUid") %>
       <input name="kobo_asset_uid" value="<%= values.kobo_asset_uid || "" %>" placeholder="aBcDeF123">
     </label>
-    <label>Latitude
+    <label><%= t("missions.fields.latitude") %>
       <input type="number" step="any" name="latitude" min="-90" max="90" value="<%= values.latitude ?? "" %>">
     </label>
-    <label>Longitude
+    <label><%= t("missions.fields.longitude") %>
       <input type="number" step="any" name="longitude" min="-180" max="180" value="<%= values.longitude ?? "" %>">
     </label>
     <div class="form-actions">
-      <a class="button" href="/missions">Annuler</a>
-      <button class="button button-primary" type="submit">Enregistrer</button>
+      <a class="button" href="/missions"><%= t("common.cancel") %></a>
+      <button class="button button-primary" type="submit"><%= t("common.save") %></button>
     </div>
   </form>
 </section>
