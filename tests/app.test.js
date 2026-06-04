@@ -173,7 +173,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /localStorage\.getItem\("g2m_display_size"\)/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.ico"/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.png"/);
-  assert.match(response.text, /Livraison v0\.2 du 03 juin 2026/);
+  assert.match(response.text, /Livraison v0\.3 du 04 juin 2026 \[KoboConnect \+ Gestion Utilisateurs\]/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);
   assert.match(response.text, /data-label-open="Afficher le menu de navigation"/);
@@ -188,6 +188,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigation, /class="nav-menu-panel nav-personalization-panel"/);
   assert.match(navigation, /href="\/\?lang=fr"[\s\S]*Français/);
   assert.match(navigation, /href="\/\?lang=en"[\s\S]*English/);
+  assert.match(navigation, /href="\/\?lang=es"[\s\S]*Español/);
   assert.match(navigation, /data-display-size-value="small"[\s\S]*Petit/);
   assert.match(navigation, /data-display-size-value="medium"[\s\S]*Moyen/);
   assert.match(navigation, /data-display-size-value="large"[\s\S]*Grand/);
@@ -197,7 +198,12 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigation, /fa-solid fa-chevron-down nav-menu-chevron/);
   assert.match(navigation, /class="nav-button" href="\/cartographie"/);
   assert.match(navigation, /fa-solid fa-map-location-dot/);
-  assert.match(navigation, /Dashboard[\s\S]*Cartographie[\s\S]*Paramétrages/);
+  assert.match(navigation, /fa-solid fa-chart-pie/);
+  assert.match(navigation, /Infographie/);
+  assert.match(navigation, /href="\/infographies\/mission-globale" role="menuitem">Mission globale/);
+  assert.match(navigation, /href="\/infographies\/par-superviseur" role="menuitem">Par superviseur/);
+  assert.match(navigation, /href="\/infographies\/par-region" role="menuitem">Par r/);
+  assert.match(navigation, /Dashboard[\s\S]*Cartographie[\s\S]*Infographie[\s\S]*Paramétrages/);
   assert.doesNotMatch(navigation, /Configuration/);
   assert.match(response.text, /role="menuitem">Missions/);
   assert.match(response.text, /role="menuitem">Équipes/);
@@ -245,6 +251,38 @@ test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => 
   assert.match(response.text, /Ongoing/);
   assert.match(response.text, /Completed/);
   assert.match(response.text, /Recent missions/);
+});
+
+test("GET /?lang=es utilise les ressources espagnoles du dashboard", async () => {
+  const response = await request(app).get("/?lang=es");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /<html lang="es" data-display-size="medium">/);
+  assert.match(response.text, /Entrega v0\.3 del 04 de junio de 2026/);
+  assert.match(response.text, /Seguimiento operativo/);
+  assert.match(response.text, /Vista sint/);
+  assert.match(response.text, /Crear una misi/);
+  assert.match(response.text, /Misiones recientes/);
+  assert.match(response.text, /class="is-active"[\s\S]*href="\/\?lang=es"[\s\S]*Espa/);
+});
+
+test("GET /infographies expose les pages factices", async () => {
+  const globalResponse = await request(app).get("/infographies/mission-globale");
+  const supervisorResponse = await request(app).get("/infographies/par-superviseur");
+  const regionResponse = await request(app).get("/infographies/par-region?lang=en");
+
+  assert.equal(globalResponse.status, 200);
+  assert.match(globalResponse.text, /Infographie mission globale/);
+  assert.match(globalResponse.text, /Infographie sur la mission globale - Page en construction/);
+
+  assert.equal(supervisorResponse.status, 200);
+  assert.match(supervisorResponse.text, /Infographie par superviseur/);
+  assert.match(supervisorResponse.text, /Infographie sur les superviseurs - Page en construction/);
+
+  assert.equal(regionResponse.status, 200);
+  assert.match(regionResponse.text, /<html lang="en" data-display-size="medium">/);
+  assert.match(regionResponse.text, /Infographic by region/);
+  assert.match(regionResponse.text, /Infographic about regions - Page under construction/);
 });
 
 test("le choix de langue est conserve dans un cookie", async () => {

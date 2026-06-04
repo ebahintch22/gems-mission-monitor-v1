@@ -8,6 +8,7 @@ const userRoutes = require("./routes/userRoutes");
 const equipeRoutes = require("./routes/equipeRoutes");
 const agentCollecteRoutes = require("./routes/agentCollecteRoutes");
 const sigRoutes = require("./routes/sigRoutes");
+const infographieRoutes = require("./routes/infographieRoutes");
 const koboAdminRoutes = require("./routes/koboAdminRoutes");
 const { i18nMiddleware } = require("./services/i18nService");
 require("./config/database");
@@ -34,6 +35,7 @@ app.use("/users", userRoutes);
 app.use("/equipes", equipeRoutes);
 app.use("/agents", agentCollecteRoutes);
 app.use("/cartographie", sigRoutes);
+app.use("/infographies", infographieRoutes);
 app.use("/parametrages/kobo", koboAdminRoutes);
 
 app.use((req, res) => {

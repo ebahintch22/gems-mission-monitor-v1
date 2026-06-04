@@ -59,6 +59,24 @@
           <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
           <span><%= t("nav.cartography") %></span>
         </a>
+        <div class="nav-menu nav-infographics">
+          <button
+            class="nav-button nav-menu-trigger"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            title="<%= t("nav.infographics") %>"
+          >
+            <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+            <span><%= t("nav.infographics") %></span>
+            <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="nav-menu-panel" role="menu">
+            <a href="/infographies/mission-globale" role="menuitem"><%= t("nav.infographicsGlobal") %></a>
+            <a href="/infographies/par-superviseur" role="menuitem"><%= t("nav.infographicsSupervisor") %></a>
+            <a href="/infographies/par-region" role="menuitem"><%= t("nav.infographicsRegion") %></a>
+          </div>
+        </div>
         <div class="nav-menu nav-personalization">
           <button
             class="nav-button nav-menu-trigger"
@@ -86,6 +104,12 @@
                 role="menuitem"
                 lang="en"
               ><%= t("nav.languageEnglish") %></a>
+              <a
+                class="<%= locale === "es" ? "is-active" : "" %>"
+                href="<%= localeUrls.es %>"
+                role="menuitem"
+                lang="es"
+              ><%= t("nav.languageSpanish") %></a>
             </div>
             <div class="nav-menu-section" aria-label="<%= t("nav.displaySize") %>">
               <p class="nav-menu-section-title"><%= t("nav.displaySize") %></p>
