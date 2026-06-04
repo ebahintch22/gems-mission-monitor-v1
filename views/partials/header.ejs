@@ -1,9 +1,22 @@
 <!doctype html>
-<html lang="<%= locale || "fr" %>">
+<html lang="<%= locale || "fr" %>" data-display-size="medium">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= title %> | <%= t("app.name") %></title>
+    <script>
+      (function () {
+        try {
+          var size = localStorage.getItem("g2m_display_size");
+          if (["small", "medium", "large"].indexOf(size) === -1) {
+            size = "medium";
+          }
+          document.documentElement.setAttribute("data-display-size", size);
+        } catch (error) {
+          document.documentElement.setAttribute("data-display-size", "medium");
+        }
+      }());
+    </script>
     <link rel="icon" href="<%= faviconPath %>" sizes="32x32">
     <link rel="icon" type="image/png" href="<%= faviconPngPath %>" sizes="32x32">
     <link rel="stylesheet" href="/css/app.css">
@@ -71,6 +84,30 @@
               role="menuitem"
               lang="en"
             ><%= t("nav.languageEnglish") %></a>
+          </div>
+        </div>
+        <div class="nav-menu nav-display-size">
+          <button
+            class="nav-button nav-menu-trigger"
+            type="button"
+            aria-haspopup="true"
+            aria-expanded="false"
+            title="<%= t("nav.displaySize") %>"
+          >
+            <i class="fa-solid fa-text-height" aria-hidden="true"></i>
+            <span><%= t("nav.displaySizeShort") %></span>
+            <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
+          </button>
+          <div class="nav-menu-panel nav-display-size-panel" role="menu" aria-label="<%= t("nav.displaySize") %>">
+            <button class="display-size-option" type="button" role="menuitem" data-display-size-value="small">
+              <%= t("nav.displaySizeSmall") %>
+            </button>
+            <button class="display-size-option" type="button" role="menuitem" data-display-size-value="medium">
+              <%= t("nav.displaySizeMedium") %>
+            </button>
+            <button class="display-size-option" type="button" role="menuitem" data-display-size-value="large">
+              <%= t("nav.displaySizeLarge") %>
+            </button>
           </div>
         </div>
         <div class="nav-menu">

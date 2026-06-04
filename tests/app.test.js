@@ -169,6 +169,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
   assert.match(response.text, /G2M/);
+  assert.match(response.text, /<html lang="fr" data-display-size="medium">/);
+  assert.match(response.text, /localStorage\.getItem\("g2m_display_size"\)/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.ico"/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.png"/);
   assert.match(response.text, /Livraison v0\.2 du 03 juin 2026/);
@@ -184,6 +186,11 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigation, /title="Langue"/);
   assert.match(navigation, /href="\/\?lang=fr"[\s\S]*Français/);
   assert.match(navigation, /href="\/\?lang=en"[\s\S]*English/);
+  assert.match(navigation, /fa-solid fa-text-height/);
+  assert.match(navigation, /title="Taille d&#39;affichage"/);
+  assert.match(navigation, /data-display-size-value="small"[\s\S]*Petit/);
+  assert.match(navigation, /data-display-size-value="medium"[\s\S]*Moyen/);
+  assert.match(navigation, /data-display-size-value="large"[\s\S]*Grand/);
   assert.match(navigation, /class="nav-button nav-menu-trigger"/);
   assert.match(navigation, /fa-solid fa-gear/);
   assert.match(navigation, /Paramétrages/);
@@ -201,10 +208,19 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /\/js\/navigation\.js/);
   assert.match(styleResponse.text, /\.nav-menu\.is-open \.nav-menu-panel/);
   assert.doesNotMatch(styleResponse.text, /\.nav-menu:hover \.nav-menu-panel/);
+  assert.match(styleResponse.text, /--font-body: 15px/);
+  assert.match(styleResponse.text, /html\[data-display-size="small"\]/);
+  assert.match(styleResponse.text, /--font-body: 13px/);
+  assert.match(styleResponse.text, /html\[data-display-size="large"\]/);
+  assert.match(styleResponse.text, /--font-body: 18px/);
+  assert.match(styleResponse.text, /\.display-size-option\.is-active/);
   assert.match(navigationScriptResponse.text, /trigger\.addEventListener\("click"/);
   assert.match(navigationScriptResponse.text, /aria-expanded/);
   assert.match(navigationScriptResponse.text, /dataset\.labelOpen/);
   assert.match(navigationScriptResponse.text, /dataset\.labelClose/);
+  assert.match(navigationScriptResponse.text, /g2m_display_size/);
+  assert.match(navigationScriptResponse.text, /applyDisplaySize/);
+  assert.match(navigationScriptResponse.text, /localStorage\.setItem\(displaySizeStorageKey, displaySize\)/);
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
@@ -214,7 +230,7 @@ test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => 
   const response = await request(app).get("/?lang=en");
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /data-label-open="Show navigation menu"/);
   assert.match(response.text, /data-label-close="Hide navigation menu"/);
   assert.match(response.text, /title="Language"/);
@@ -238,7 +254,7 @@ test("le choix de langue est conserve dans un cookie", async () => {
   assert.match(cookie, /Path=\//);
   assert.match(cookie, /SameSite=Lax/);
   assert.equal(dashboardResponse.status, 200);
-  assert.match(dashboardResponse.text, /<html lang="en">/);
+  assert.match(dashboardResponse.text, /<html lang="en" data-display-size="medium">/);
   assert.match(dashboardResponse.text, /Operational monitoring/);
 });
 
@@ -266,7 +282,7 @@ test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async ()
   const response = await request(app).get("/parametrages/kobo?lang=en");
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /KoboToolbox Administration/);
   assert.match(response.text, /Settings/);
   assert.match(response.text, /Test connection/);
@@ -281,7 +297,7 @@ test("GET /missions?lang=en utilise les ressources anglaises Missions", async ()
 
   assert.equal(response.status, 200);
   assert.equal(scriptResponse.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /Field collection/);
   assert.match(response.text, /Mission register and location/);
   assert.match(response.text, /New mission/);
@@ -296,7 +312,7 @@ test("GET /agents/new?lang=en utilise les ressources anglaises Agents", async ()
   const response = await request(app).get("/agents/new?lang=en");
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /New collection agent/);
   assert.match(response.text, /Identify the enumerator/);
   assert.match(response.text, /Last name \*/);
@@ -310,7 +326,7 @@ test("GET /users/new?lang=en utilise les ressources anglaises Utilisateurs", asy
   const response = await request(app).get("/users/new?lang=en");
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /New user/);
   assert.match(response.text, /A supervisor can then be linked to a team/);
   assert.match(response.text, /Last name \*/);
@@ -324,7 +340,7 @@ test("GET /equipes/new?lang=en utilise les ressources anglaises Equipes", async 
   const response = await request(app).get("/equipes/new?lang=en");
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /New team/);
   assert.match(response.text, /Link the team to a mission and its intervention area/);
   assert.match(response.text, /Team name \*/);
@@ -343,7 +359,7 @@ test("GET /route-inconnue localise la page 404", async () => {
   assert.match(frenchResponse.text, /Retour au dashboard/);
 
   assert.equal(englishResponse.status, 404);
-  assert.match(englishResponse.text, /<html lang="en">/);
+  assert.match(englishResponse.text, /<html lang="en" data-display-size="medium">/);
   assert.match(englishResponse.text, /Page not found/);
   assert.match(englishResponse.text, /The requested resource does not exist/);
   assert.match(englishResponse.text, /Back to dashboard/);
@@ -963,7 +979,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /toolsToggle\.addEventListener\("click"/);
   assert.match(scriptResponse.text, /toolsClose\.addEventListener\("click"/);
   assert.match(styleResponse.text, /\.container-wide\s*\{/);
-  assert.match(styleResponse.text, /height: calc\(100vh - 78px\)/);
+  assert.match(styleResponse.text, /height: calc\(100vh - var\(--site-header-height\)\)/);
   assert.match(styleResponse.text, /\.container-wide > \*/);
   assert.match(styleResponse.text, /overflow-y: hidden/);
   assert.match(styleResponse.text, /\.sig-workspace\s*\{[\s\S]*height: 100%/);
@@ -973,11 +989,11 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed \.sig-map-legend-items/);
   assert.match(styleResponse.text, /\.site-nav-toggle\s*\{[\s\S]*display: none/);
   assert.match(styleResponse.text, /\.site-header\.is-nav-open nav\s*\{[\s\S]*display: grid/);
-  assert.match(styleResponse.text, /\.brand-logo\s*\{[\s\S]*height: 30px/);
+  assert.match(styleResponse.text, /\.brand-logo\s*\{[\s\S]*height: var\(--brand-logo-mobile-height\)/);
   assert.match(styleResponse.text, /\.brand-product\s*\{[\s\S]*display: none/);
   assert.match(styleResponse.text, /\.brand-product-mobile\s*\{[\s\S]*display: block/);
-  assert.match(styleResponse.text, /\.brand-release\s*\{[\s\S]*font-size: 10px/);
-  assert.match(styleResponse.text, /\.container-wide\s*\{[\s\S]*height: calc\(100vh - 58px\)/);
+  assert.match(styleResponse.text, /\.brand-release\s*\{[\s\S]*font-size: var\(--font-small\)/);
+  assert.match(styleResponse.text, /\.container-wide\s*\{[\s\S]*height: calc\(100vh - var\(--site-header-mobile-height\)\)/);
   assert.match(styleResponse.text, /--mobile-map-control-bottom: max\(76px, env\(safe-area-inset-bottom\)\)/);
   assert.match(styleResponse.text, /\.sig-tools-toggle\s*\{[\s\S]*display: flex/);
   assert.match(styleResponse.text, /\.sig-tools-toggle\s*\{[\s\S]*bottom: var\(--mobile-map-control-bottom\)/);
@@ -1001,7 +1017,7 @@ test("GET /cartographie?lang=en utilise les ressources anglaises SIG", async () 
   const response = await request(app).get("/cartographie?lang=en");
 
   assert.equal(response.status, 200);
-  assert.match(response.text, /<html lang="en">/);
+  assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /GIS Mapping/);
   assert.match(response.text, /Filters/);
   assert.match(response.text, /All missions/);

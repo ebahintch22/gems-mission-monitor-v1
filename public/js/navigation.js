@@ -3,6 +3,9 @@
   const siteHeader = document.querySelector(".site-header");
   const siteNav = document.getElementById("site-nav");
   const siteNavToggle = document.getElementById("site-nav-toggle");
+  const displaySizeOptions = document.querySelectorAll("[data-display-size-value]");
+  const displaySizeStorageKey = "g2m_display_size";
+  const supportedDisplaySizes = ["small", "medium", "large"];
 
   function closeSiteNav() {
     if (!siteHeader || !siteNavToggle) {
@@ -46,11 +49,51 @@
     });
 
     panel.addEventListener("click", function (event) {
-      if (event.target.closest("a")) {
+      if (event.target.closest("a") || event.target.closest("button")) {
         closeMenu(menu);
       }
     });
   });
+
+  function normalizeDisplaySize(size) {
+    return supportedDisplaySizes.includes(size) ? size : "medium";
+  }
+
+  function applyDisplaySize(size, persist) {
+    const displaySize = normalizeDisplaySize(size);
+    document.documentElement.setAttribute("data-display-size", displaySize);
+
+    displaySizeOptions.forEach(function (option) {
+      const isActive = option.dataset.displaySizeValue === displaySize;
+      option.classList.toggle("is-active", isActive);
+      option.setAttribute("aria-pressed", String(isActive));
+    });
+
+    if (persist) {
+      try {
+        localStorage.setItem(displaySizeStorageKey, displaySize);
+      } catch (error) {
+        // Storage may be unavailable in private or constrained browser contexts.
+      }
+    }
+  }
+
+  if (displaySizeOptions.length) {
+    let storedDisplaySize = "medium";
+    try {
+      storedDisplaySize = localStorage.getItem(displaySizeStorageKey);
+    } catch (error) {
+      storedDisplaySize = "medium";
+    }
+
+    applyDisplaySize(storedDisplaySize, false);
+
+    displaySizeOptions.forEach(function (option) {
+      option.addEventListener("click", function () {
+        applyDisplaySize(option.dataset.displaySizeValue, true);
+      });
+    });
+  }
 
   document.addEventListener("click", function (event) {
     menus.forEach(function (menu) {
