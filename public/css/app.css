@@ -310,12 +310,29 @@ nav {
   font-weight: 700;
 }
 
-.nav-language-panel {
-  min-width: 135px;
+.nav-personalization-panel {
+  gap: 8px;
+  min-width: 210px;
 }
 
-.nav-display-size-panel {
-  min-width: 150px;
+.nav-menu-section {
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 2px;
+  padding-top: 7px;
+}
+
+.nav-menu-section:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.nav-menu-section-title {
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 700;
+  margin: 0;
+  padding: 3px var(--field-padding-x);
 }
 
 .display-size-option {

@@ -49,7 +49,7 @@
     });
 
     panel.addEventListener("click", function (event) {
-      if (event.target.closest("a") || event.target.closest("button")) {
+      if (event.target.closest("a")) {
         closeMenu(menu);
       }
     });

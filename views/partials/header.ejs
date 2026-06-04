@@ -59,55 +59,46 @@
           <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
           <span><%= t("nav.cartography") %></span>
         </a>
-        <div class="nav-menu nav-language">
+        <div class="nav-menu nav-personalization">
           <button
             class="nav-button nav-menu-trigger"
             type="button"
             aria-haspopup="true"
             aria-expanded="false"
-            title="<%= t("nav.language") %>"
+            title="<%= t("nav.personalization") %>"
           >
-            <i class="fa-solid fa-language" aria-hidden="true"></i>
-            <span><%= String(locale || "fr").toUpperCase() %></span>
+            <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+            <span><%= t("nav.personalization") %></span>
             <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
           </button>
-          <div class="nav-menu-panel nav-language-panel" role="menu">
-            <a
-              class="<%= locale === "fr" ? "is-active" : "" %>"
-              href="<%= localeUrls.fr %>"
-              role="menuitem"
-              lang="fr"
-            ><%= t("nav.languageFrench") %></a>
-            <a
-              class="<%= locale === "en" ? "is-active" : "" %>"
-              href="<%= localeUrls.en %>"
-              role="menuitem"
-              lang="en"
-            ><%= t("nav.languageEnglish") %></a>
-          </div>
-        </div>
-        <div class="nav-menu nav-display-size">
-          <button
-            class="nav-button nav-menu-trigger"
-            type="button"
-            aria-haspopup="true"
-            aria-expanded="false"
-            title="<%= t("nav.displaySize") %>"
-          >
-            <i class="fa-solid fa-text-height" aria-hidden="true"></i>
-            <span><%= t("nav.displaySizeShort") %></span>
-            <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
-          </button>
-          <div class="nav-menu-panel nav-display-size-panel" role="menu" aria-label="<%= t("nav.displaySize") %>">
-            <button class="display-size-option" type="button" role="menuitem" data-display-size-value="small">
-              <%= t("nav.displaySizeSmall") %>
-            </button>
-            <button class="display-size-option" type="button" role="menuitem" data-display-size-value="medium">
-              <%= t("nav.displaySizeMedium") %>
-            </button>
-            <button class="display-size-option" type="button" role="menuitem" data-display-size-value="large">
-              <%= t("nav.displaySizeLarge") %>
-            </button>
+          <div class="nav-menu-panel nav-personalization-panel" role="menu">
+            <div class="nav-menu-section" aria-label="<%= t("nav.language") %>">
+              <p class="nav-menu-section-title"><%= t("nav.language") %></p>
+              <a
+                class="<%= locale === "fr" ? "is-active" : "" %>"
+                href="<%= localeUrls.fr %>"
+                role="menuitem"
+                lang="fr"
+              ><%= t("nav.languageFrench") %></a>
+              <a
+                class="<%= locale === "en" ? "is-active" : "" %>"
+                href="<%= localeUrls.en %>"
+                role="menuitem"
+                lang="en"
+              ><%= t("nav.languageEnglish") %></a>
+            </div>
+            <div class="nav-menu-section" aria-label="<%= t("nav.displaySize") %>">
+              <p class="nav-menu-section-title"><%= t("nav.displaySize") %></p>
+              <button class="display-size-option" type="button" role="menuitem" data-display-size-value="small">
+                <%= t("nav.displaySizeSmall") %>
+              </button>
+              <button class="display-size-option" type="button" role="menuitem" data-display-size-value="medium">
+                <%= t("nav.displaySizeMedium") %>
+              </button>
+              <button class="display-size-option" type="button" role="menuitem" data-display-size-value="large">
+                <%= t("nav.displaySizeLarge") %>
+              </button>
+            </div>
           </div>
         </div>
         <div class="nav-menu">

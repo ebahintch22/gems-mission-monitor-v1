@@ -182,12 +182,12 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
   assert.match(navigation, /class="nav-button" href="\/"/);
   assert.match(navigation, /fa-solid fa-chart-line/);
-  assert.match(navigation, /fa-solid fa-language/);
-  assert.match(navigation, /title="Langue"/);
+  assert.match(navigation, /fa-solid fa-sliders/);
+  assert.match(navigation, /title="Personnalisation"/);
+  assert.match(navigation, /Personnalisation/);
+  assert.match(navigation, /class="nav-menu-panel nav-personalization-panel"/);
   assert.match(navigation, /href="\/\?lang=fr"[\s\S]*Français/);
   assert.match(navigation, /href="\/\?lang=en"[\s\S]*English/);
-  assert.match(navigation, /fa-solid fa-text-height/);
-  assert.match(navigation, /title="Taille d&#39;affichage"/);
   assert.match(navigation, /data-display-size-value="small"[\s\S]*Petit/);
   assert.match(navigation, /data-display-size-value="medium"[\s\S]*Moyen/);
   assert.match(navigation, /data-display-size-value="large"[\s\S]*Grand/);
@@ -213,6 +213,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(styleResponse.text, /--font-body: 13px/);
   assert.match(styleResponse.text, /html\[data-display-size="large"\]/);
   assert.match(styleResponse.text, /--font-body: 18px/);
+  assert.match(styleResponse.text, /\.nav-personalization-panel/);
+  assert.match(styleResponse.text, /\.nav-menu-section-title/);
   assert.match(styleResponse.text, /\.display-size-option\.is-active/);
   assert.match(navigationScriptResponse.text, /trigger\.addEventListener\("click"/);
   assert.match(navigationScriptResponse.text, /aria-expanded/);
@@ -233,7 +235,9 @@ test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => 
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /data-label-open="Show navigation menu"/);
   assert.match(response.text, /data-label-close="Hide navigation menu"/);
-  assert.match(response.text, /title="Language"/);
+  assert.match(response.text, /title="Personalization"/);
+  assert.match(response.text, /Language/);
+  assert.match(response.text, /Display size/);
   assert.match(response.text, /class="is-active"[\s\S]*href="\/\?lang=en"[\s\S]*English/);
   assert.match(response.text, /Operational monitoring/);
   assert.match(response.text, /Synthetic view of registered collection missions/);
