@@ -32,7 +32,7 @@
       <input type="date" name="end_date" value="<%= values.end_date || "" %>">
     </label>
     <label><%= t("missions.fields.koboUid") %>
-      <input name="kobo_asset_uid" value="<%= values.kobo_asset_uid || "" %>" placeholder="aBcDeF123">
+      <input name="kobo_asset_uid" value="<%= values.kobo_asset_uid || "" %>" placeholder="<%= t("common.placeholderExample", { example: "aBcDeF123" }) %>">
     </label>
     <label><%= t("missions.fields.latitude") %>
       <input type="number" step="any" name="latitude" min="-90" max="90" value="<%= values.latitude ?? "" %>">

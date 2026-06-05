@@ -222,6 +222,10 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(styleResponse.text, /\.nav-personalization-panel/);
   assert.match(styleResponse.text, /\.nav-menu-section-title/);
   assert.match(styleResponse.text, /\.display-size-option\.is-active/);
+  assert.match(styleResponse.text, /input::placeholder,\s*textarea::placeholder/);
+  assert.match(styleResponse.text, /color: #aeb8c0/);
+  assert.match(styleResponse.text, /font-style: italic/);
+  assert.match(styleResponse.text, /font-weight: 600/);
   assert.match(navigationScriptResponse.text, /trigger\.addEventListener\("click"/);
   assert.match(navigationScriptResponse.text, /aria-expanded/);
   assert.match(navigationScriptResponse.text, /dataset\.labelOpen/);
@@ -313,6 +317,8 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(response.text, /name="base_url"/);
   assert.match(response.text, /name="api_token"/);
   assert.match(response.text, /name="asset_uid"/);
+  assert.match(response.text, /Par exemple : https:\/\/kf\.kobotoolbox\.org/);
+  assert.match(response.text, /Par exemple : aBcDeF123/);
   assert.match(response.text, /name="mission_id"/);
   assert.match(response.text, /name="dry_run"/);
   assert.match(styleResponse.text, /\.kobo-layout\s*\{/);
@@ -360,6 +366,8 @@ test("GET /agents/new?lang=en utilise les ressources anglaises Agents", async ()
   assert.match(response.text, /Last name \*/);
   assert.match(response.text, /First names \*/);
   assert.match(response.text, /Agent code \*/);
+  assert.match(response.text, /For example: AG-001/);
+  assert.match(response.text, /For example: Tablet, smartphone/);
   assert.match(response.text, /No application account/);
   assert.match(response.text, /Assign later/);
 });

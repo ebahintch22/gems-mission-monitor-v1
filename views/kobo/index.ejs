@@ -35,7 +35,7 @@
           type="url"
           name="base_url"
           value="<%= config.baseUrl %>"
-          placeholder="https://kf.kobotoolbox.org"
+          placeholder="<%= t("common.placeholderExample", { example: "https://kf.kobotoolbox.org" }) %>"
           required
         >
       </label>
@@ -43,7 +43,7 @@
         <input
           type="password"
           name="api_token"
-          placeholder="<%= config.tokenConfigured ? t("kobo.config.tokenAlreadySet") : t("kobo.config.tokenPlaceholder") %>"
+          placeholder="<%= config.tokenConfigured ? t("kobo.config.tokenAlreadySet") : t("common.placeholderExample", { example: t("kobo.config.tokenPlaceholder") }) %>"
           autocomplete="off"
           <%= config.tokenConfigured ? "" : "required" %>
         >
@@ -93,13 +93,13 @@
         </select>
       </label>
       <label><%= t("kobo.sync.assetUid") %>
-        <input name="asset_uid" required value="<%= values.asset_uid %>" placeholder="aBcDeF123">
+        <input name="asset_uid" required value="<%= values.asset_uid %>" placeholder="<%= t("common.placeholderExample", { example: "aBcDeF123" }) %>">
       </label>
       <label><%= t("kobo.sync.gpsField") %>
-        <input name="gps_field" value="<%= values.gps_field %>" placeholder="coordonnees_gps">
+        <input name="gps_field" value="<%= values.gps_field %>" placeholder="<%= t("common.placeholderExample", { example: "coordonnees_gps" }) %>">
       </label>
       <label><%= t("kobo.sync.agentCodeField") %>
-        <input name="agent_code_field" value="<%= values.agent_code_field %>" placeholder="modA/enqueteur">
+        <input name="agent_code_field" value="<%= values.agent_code_field %>" placeholder="<%= t("common.placeholderExample", { example: "modA/enqueteur" }) %>">
       </label>
       <label><%= t("kobo.sync.formType") %>
         <input name="form_type" value="<%= values.form_type %>">

@@ -17,7 +17,7 @@
       <input name="prenoms" required value="<%= values.prenoms || "" %>">
     </label>
     <label><%= t("agents.fields.code") %>
-      <input name="code_agent" required value="<%= values.code_agent || "" %>" placeholder="AG-001">
+      <input name="code_agent" required value="<%= values.code_agent || "" %>" placeholder="<%= t("common.placeholderExample", { example: "AG-001" }) %>">
     </label>
     <label><%= t("agents.fields.status") %>
       <select name="statut" required>
@@ -30,7 +30,7 @@
       <input type="tel" name="telephone" value="<%= values.telephone || "" %>">
     </label>
     <label><%= t("agents.fields.equipment") %>
-      <input name="equipement" value="<%= values.equipement || "" %>" placeholder="Tablette, smartphone...">
+      <input name="equipement" value="<%= values.equipement || "" %>" placeholder="<%= t("common.placeholderExample", { example: t("agents.placeholders.equipment") }) %>">
     </label>
     <label><%= t("agents.fields.userAccount") %>
       <select name="user_id">

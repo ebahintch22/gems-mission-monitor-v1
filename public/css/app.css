@@ -1103,6 +1103,14 @@ select {
   padding: var(--field-padding-y) var(--field-padding-x);
 }
 
+input::placeholder,
+textarea::placeholder {
+  color: #aeb8c0;
+  font-style: italic;
+  font-weight: 600;
+  opacity: 1;
+}
+
 .form-actions {
   display: flex;
   gap: 10px;
