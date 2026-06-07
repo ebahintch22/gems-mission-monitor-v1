@@ -1,7 +1,7 @@
 {
   "app.name": "GEMS Mission Monitor",
   "app.shortName": "G2M",
-  "app.release": "Livraison v0.3 du 04 juin 2026 [KoboConnect + Gestion Utilisateurs]",
+  "app.release": "Livraison v0.4 du 07 juin 2026 [View Transposition + UserMngr]",
   "app.homeAria": "GEMS Mission Monitor - Accueil",
   "nav.ariaLabel": "Navigation principale",
   "nav.toggle": "Afficher le menu de navigation",
