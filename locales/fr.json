@@ -341,5 +341,15 @@
   "kobo.notice.connectionOk": "Connexion KoboToolbox valide. {{count}} formulaire vérifié.",
   "kobo.notice.assetsLoaded": "{{count}} formulaire(s) KoboToolbox récupéré(s).",
   "kobo.notice.syncDryRunDone": "Simulation de synchronisation terminée.",
-  "kobo.notice.syncDone": "Synchronisation KoboToolbox terminée."
+  "kobo.notice.syncDone": "Synchronisation KoboToolbox terminée.",
+  "kobo.debug.eyebrow": "Diagnostic API",
+  "kobo.debug.title": "Réponse KoboToolbox",
+  "kobo.debug.copy": "Copier le JSON",
+  "kobo.debug.copySuccess": "JSON copié.",
+  "kobo.debug.download": "Télécharger le JSON",
+  "kobo.debug.collapse": "Réduire la fenêtre",
+  "kobo.debug.close": "Fermer la fenêtre",
+  "kobo.debug.actions.testConnection": "Test de connexion",
+  "kobo.debug.actions.loadForms": "Chargement des formulaires",
+  "kobo.debug.actions.sync": "Synchronisation des soumissions"
 }

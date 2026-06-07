@@ -170,4 +170,40 @@
     <% } %>
   </section>
 <% } %>
+
+<% if (koboDebugPayloadJson) { %>
+  <aside
+    id="kobo-json-panel"
+    class="kobo-json-panel"
+    aria-labelledby="kobo-json-panel-title"
+    data-copy-success-label="<%= t("kobo.debug.copySuccess") %>"
+  >
+    <header class="kobo-json-panel-header">
+      <div>
+        <p class="eyebrow"><%= t("kobo.debug.eyebrow") %></p>
+        <h2 id="kobo-json-panel-title"><%= t("kobo.debug.title") %></h2>
+      </div>
+      <div class="kobo-json-panel-actions">
+        <button class="icon-button" type="button" id="kobo-json-copy" title="<%= t("kobo.debug.copy") %>" aria-label="<%= t("kobo.debug.copy") %>">
+          <i class="fa-solid fa-copy" aria-hidden="true"></i>
+        </button>
+        <button class="icon-button" type="button" id="kobo-json-download" title="<%= t("kobo.debug.download") %>" aria-label="<%= t("kobo.debug.download") %>">
+          <i class="fa-solid fa-download" aria-hidden="true"></i>
+        </button>
+        <button class="icon-button" type="button" id="kobo-json-collapse" title="<%= t("kobo.debug.collapse") %>" aria-label="<%= t("kobo.debug.collapse") %>">
+          <i class="fa-solid fa-minus" aria-hidden="true"></i>
+        </button>
+        <button class="icon-button" type="button" id="kobo-json-close" title="<%= t("kobo.debug.close") %>" aria-label="<%= t("kobo.debug.close") %>">
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </div>
+    </header>
+    <div class="kobo-json-panel-body">
+      <div id="kobo-json-editor" class="kobo-json-editor"></div>
+    </div>
+    <p id="kobo-json-feedback" class="kobo-json-feedback" role="status" aria-live="polite"></p>
+  </aside>
+  <script id="kobo-debug-payload" type="application/json"><%- koboDebugPayloadJson %></script>
+  <script type="module" src="/js/kobo-json-viewer.js"></script>
+<% } %>
 <%- include("../partials/footer") %>

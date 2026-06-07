@@ -32,7 +32,11 @@ exports.testConnection = async (req, res) => {
   try {
     const result = await testKoboConnection();
     renderKoboAdmin(req, res, {
-      notice: req.t("kobo.notice.connectionOk", { count: result.assetsPreviewCount })
+      notice: req.t("kobo.notice.connectionOk", { count: result.assetsPreviewCount }),
+      koboDebugPayload: buildKoboDebugPayload({
+        action: req.t("kobo.debug.actions.testConnection"),
+        payload: result.payload
+      })
     });
   } catch (error) {
     renderKoboAdmin(req, res, {
@@ -43,10 +47,15 @@ exports.testConnection = async (req, res) => {
 
 exports.listAssets = async (req, res) => {
   try {
-    const assets = await listKoboAssets({ limit: req.body.limit || 25 });
+    const result = await listKoboAssets({ limit: req.body.limit || 25, includePayload: true });
     renderKoboAdmin(req, res, {
-      assets,
-      notice: req.t("kobo.notice.assetsLoaded", { count: assets.length })
+      assets: result.assets,
+      notice: req.t("kobo.notice.assetsLoaded", { count: result.assets.length }),
+      koboDebugPayload: buildKoboDebugPayload({
+        action: req.t("kobo.debug.actions.loadForms"),
+        payload: result.payload,
+        mapped: result.assets
+      })
     });
   } catch (error) {
     renderKoboAdmin(req, res, {
@@ -57,7 +66,7 @@ exports.listAssets = async (req, res) => {
 
 exports.sync = async (req, res) => {
   try {
-    const summary = await syncKoboSubmissions({
+    const result = await syncKoboSubmissions({
       assetUid: req.body.asset_uid,
       missionId: req.body.mission_id,
       limit: req.body.limit,
@@ -65,14 +74,21 @@ exports.sync = async (req, res) => {
       dryRun: req.body.dry_run === "on",
       gpsField: req.body.gps_field,
       agentCodeField: req.body.agent_code_field,
-      formType: req.body.form_type
+      formType: req.body.form_type,
+      includePayload: true
     });
+    const summary = result.summary;
 
     renderKoboAdmin(req, res, {
       summary,
       notice: summary.dryRun
         ? req.t("kobo.notice.syncDryRunDone")
-        : req.t("kobo.notice.syncDone")
+        : req.t("kobo.notice.syncDone"),
+      koboDebugPayload: buildKoboDebugPayload({
+        action: req.t("kobo.debug.actions.sync"),
+        payload: result.payload,
+        summary
+      })
     });
   } catch (error) {
     renderKoboAdmin(req, res, {
@@ -101,6 +117,7 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
     missions: Mission.all(),
     assets: options.assets || [],
     summary: options.summary || null,
+    koboDebugPayloadJson: serializeDebugPayload(options.koboDebugPayload),
     notice: options.notice || null,
     error: options.error || null,
     values
@@ -109,4 +126,41 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
 
 function sanitizeError(error) {
   return error.message.replace(/Token\s+[A-Za-z0-9._-]+/g, "Token ***");
+}
+
+function buildKoboDebugPayload({ action, payload, mapped, summary }) {
+  return sanitizeDebugPayload({
+    action,
+    generatedAt: new Date().toISOString(),
+    response: payload,
+    mapped,
+    summary
+  });
+}
+
+function serializeDebugPayload(payload) {
+  if (!payload) {
+    return "";
+  }
+
+  return JSON.stringify(payload).replace(/</g, "\\u003c");
+}
+
+function sanitizeDebugPayload(value) {
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeDebugPayload(item));
+  }
+
+  if (!value || typeof value !== "object") {
+    return value;
+  }
+
+  return Object.entries(value).reduce((safeValue, [key, entryValue]) => {
+    safeValue[key] = isSensitiveKey(key) ? "***" : sanitizeDebugPayload(entryValue);
+    return safeValue;
+  }, {});
+}
+
+function isSensitiveKey(key) {
+  return /token|authorization|password|secret|api[_-]?key/i.test(key);
 }

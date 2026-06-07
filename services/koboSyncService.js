@@ -40,19 +40,26 @@ async function testKoboConnection({ client } = {}) {
   const payload = await koboClient.listAssets({ limit: 1 });
   return {
     ok: true,
-    assetsPreviewCount: extractResults(payload).length
+    assetsPreviewCount: extractResults(payload).length,
+    payload
   };
 }
 
-async function listKoboAssets({ client, limit = 25 } = {}) {
+async function listKoboAssets({ client, limit = 25, includePayload = false } = {}) {
   const koboClient = createKoboClient(client);
   const payload = await koboClient.listAssets({ limit });
-  return extractResults(payload).map((asset) => ({
+  const assets = extractResults(payload).map((asset) => ({
     uid: asset.uid || asset.id || "",
     name: asset.name || asset.asset_type || "Formulaire sans nom",
     deploymentStatus: asset.deployment__active ? "actif" : "non actif",
     dateModified: asset.date_modified || ""
   }));
+
+  if (includePayload) {
+    return { assets, payload };
+  }
+
+  return assets;
 }
 
 async function syncKoboSubmissions({
@@ -64,7 +71,8 @@ async function syncKoboSubmissions({
   dryRun = false,
   gpsField,
   agentCodeField,
-  formType
+  formType,
+  includePayload = false
 } = {}) {
   const koboClient = createKoboClient(client);
   const normalizedMissionId = Number(missionId);
@@ -130,6 +138,10 @@ async function syncKoboSubmissions({
     } catch (error) {
       summary.errors.push(error.message);
     }
+  }
+
+  if (includePayload) {
+    return { summary, payload };
   }
 
   return summary;

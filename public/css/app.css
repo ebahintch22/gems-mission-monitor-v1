@@ -1086,6 +1086,70 @@ h2 {
   padding-left: 20px;
 }
 
+.kobo-json-panel {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(24, 43, 55, 0.24);
+  display: flex;
+  flex-direction: column;
+  max-height: min(72vh, 760px);
+  min-height: 360px;
+  position: fixed;
+  right: 28px;
+  top: calc(var(--site-header-height) + 28px);
+  transition: max-height 0.3s ease, min-height 0.3s ease, transform 0.3s ease;
+  width: min(720px, calc(100vw - 56px));
+  z-index: 1100;
+}
+
+.kobo-json-panel.is-collapsed {
+  max-height: 78px;
+  min-height: 78px;
+  overflow: hidden;
+}
+
+.kobo-json-panel-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  padding: 12px 14px;
+}
+
+.kobo-json-panel-header h2 {
+  font-size: var(--font-panel-title);
+  margin: 0;
+}
+
+.kobo-json-panel-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.kobo-json-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px;
+}
+
+.kobo-json-editor {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 100%;
+  min-height: 280px;
+  overflow: hidden;
+}
+
+.kobo-json-feedback {
+  color: var(--success);
+  font-size: var(--font-small);
+  min-height: 18px;
+  padding: 0 14px 10px;
+}
+
 label {
   color: var(--muted);
   display: flex;
@@ -1309,6 +1373,19 @@ textarea::placeholder {
 
   .kobo-status-list {
     grid-template-columns: 1fr;
+  }
+
+  .kobo-json-panel {
+    max-height: calc(100vh - var(--site-header-mobile-height) - 20px);
+    min-height: min(520px, calc(100vh - var(--site-header-mobile-height) - 20px));
+    right: 10px;
+    top: calc(var(--site-header-mobile-height) + 10px);
+    width: calc(100vw - 20px);
+  }
+
+  .kobo-json-panel.is-collapsed {
+    max-height: 76px;
+    min-height: 76px;
   }
 
   .container-wide {

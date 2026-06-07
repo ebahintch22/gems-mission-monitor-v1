@@ -16,7 +16,7 @@ Cette commande exécute la suite de tests de l'application Node.js. Elle vérifi
 
 ## `git add .`
 
-Cette commande prépare tous les fichiers modifiés ou nouveaux pour le prochain commit. Elle place les changements dans la zone d'index Git. Concrètement, elle dit à Git : "ces fichiers font partie du point d'archivage". Elle est importante parce qu'un commit ne contient que les fichiers ajoutés à l'index. Il faut donc l'utiliser après avoir vérifié le contenu avec `git status`.
+Cette commande prépare tous les fichiers modifiés ou nouveaux pour le prochain commit. Elle place les changements dans la zone d'index Git. Concrètement, elle dit à Git : "ces fichiers font partie du point d'archivage". Elle est importante parce qu'un commit ne contient que les fichiers ajoutés à l'index. Il faut donc l'utiliser après avoir vérifié le contenu avec `git status`.git push
 
 ## `git commit -m "Point archivage G2M - interface SIG, Kobo et documentation"`
 

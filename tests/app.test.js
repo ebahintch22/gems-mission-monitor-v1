@@ -12,6 +12,7 @@ const { importTerritories } = require("../services/territoryImportService");
 const { importRoles } = require("../services/roleImportService");
 const { importAgents } = require("../services/agentImportService");
 const { seedSubmissions } = require("../services/submissionSeedService");
+const { listKoboAssets } = require("../services/koboSyncService");
 
 const roleCsv = [
   "Role;Label;description",
@@ -307,9 +308,13 @@ test("le choix de langue est conserve dans un cookie", async () => {
 test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => {
   const response = await request(app).get("/parametrages/kobo");
   const styleResponse = await request(app).get("/css/app.css");
+  const viewerScriptResponse = await request(app).get("/js/kobo-json-viewer.js");
+  const editorBundleResponse = await request(app).get("/vendor/vanilla-jsoneditor/standalone.js");
 
   assert.equal(response.status, 200);
   assert.equal(styleResponse.status, 200);
+  assert.equal(viewerScriptResponse.status, 200);
+  assert.equal(editorBundleResponse.status, 200);
   assert.match(response.text, /Administration KoboToolbox/);
   assert.match(response.text, /Tester la connexion/);
   assert.match(response.text, /Charger les formulaires/);
@@ -324,6 +329,35 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(styleResponse.text, /\.kobo-layout\s*\{/);
   assert.match(styleResponse.text, /\.kobo-sync-form\s*\{/);
   assert.match(styleResponse.text, /\.kobo-summary\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-json-panel\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-json-panel\.is-collapsed/);
+  assert.match(styleResponse.text, /\.kobo-json-editor\s*\{/);
+  assert.match(viewerScriptResponse.text, /createJSONEditor/);
+  assert.match(viewerScriptResponse.text, /readOnly: true/);
+  assert.match(viewerScriptResponse.text, /navigator\.clipboard\.writeText/);
+});
+
+test("listKoboAssets peut retourner le payload Kobo brut sur demande", async () => {
+  const payload = {
+    count: 1,
+    results: [{
+      uid: "asset-001",
+      name: "Questionnaire pilote",
+      deployment__active: true,
+      date_modified: "2026-06-05T10:00:00Z"
+    }]
+  };
+  const result = await listKoboAssets({
+    includePayload: true,
+    client: {
+      listAssets: async () => payload
+    }
+  });
+
+  assert.deepEqual(result.payload, payload);
+  assert.equal(result.assets.length, 1);
+  assert.equal(result.assets[0].uid, "asset-001");
+  assert.equal(result.assets[0].deploymentStatus, "actif");
 });
 
 test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async () => {
