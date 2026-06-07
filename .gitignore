@@ -13,7 +13,7 @@ node_modules/
 # Bases SQLite runtime
 # =========================
 #data/*.sqlite
-data/*.sqlite-*
+#data/*.sqlite-*
 
 # =========================
 # Logs
