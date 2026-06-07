@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="<%= locale || "fr" %>" data-display-size="medium">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= title %> | <%= t("app.name") %></title>
+    <script>
+      (function () {
+        try {
+          var size = localStorage.getItem("g2m_display_size");
+          if (["small", "medium", "large"].indexOf(size) === -1) {
+            size = "medium";
+          }
+          document.documentElement.setAttribute("data-display-size", size);
+        } catch (error) {
+          document.documentElement.setAttribute("data-display-size", "medium");
+        }
+      }());
+    </script>
+    <link rel="icon" href="<%= faviconPath %>" sizes="32x32">
+    <link rel="icon" type="image/png" href="<%= faviconPngPath %>" sizes="32x32">
+    <link rel="stylesheet" href="/css/app.css">
+  </head>
+  <body class="auth-body">
+    <main class="auth-shell">

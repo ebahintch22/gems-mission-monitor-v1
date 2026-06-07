@@ -1,0 +1,54 @@
+<%- include("../../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("users.eyebrow") %></p>
+    <h1><%= t("users.invitations.title") %></h1>
+    <p class="muted"><%= t("users.invitations.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/users"><%= t("users.actions.back") %></a>
+    <a class="button button-primary" href="/users/invitations/new"><%= t("users.invitations.new") %></a>
+  </div>
+</section>
+
+<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("users.invitations.listTitle") %></h2>
+    <span class="muted"><%= t("users.invitations.count", { count: invitations.length }) %></span>
+  </div>
+  <% if (!invitations.length) { %>
+    <p class="empty"><%= t("users.invitations.empty") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("common.user") %></th>
+          <th><%= t("common.email") %></th>
+          <th><%= t("users.fields.role").replace(" *", "") %></th>
+          <th><%= t("users.invitations.expiresAt") %></th>
+          <th><%= t("common.status") %></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% invitations.forEach((invitation) => { %>
+          <tr>
+            <td><%= invitation.prenoms %> <%= invitation.nom %></td>
+            <td><%= invitation.email %></td>
+            <td><%= invitation.role_label || invitation.role %></td>
+            <td><%= invitation.expires_at %></td>
+            <td><span class="status status-<%= invitation.statut %>"><%= t(`users.invitations.status.${invitation.statut}`) %></span></td>
+            <td>
+              <% if (invitation.statut === "invite" && !invitation.activated_at) { %>
+                <a href="/users/invitations/<%= invitation.id %>/edit"><%= t("common.edit") %></a>
+              <% } %>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../../partials/footer") %>

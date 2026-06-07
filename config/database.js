@@ -341,4 +341,115 @@ if (!agentColumns.includes("nom") || !agentColumns.includes("prenoms")) {
   }
 }
 
+migrateUsersForClosedRegistration();
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS user_invitations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL COLLATE NOCASE UNIQUE,
+    nom TEXT NOT NULL,
+    prenoms TEXT NOT NULL,
+    role TEXT NOT NULL,
+    zone_affectation TEXT,
+    mission_id INTEGER,
+    statut TEXT NOT NULL DEFAULT 'invite'
+      CHECK (statut IN ('invite', 'activee', 'expiree', 'annulee')),
+    invited_by INTEGER,
+    invitation_token_hash TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    activated_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (mission_id) REFERENCES missions(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL,
+    FOREIGN KEY (invited_by) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_user_invitations_email
+    ON user_invitations(email);
+
+  CREATE INDEX IF NOT EXISTS idx_user_invitations_statut
+    ON user_invitations(statut);
+
+  CREATE TABLE IF NOT EXISTS activation_tokens (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invitation_id INTEGER NOT NULL,
+    user_id INTEGER,
+    token_hash TEXT NOT NULL UNIQUE,
+    purpose TEXT NOT NULL DEFAULT 'activation'
+      CHECK (purpose IN ('activation', 'password_reset')),
+    expires_at TEXT NOT NULL,
+    used_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (invitation_id) REFERENCES user_invitations(id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_activation_tokens_invitation_id
+    ON activation_tokens(invitation_id);
+
+  CREATE TABLE IF NOT EXISTS audit_logs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    actor_user_id INTEGER,
+    target_user_id INTEGER,
+    action TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    details_json TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (actor_user_id) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL,
+    FOREIGN KEY (target_user_id) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_action
+    ON audit_logs(action);
+
+  CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
+    ON audit_logs(created_at);
+`);
+
 module.exports = db;
+
+function migrateUsersForClosedRegistration() {
+  const columns = db.prepare("PRAGMA table_info('users')").all();
+  const columnNames = columns.map((column) => column.name);
+
+  addColumnIfMissing(columnNames, "users", "zone_affectation", "TEXT");
+  addColumnIfMissing(columnNames, "users", "mission_id", "INTEGER");
+  addColumnIfMissing(columnNames, "users", "email_verified", "INTEGER NOT NULL DEFAULT 0");
+  addColumnIfMissing(columnNames, "users", "updated_at", "TEXT");
+
+  db.prepare(`
+    UPDATE users
+    SET email_verified = 1
+    WHERE statut = 'actif'
+      AND password_hash IS NOT NULL
+      AND email_verified = 0
+  `).run();
+
+  db.prepare(`
+    UPDATE users
+    SET updated_at = COALESCE(updated_at, created_at, CURRENT_TIMESTAMP)
+    WHERE updated_at IS NULL
+  `).run();
+}
+
+function addColumnIfMissing(columnNames, tableName, columnName, definition) {
+  if (!columnNames.includes(columnName)) {
+    db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition};`);
+    columnNames.push(columnName);
+  }
+}

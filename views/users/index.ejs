@@ -5,7 +5,10 @@
     <h1><%= t("users.title") %></h1>
     <p class="muted"><%= t("users.description") %></p>
   </div>
-  <a class="button button-primary" href="/users/new"><%= t("users.actions.new") %></a>
+  <div class="heading-actions">
+    <a class="button" href="/users/invitations"><%= t("users.invitations.title") %></a>
+    <a class="button button-primary" href="/users/new"><%= t("users.actions.new") %></a>
+  </div>
 </section>
 
 <section class="panel">

@@ -1,0 +1,8 @@
+<%- include("../partials/header", { title }) %>
+<section class="panel error-page">
+  <p class="eyebrow"><%= t("errors.403.eyebrow") %></p>
+  <h1><%= t("errors.403.title") %></h1>
+  <p class="muted"><%= t("errors.403.description") %></p>
+  <a class="button button-primary" href="/"><%= t("errors.actions.home") %></a>
+</section>
+<%- include("../partials/footer") %>

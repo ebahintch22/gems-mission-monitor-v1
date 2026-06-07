@@ -122,6 +122,72 @@ body {
   font: var(--font-body)/1.5 Arial, sans-serif;
 }
 
+.auth-body {
+  background:
+    linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(26, 188, 192, 0.08)),
+    #f5f8fa;
+  min-height: 100vh;
+}
+
+.auth-shell {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 28px;
+}
+
+.auth-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(24, 43, 55, 0.16);
+  max-width: 460px;
+  padding: 28px;
+  width: 100%;
+}
+
+.auth-brand {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 16px;
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+}
+
+.auth-logo {
+  display: block;
+  height: 46px;
+  object-fit: contain;
+  width: auto;
+}
+
+.auth-brand h1 {
+  font-size: var(--font-h1);
+  margin: 0;
+}
+
+.auth-brand p {
+  color: var(--muted);
+  font-size: var(--font-small);
+  margin: 4px 0 0;
+}
+
+.auth-heading {
+  margin-bottom: 18px;
+}
+
+.auth-heading h2 {
+  font-size: var(--font-h2);
+  margin: 0 0 6px;
+}
+
+.auth-form {
+  display: grid;
+  gap: 16px;
+}
+
 a {
   color: var(--primary);
   text-decoration: none;

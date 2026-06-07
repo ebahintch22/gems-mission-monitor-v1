@@ -1,0 +1,50 @@
+<%- include("../../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("users.eyebrow") %></p>
+    <h1><%= title %></h1>
+    <p class="muted"><%= t("users.invitations.formDescription") %></p>
+  </div>
+</section>
+
+<section class="panel form-panel">
+  <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <form action="<%= formAction %>" method="post" class="user-form">
+    <label><%= t("users.fields.lastName") %>
+      <input name="nom" required value="<%= values.nom || "" %>">
+    </label>
+    <label><%= t("users.fields.firstNames") %>
+      <input name="prenoms" required value="<%= values.prenoms || "" %>">
+    </label>
+    <label><%= t("users.fields.email") %>
+      <input type="email" name="email" required value="<%= values.email || "" %>">
+    </label>
+    <label><%= t("users.fields.role") %>
+      <select name="role" required>
+        <% roles.forEach((role) => { %>
+          <option value="<%= role.code_role %>" <%= values.role === role.code_role ? "selected" : "" %>><%= role.label %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label><%= t("users.invitations.zone") %>
+      <input name="zone_affectation" value="<%= values.zone_affectation || "" %>">
+    </label>
+    <label><%= t("common.mission") %>
+      <select name="mission_id">
+        <option value=""><%= t("common.notAssigned") %></option>
+        <% missions.forEach((mission) => { %>
+          <option value="<%= mission.id %>" <%= String(values.mission_id || "") === String(mission.id) ? "selected" : "" %>><%= mission.name %></option>
+        <% }) %>
+      </select>
+    </label>
+    <label><%= t("users.invitations.expirationDays") %>
+      <input type="number" name="expires_in_days" min="1" max="30" value="<%= values.expires_in_days || 7 %>">
+    </label>
+    <p class="form-note"><%= t("users.invitations.activationNote") %></p>
+    <div class="form-actions">
+      <a class="button" href="/users/invitations"><%= t("common.cancel") %></a>
+      <button class="button button-primary" type="submit"><%= submitLabel %></button>
+    </div>
+  </form>
+</section>
+<%- include("../../partials/footer") %>

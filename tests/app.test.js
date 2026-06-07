@@ -13,6 +13,7 @@ const { importRoles } = require("../services/roleImportService");
 const { importAgents } = require("../services/agentImportService");
 const { seedSubmissions } = require("../services/submissionSeedService");
 const { listKoboAssets } = require("../services/koboSyncService");
+const { hashToken } = require("../services/tokenService");
 
 const roleCsv = [
   "Role;Label;description",
@@ -358,6 +359,104 @@ test("listKoboAssets peut retourner le payload Kobo brut sur demande", async () 
   assert.equal(result.assets.length, 1);
   assert.equal(result.assets[0].uid, "asset-001");
   assert.equal(result.assets[0].deploymentStatus, "actif");
+});
+
+test("GET /login affiche la page de connexion fermee", async () => {
+  const response = await request(app).get("/login");
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Connexion/);
+  assert.match(response.text, /Accès réservé aux utilisateurs préautorisés/);
+  assert.match(response.text, /class="auth-shell"/);
+  assert.match(response.text, /Logo%20Rakall\.png/);
+  assert.match(response.text, /name="email"/);
+  assert.match(response.text, /name="password"/);
+  assert.doesNotMatch(response.text, /id="site-nav"/);
+  assert.doesNotMatch(response.text, /nav-button/);
+});
+
+test("creation invitation puis demande de lien d'activation depuis login", async () => {
+  const email = "invite.activation@g2m.test";
+  const createResponse = await request(app)
+    .post("/users/invitations")
+    .type("form")
+    .send({
+      nom: "Activation",
+      prenoms: "Invite",
+      email,
+      role: "partenaire",
+      zone_affectation: "Nord",
+      expires_in_days: "7"
+    });
+
+  assert.equal(createResponse.status, 302);
+  assert.equal(createResponse.headers.location, "/users/invitations?created=1");
+
+  const invitation = db.prepare("SELECT * FROM user_invitations WHERE email = ?").get(email);
+  assert.equal(invitation.statut, "invite");
+  assert.equal(invitation.role, "partenaire");
+
+  const loginResponse = await request(app)
+    .post("/login")
+    .type("form")
+    .send({ email, password: "" });
+
+  assert.equal(loginResponse.status, 200);
+  assert.match(loginResponse.text, /Si votre adresse est autorisée/);
+  const tokenCount = db.prepare(`
+    SELECT COUNT(*) AS count FROM activation_tokens WHERE invitation_id = ?
+  `).get(invitation.id).count;
+  assert.equal(tokenCount, 1);
+});
+
+test("activation par token valide puis connexion reussie", async () => {
+  const email = "activation.complete@g2m.test";
+  const invitationResult = db.prepare(`
+    INSERT INTO user_invitations (
+      email, nom, prenoms, role, invitation_token_hash, expires_at
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    email,
+    "Complete",
+    "Activation",
+    "partenaire",
+    hashToken("seed-token"),
+    new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  );
+  const activationToken = "activation-token-test";
+  db.prepare(`
+    INSERT INTO activation_tokens (invitation_id, token_hash, expires_at)
+    VALUES (?, ?, ?)
+  `).run(
+    invitationResult.lastInsertRowid,
+    hashToken(activationToken),
+    new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+  );
+
+  const activationResponse = await request(app)
+    .post(`/activation/${activationToken}`)
+    .type("form")
+    .send({
+      password: "MotDePasse10",
+      password_confirm: "MotDePasse10"
+    });
+
+  assert.equal(activationResponse.status, 302);
+  assert.equal(activationResponse.headers.location, "/login?activated=1");
+
+  const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
+  assert.equal(user.statut, "actif");
+  assert.equal(user.email_verified, 1);
+  assert.notEqual(user.password_hash, "MotDePasse10");
+
+  const loginResponse = await request(app)
+    .post("/login")
+    .type("form")
+    .send({ email, password: "MotDePasse10" });
+
+  assert.equal(loginResponse.status, 302);
+  assert.equal(loginResponse.headers.location, "/");
+  assert.match(String(loginResponse.headers["set-cookie"]), /g2m_auth=/);
 });
 
 test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async () => {

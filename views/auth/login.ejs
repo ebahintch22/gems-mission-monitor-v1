@@ -1,0 +1,31 @@
+<%- include("../partials/auth-header", { title }) %>
+<section class="auth-card">
+  <header class="auth-brand">
+    <img class="auth-logo" src="/assets/images/Logo%20Rakall.png" alt="Rakall">
+    <div>
+      <h1><%= t("app.shortName") %></h1>
+      <p><%= t("app.release") %></p>
+    </div>
+  </header>
+  <div class="auth-heading">
+    <p class="eyebrow"><%= t("auth.eyebrow") %></p>
+    <h2><%= t("auth.login.title") %></h2>
+    <p class="muted"><%= t("auth.login.description") %></p>
+  </div>
+  <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+  <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <form action="/login" method="post" class="auth-form">
+    <input type="hidden" name="next" value="<%= typeof next !== "undefined" ? next : "" %>">
+    <label><%= t("auth.login.email") %>
+      <input type="email" name="email" required value="<%= values.email || "" %>">
+    </label>
+    <label><%= t("auth.login.password") %>
+      <input type="password" name="password" autocomplete="current-password">
+    </label>
+    <p class="form-note"><%= t("auth.login.invitationNote") %></p>
+    <div class="form-actions">
+      <button class="button button-primary" type="submit"><%= t("auth.login.submit") %></button>
+    </div>
+  </form>
+</section>
+<%- include("../partials/auth-footer") %>

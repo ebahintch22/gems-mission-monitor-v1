@@ -2,7 +2,7 @@
 setlocal
 
 set "COMMIT_MESSAGE=%~1"
-if "%COMMIT_MESSAGE%"=="" set "COMMIT_MESSAGE=Livraison v0.3 du 04 juin 2026 [KoboConnect + Gestion Utilisateurs]"
+if "%COMMIT_MESSAGE%"=="" set "COMMIT_MESSAGE=Livraison v0.4 du 07 juin 2026 [KoboConnect + View Transposition + User Manager]"
 
 git status
 git add .

@@ -46,6 +46,14 @@ class User {
     return db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   }
 
+  static findAuthByEmail(email) {
+    return db.prepare(`
+      SELECT id, nom, prenoms, email, password_hash, role, statut, email_verified
+      FROM users
+      WHERE email = ?
+    `).get(email);
+  }
+
   static availableRegions() {
     return db.prepare(`
       SELECT id, code_region, nom_region
@@ -79,6 +87,79 @@ class User {
     });
 
     return createUser();
+  }
+
+  static activateFromInvitation(invitation, passwordHash) {
+    const existingUser = this.findAuthByEmail(invitation.email);
+    const activateUser = db.transaction(() => {
+      let userId = existingUser?.id;
+
+      if (existingUser) {
+        db.prepare(`
+          UPDATE users
+          SET
+            nom = @nom,
+            prenoms = @prenoms,
+            password_hash = @password_hash,
+            role = @role,
+            zone_affectation = @zone_affectation,
+            mission_id = @mission_id,
+            statut = 'actif',
+            email_verified = 1,
+            updated_at = CURRENT_TIMESTAMP
+          WHERE id = @id
+        `).run({
+          id: existingUser.id,
+          nom: invitation.nom,
+          prenoms: invitation.prenoms,
+          password_hash: passwordHash,
+          role: invitation.role,
+          zone_affectation: invitation.zone_affectation,
+          mission_id: invitation.mission_id
+        });
+      } else {
+        const result = db.prepare(`
+          INSERT INTO users (
+            nom, prenoms, email, password_hash, role, zone_affectation,
+            mission_id, statut, email_verified
+          ) VALUES (
+            @nom, @prenoms, @email, @password_hash, @role, @zone_affectation,
+            @mission_id, 'actif', 1
+          )
+        `).run({
+          nom: invitation.nom,
+          prenoms: invitation.prenoms,
+          email: invitation.email,
+          password_hash: passwordHash,
+          role: invitation.role,
+          zone_affectation: invitation.zone_affectation,
+          mission_id: invitation.mission_id
+        });
+        userId = result.lastInsertRowid;
+      }
+
+      return this.findById(userId);
+    });
+
+    return activateUser();
+  }
+
+  static updateLastLogin(id) {
+    return db.prepare(`
+      UPDATE users
+      SET last_login = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(id);
+  }
+
+  static updateStatus(id, statut) {
+    const result = db.prepare(`
+      UPDATE users
+      SET statut = ?, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ?
+    `).run(statut, id);
+
+    return result.changes ? this.findById(id) : null;
   }
 
   static update(id, input, regionIds) {

@@ -1,0 +1,31 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("auth.eyebrow") %></p>
+    <h1><%= t("activation.title") %></h1>
+    <p class="muted"><%= t("activation.description") %></p>
+  </div>
+</section>
+
+<section class="panel form-panel auth-panel">
+  <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <% if (invitation) { %>
+    <div class="activation-summary">
+      <strong><%= invitation.prenoms %> <%= invitation.nom %></strong>
+      <span class="muted"><%= invitation.email %></span>
+    </div>
+    <form action="" method="post" class="auth-form">
+      <label><%= t("activation.password") %>
+        <input type="password" name="password" minlength="10" required autocomplete="new-password">
+      </label>
+      <label><%= t("activation.confirmPassword") %>
+        <input type="password" name="password_confirm" minlength="10" required autocomplete="new-password">
+      </label>
+      <p class="form-note"><%= t("activation.passwordPolicy") %></p>
+      <div class="form-actions">
+        <button class="button button-primary" type="submit"><%= t("activation.submit") %></button>
+      </div>
+    </form>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

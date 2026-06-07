@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const express = require("express");
 const path = require("path");
+const cookieParser = require("cookie-parser");
+const authRoutes = require("./routes/authRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const missionRoutes = require("./routes/missionRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -10,6 +12,7 @@ const agentCollecteRoutes = require("./routes/agentCollecteRoutes");
 const sigRoutes = require("./routes/sigRoutes");
 const infographieRoutes = require("./routes/infographieRoutes");
 const koboAdminRoutes = require("./routes/koboAdminRoutes");
+const { currentUser } = require("./middlewares/authMiddleware");
 const { i18nMiddleware } = require("./services/i18nService");
 require("./config/database");
 
@@ -21,14 +24,17 @@ app.set("views", path.join(__dirname, "views"));
 
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 app.use(i18nMiddleware);
+app.use(currentUser);
 app.use((req, res, next) => {
   res.locals.faviconPath = `/assets/favicons/g2m-favicon-${faviconVariant}.ico`;
   res.locals.faviconPngPath = `/assets/favicons/g2m-favicon-${faviconVariant}.png`;
   next();
 });
 
+app.use("/", authRoutes);
 app.use("/", dashboardRoutes);
 app.use("/missions", missionRoutes);
 app.use("/users", userRoutes);
