@@ -1,0 +1,76 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.email.title") %></h1>
+    <p class="muted"><%= t("admin.email.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+  </div>
+</section>
+
+<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+<% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+
+<section class="kobo-layout">
+  <div class="panel">
+    <div class="panel-header">
+      <h2><%= t("admin.email.smtpStatus") %></h2>
+      <span class="status <%= smtpReady ? "status-actif" : "status-suspendu" %>">
+        <%= smtpReady ? t("common.ready") : t("common.incomplete") %>
+      </span>
+    </div>
+    <dl class="kobo-status-list">
+      <dt>MAIL_FROM</dt>
+      <dd><%= mailEnv.MAIL_FROM || t("common.missingMasc") %></dd>
+      <dt>SMTP_AUTH_METHOD</dt>
+      <dd><%= mailEnv.SMTP_AUTH_METHOD %></dd>
+      <dt>SMTP_HOST</dt>
+      <dd><%= mailEnv.SMTP_HOST || t("common.missingMasc") %></dd>
+      <dt>SMTP_PORT</dt>
+      <dd><%= mailEnv.SMTP_PORT || t("common.missingMasc") %></dd>
+      <dt>SMTP_USER</dt>
+      <dd><%= mailEnv.SMTP_USER || t("common.notProvided") %></dd>
+      <dt>SMTP_PASSWORD</dt>
+      <dd><%= mailEnv.SMTP_PASSWORD || t("common.notProvided") %></dd>
+      <% if (mailEnv.SMTP_AUTH_METHOD === "oauth2") { %>
+        <dt>GMAIL_CLIENT_ID</dt>
+        <dd><%= mailEnv.GMAIL_OAUTH_CLIENT_ID || t("common.notProvided") %></dd>
+        <dt>GMAIL_CLIENT_SECRET</dt>
+        <dd><%= mailEnv.GMAIL_OAUTH_CLIENT_SECRET || t("common.notProvided") %></dd>
+        <dt>GMAIL_REFRESH_TOKEN</dt>
+        <dd><%= mailEnv.GMAIL_OAUTH_REFRESH_TOKEN || t("common.notProvided") %></dd>
+      <% } %>
+    </dl>
+  </div>
+
+  <div class="panel">
+    <h2><%= t("admin.email.formTitle") %></h2>
+    <form action="/admin/email-test" method="post" class="admin-email-form">
+      <label><%= t("admin.email.recipient") %> *
+        <input type="email" name="to" value="<%= values.to %>" required>
+      </label>
+      <label><%= t("admin.email.subject") %>
+        <input name="subject" value="<%= values.subject %>">
+      </label>
+      <label><%= t("admin.email.message") %>
+        <textarea name="message" rows="5"><%= values.message %></textarea>
+      </label>
+      <div class="form-actions">
+        <button class="button button-primary" type="submit">
+          <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+          <%= t("admin.email.actions.send") %>
+        </button>
+      </div>
+    </form>
+  </div>
+</section>
+
+<% if (result) { %>
+  <section class="panel">
+    <h2><%= t("admin.email.resultTitle") %></h2>
+    <pre class="admin-log-output"><%= JSON.stringify(result, null, 2) %></pre>
+  </section>
+<% } %>
+<%- include("../partials/footer") %>

@@ -143,6 +143,9 @@
             <a href="/agents" role="menuitem"><%= t("nav.agents") %></a>
             <a href="/users" role="menuitem"><%= t("nav.users") %></a>
             <a href="/parametrages/kobo" role="menuitem"><%= t("nav.kobo") %></a>
+            <% if (currentUser && currentUser.role === "admin") { %>
+              <a href="/admin" role="menuitem"><%= t("nav.admin") %></a>
+            <% } %>
           </div>
         </div>
       </nav>

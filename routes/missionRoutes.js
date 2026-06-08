@@ -1,11 +1,15 @@
 const express = require("express");
 const missionController = require("../controllers/missionController");
+const { requireAuth } = require("../middlewares/authMiddleware");
+const { requirePermission } = require("../middlewares/permissionMiddleware");
 
 const router = express.Router();
 
-router.get("/", missionController.index);
-router.get("/new", missionController.new);
-router.post("/", missionController.create);
-router.get("/:id", missionController.show);
+router.use(requireAuth);
+
+router.get("/", requirePermission("missions.read"), missionController.index);
+router.get("/new", requirePermission("missions.manage"), missionController.new);
+router.post("/", requirePermission("missions.manage"), missionController.create);
+router.get("/:id", requirePermission("missions.read"), missionController.show);
 
 module.exports = router;

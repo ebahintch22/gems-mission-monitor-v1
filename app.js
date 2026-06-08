@@ -4,6 +4,7 @@ const express = require("express");
 const path = require("path");
 const cookieParser = require("cookie-parser");
 const authRoutes = require("./routes/authRoutes");
+const adminRoutes = require("./routes/adminRoutes");
 const dashboardRoutes = require("./routes/dashboardRoutes");
 const missionRoutes = require("./routes/missionRoutes");
 const userRoutes = require("./routes/userRoutes");
@@ -35,6 +36,7 @@ app.use((req, res, next) => {
 });
 
 app.use("/", authRoutes);
+app.use("/admin", adminRoutes);
 app.use("/", dashboardRoutes);
 app.use("/missions", missionRoutes);
 app.use("/users", userRoutes);

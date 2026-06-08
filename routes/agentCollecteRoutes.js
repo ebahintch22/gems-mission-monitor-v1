@@ -1,13 +1,17 @@
 const express = require("express");
 const agentCollecteController = require("../controllers/agentCollecteController");
+const { requireAuth } = require("../middlewares/authMiddleware");
+const { requirePermission } = require("../middlewares/permissionMiddleware");
 
 const router = express.Router();
 
-router.get("/", agentCollecteController.index);
-router.get("/new", agentCollecteController.new);
-router.post("/", agentCollecteController.create);
-router.get("/:id/edit", agentCollecteController.edit);
-router.post("/:id", agentCollecteController.update);
-router.get("/:id", agentCollecteController.show);
+router.use(requireAuth);
+
+router.get("/", requirePermission("agents.read"), agentCollecteController.index);
+router.get("/new", requirePermission("agents.manage"), agentCollecteController.new);
+router.post("/", requirePermission("agents.manage"), agentCollecteController.create);
+router.get("/:id/edit", requirePermission("agents.manage"), agentCollecteController.edit);
+router.post("/:id", requirePermission("agents.manage"), agentCollecteController.update);
+router.get("/:id", requirePermission("agents.read"), agentCollecteController.show);
 
 module.exports = router;

@@ -1,0 +1,60 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.settings.title") %></h1>
+    <p class="muted"><%= t("admin.settings.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+  </div>
+</section>
+
+<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+<% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+
+<form action="/admin/settings" method="post" class="admin-settings-form">
+  <% Object.entries(groupedSettings).forEach(([groupName, settings]) => { %>
+    <section class="panel">
+      <div class="panel-header">
+        <h2><%= groupLabels[groupName] || groupName %></h2>
+      </div>
+      <div class="admin-settings-grid">
+        <% settings.forEach((setting) => { %>
+          <label>
+            <span><%= setting.label %></span>
+            <% if (setting.type === "boolean") { %>
+              <span class="checkbox-label">
+                <input type="checkbox" name="settings[<%= setting.key %>]" <%= setting.value === "true" ? "checked" : "" %>>
+                <%= t("admin.settings.booleanEnabled") %>
+              </span>
+            <% } else if (setting.type === "secret") { %>
+              <input
+                type="password"
+                name="settings[<%= setting.key %>]"
+                placeholder="<%= setting.configured ? t("admin.settings.secretConfigured") : t("admin.settings.secretEmpty") %>"
+                autocomplete="off"
+              >
+            <% } else { %>
+              <input
+                type="<%= setting.type === "number" ? "number" : "text" %>"
+                name="settings[<%= setting.key %>]"
+                value="<%= setting.value || "" %>"
+              >
+            <% } %>
+            <% if (setting.description) { %>
+              <span class="form-hint"><%= setting.description %></span>
+            <% } %>
+          </label>
+        <% }) %>
+      </div>
+    </section>
+  <% }) %>
+  <div class="form-actions">
+    <button class="button button-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+      <%= t("admin.settings.actions.save") %>
+    </button>
+  </div>
+</form>
+<%- include("../partials/footer") %>

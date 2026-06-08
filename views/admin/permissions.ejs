@@ -1,0 +1,78 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.permissions.title") %></h1>
+    <p class="muted"><%= t("admin.permissions.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+  </div>
+</section>
+
+<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+<% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+
+<form action="/admin/permissions" method="post" class="admin-permissions-form">
+  <section class="panel admin-permissions-panel">
+    <% matrix.roles.forEach((role) => { %>
+      <input type="hidden" name="matrix_roles" value="<%= role.code_role %>">
+    <% }) %>
+    <div class="panel-header">
+      <h2><%= t("admin.permissions.matrixTitle") %></h2>
+      <span class="muted"><%= t("admin.permissions.matrixCount", { roles: matrix.roles.length, permissions: matrix.permissions.length }) %></span>
+    </div>
+
+    <div class="admin-permissions-scroll">
+      <table class="simple-table admin-permissions-table">
+        <thead>
+          <tr>
+            <th class="admin-permissions-role-header"><%= t("admin.permissions.role") %></th>
+            <% matrix.permissions.forEach((permission) => { %>
+              <th title="<%= permission.description || permission.code_permission %>">
+                <span><%= permission.label %></span>
+                <code><%= permission.code_permission %></code>
+              </th>
+            <% }) %>
+          </tr>
+        </thead>
+        <tbody>
+          <% matrix.roles.forEach((role) => { %>
+            <tr>
+              <th class="admin-permissions-role">
+                <span><%= role.label %></span>
+                <code><%= role.code_role %></code>
+              </th>
+              <% matrix.permissions.forEach((permission) => {
+                const entry = matrix.rolePermissionIndex[`${role.code_role}:${permission.code_permission}`];
+                const checked = Boolean(entry && entry.allowed);
+                const disabled = Boolean(permission.is_system || (entry && entry.locked));
+              %>
+                <td class="<%= disabled ? "is-locked" : "" %>">
+                  <label class="admin-permission-toggle" title="<%= disabled ? t("admin.permissions.locked") : permission.code_permission %>">
+                    <input
+                      type="checkbox"
+                      name="matrix[<%= role.code_role %>][<%= permission.code_permission %>]"
+                      <%= checked ? "checked" : "" %>
+                      <%= disabled ? "disabled" : "" %>
+                    >
+                    <span><%= disabled ? t("admin.permissions.lockedShort") : t("admin.permissions.toggle") %></span>
+                  </label>
+                </td>
+              <% }) %>
+            </tr>
+          <% }) %>
+        </tbody>
+      </table>
+    </div>
+    <p class="form-note"><%= t("admin.permissions.systemNote") %></p>
+  </section>
+
+  <div class="form-actions">
+    <button class="button button-primary" type="submit">
+      <i class="fa-solid fa-floppy-disk" aria-hidden="true"></i>
+      <%= t("admin.permissions.actions.save") %>
+    </button>
+  </div>
+</form>
+<%- include("../partials/footer") %>

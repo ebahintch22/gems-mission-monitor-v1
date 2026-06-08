@@ -1,0 +1,102 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.monitoring.title") %></h1>
+    <p class="muted"><%= t("admin.monitoring.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+  </div>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("admin.monitoring.bySource") %></h2>
+  </div>
+  <% if (!monitoring.submissionsBySource.length) { %>
+    <p class="empty"><%= t("admin.monitoring.empty") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("admin.monitoring.source") %></th>
+          <th><%= t("admin.monitoring.total") %></th>
+          <th><%= t("admin.monitoring.lastSync") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% monitoring.submissionsBySource.forEach((row) => { %>
+          <tr>
+            <td><%= row.source %></td>
+            <td><%= row.total %></td>
+            <td><%= row.last_synced_at || t("common.notProvided") %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("admin.monitoring.latestKobo") %></h2>
+  </div>
+  <% if (!monitoring.latestKoboSubmissions.length) { %>
+    <p class="empty"><%= t("admin.monitoring.noKobo") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Kobo</th>
+          <th><%= t("admin.monitoring.submittedAt") %></th>
+          <th><%= t("admin.monitoring.lastSync") %></th>
+          <th><%= t("common.status") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% monitoring.latestKoboSubmissions.forEach((row) => { %>
+          <tr>
+            <td><%= row.id %></td>
+            <td><code><%= row.source_submission_id %></code></td>
+            <td><%= row.submitted_at %></td>
+            <td><%= row.synced_at %></td>
+            <td><%= row.statut_validation %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("admin.monitoring.latestAudit") %></h2>
+  </div>
+  <% if (!monitoring.latestAuditLogs.length) { %>
+    <p class="empty"><%= t("admin.monitoring.noAudit") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th><%= t("admin.monitoring.action") %></th>
+          <th><%= t("admin.monitoring.entity") %></th>
+          <th><%= t("admin.monitoring.createdAt") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% monitoring.latestAuditLogs.forEach((row) => { %>
+          <tr>
+            <td><%= row.id %></td>
+            <td><code><%= row.action %></code></td>
+            <td><%= row.entity_type || "-" %> <%= row.entity_id || "" %></td>
+            <td><%= row.created_at %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

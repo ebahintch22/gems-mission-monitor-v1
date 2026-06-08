@@ -1,0 +1,79 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.dbStats.title") %></h1>
+    <p class="muted"><%= t("admin.dbStats.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+  </div>
+</section>
+
+<section class="stats" aria-label="<%= t("admin.dbStats.indicators") %>">
+  <div>
+    <span><%= t("admin.dbStats.totalTables") %></span>
+    <strong><%= stats.totalTables %></strong>
+  </div>
+  <div>
+    <span><%= t("admin.dbStats.totalSubmissions") %></span>
+    <strong><%= stats.metrics ? stats.metrics.submissionCount : 0 %></strong>
+  </div>
+  <div>
+    <span><%= t("admin.dbStats.lastSubmission") %></span>
+    <strong><%= stats.metrics && stats.metrics.lastSubmittedAt ? stats.metrics.lastSubmittedAt : "-" %></strong>
+  </div>
+  <div>
+    <span><%= t("admin.dbStats.lastSync") %></span>
+    <strong><%= stats.metrics && stats.metrics.lastSyncedAt ? stats.metrics.lastSyncedAt : "-" %></strong>
+  </div>
+</section>
+
+<% Object.entries(stats.groupedTables).forEach(([category, tables]) => { %>
+  <section class="panel admin-db-category">
+    <div class="panel-header">
+      <h2><%= categoryLabels[category] || category %></h2>
+      <span class="muted"><%= tables.length %> table(s)</span>
+    </div>
+    <% tables.forEach((table) => { %>
+      <details class="admin-db-table">
+        <summary>
+          <strong><%= table.name %></strong>
+          <span><%= t("admin.dbStats.records", { count: table.recordCount ?? "-" }) %></span>
+          <span><%= t("admin.dbStats.fields", { count: table.columnCount }) %></span>
+        </summary>
+        <table class="simple-table">
+          <thead>
+            <tr>
+              <th><%= t("admin.dbStats.field.name") %></th>
+              <th><%= t("admin.dbStats.field.type") %></th>
+              <th><%= t("admin.dbStats.field.required") %></th>
+              <th><%= t("admin.dbStats.field.default") %></th>
+              <th><%= t("admin.dbStats.field.pk") %></th>
+            </tr>
+          </thead>
+          <tbody>
+            <% table.columns.forEach((column) => { %>
+              <tr>
+                <td><code><%= column.name %></code></td>
+                <td><%= column.type || "-" %></td>
+                <td><%= column.notnull ? "yes" : "no" %></td>
+                <td><%= column.dflt_value || "-" %></td>
+                <td><%= column.pk ? "yes" : "no" %></td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
+        <% if (table.foreignKeys.length) { %>
+          <p class="form-hint"><%= t("admin.dbStats.foreignKeys") %></p>
+          <ul class="admin-inline-list">
+            <% table.foreignKeys.forEach((foreignKey) => { %>
+              <li><code><%= foreignKey.from %></code> -> <code><%= foreignKey.table %>.<%= foreignKey.to %></code></li>
+            <% }) %>
+          </ul>
+        <% } %>
+      </details>
+    <% }) %>
+  </section>
+<% }) %>
+<%- include("../partials/footer") %>

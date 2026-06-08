@@ -1146,6 +1146,156 @@ h2 {
   font-size: var(--font-summary);
 }
 
+.admin-card-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 22px;
+}
+
+.admin-card {
+  color: inherit;
+  display: block;
+  text-decoration: none;
+}
+
+.admin-card i {
+  color: var(--primary);
+  font-size: 24px;
+  margin-bottom: 12px;
+}
+
+.admin-card h2 {
+  font-size: var(--font-panel-title);
+  margin: 0 0 8px;
+}
+
+.admin-card p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.admin-settings-form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-settings-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-email-form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-db-table {
+  border-top: 1px solid var(--border);
+  padding: 12px 0;
+}
+
+.admin-db-table summary {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.admin-db-table summary span {
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.admin-inline-list {
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  list-style: none;
+  padding: 0;
+}
+
+.admin-log-output {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 0;
+  overflow: auto;
+  padding: 12px;
+}
+
+.admin-permissions-form {
+  display: grid;
+  gap: 18px;
+}
+
+.admin-permissions-scroll {
+  overflow-x: auto;
+}
+
+.admin-permissions-table {
+  min-width: 1280px;
+}
+
+.admin-permissions-table th {
+  vertical-align: bottom;
+}
+
+.admin-permissions-table thead th {
+  font-size: var(--font-small);
+  min-width: 118px;
+}
+
+.admin-permissions-table thead th span,
+.admin-permissions-role span {
+  display: block;
+}
+
+.admin-permissions-table code {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.admin-permissions-role-header,
+.admin-permissions-role {
+  left: 0;
+  min-width: 210px;
+  position: sticky;
+  z-index: 1;
+}
+
+.admin-permissions-role-header {
+  background: var(--panel);
+  z-index: 2;
+}
+
+.admin-permissions-role {
+  background: var(--panel);
+  text-align: left;
+}
+
+.admin-permission-toggle {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 4px;
+}
+
+.admin-permission-toggle input {
+  height: 18px;
+  width: 18px;
+}
+
+.admin-permissions-table td.is-locked {
+  background: #f5f7f8;
+}
+
 .kobo-error-list {
   color: var(--danger);
   margin: 18px 0 0;
@@ -1225,7 +1375,8 @@ label {
 }
 
 input,
-select {
+select,
+textarea {
   border: 1px solid var(--border);
   border-radius: 5px;
   color: var(--ink);
@@ -1430,6 +1581,8 @@ textarea::placeholder {
     .user-form,
     .equipe-form,
     .agent-form,
+    .admin-card-grid,
+    .admin-settings-grid,
     .kobo-layout,
     .kobo-sync-form,
     .kobo-summary,

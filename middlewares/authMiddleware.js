@@ -1,12 +1,15 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { resolveUserPermissions } = require("../services/permissionService");
 
 const AUTH_COOKIE = "g2m_auth";
 
 function currentUser(req, res, next) {
   const token = req.cookies?.[AUTH_COOKIE];
   req.currentUser = null;
+  req.permissions = new Set();
   res.locals.currentUser = null;
+  res.locals.permissions = new Set();
 
   if (!token) {
     return next();
@@ -17,7 +20,9 @@ function currentUser(req, res, next) {
     const user = User.findById(payload.sub);
     if (user && user.statut === "actif") {
       req.currentUser = user;
+      req.permissions = resolveUserPermissions(user);
       res.locals.currentUser = user;
+      res.locals.permissions = req.permissions;
     }
   } catch {
     res.clearCookie(AUTH_COOKIE);

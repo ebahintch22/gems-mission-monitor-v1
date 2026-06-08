@@ -1,0 +1,78 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.title") %></h1>
+    <p class="muted"><%= t("admin.description") %></p>
+  </div>
+</section>
+
+<section class="admin-card-grid">
+  <a class="panel admin-card" href="/admin/settings">
+    <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+    <h2><%= t("admin.cards.settings.title") %></h2>
+    <p><%= t("admin.cards.settings.description") %></p>
+  </a>
+  <a class="panel admin-card" href="/admin/db-stats">
+    <i class="fa-solid fa-database" aria-hidden="true"></i>
+    <h2><%= t("admin.cards.dbStats.title") %></h2>
+    <p><%= t("admin.cards.dbStats.description") %></p>
+  </a>
+  <a class="panel admin-card" href="/users">
+    <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
+    <h2><%= t("admin.cards.users.title") %></h2>
+    <p><%= t("admin.cards.users.description") %></p>
+  </a>
+  <a class="panel admin-card" href="/users/invitations">
+    <i class="fa-solid fa-envelope-open-text" aria-hidden="true"></i>
+    <h2><%= t("admin.cards.invitations.title") %></h2>
+    <p><%= t("admin.cards.invitations.description") %></p>
+  </a>
+  <a class="panel admin-card" href="/admin/email-test">
+    <i class="fa-solid fa-paper-plane" aria-hidden="true"></i>
+    <h2><%= t("admin.cards.email.title") %></h2>
+    <p><%= t("admin.cards.email.description") %></p>
+  </a>
+  <a class="panel admin-card" href="/admin/monitoring">
+    <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+    <h2><%= t("admin.cards.monitoring.title") %></h2>
+    <p><%= t("admin.cards.monitoring.description") %></p>
+  </a>
+  <% if (permissions && permissions.has("permissions.manage")) { %>
+    <a class="panel admin-card" href="/admin/permissions">
+      <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+      <h2><%= t("admin.cards.permissions.title") %></h2>
+      <p><%= t("admin.cards.permissions.description") %></p>
+    </a>
+  <% } %>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("admin.monitoring.summaryTitle") %></h2>
+    <a href="/admin/monitoring"><%= t("admin.actions.viewDetails") %></a>
+  </div>
+  <% if (!monitoring.submissionsBySource.length) { %>
+    <p class="empty"><%= t("admin.monitoring.empty") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("admin.monitoring.source") %></th>
+          <th><%= t("admin.monitoring.total") %></th>
+          <th><%= t("admin.monitoring.lastSync") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% monitoring.submissionsBySource.forEach((row) => { %>
+          <tr>
+            <td><%= row.source %></td>
+            <td><%= row.total %></td>
+            <td><%= row.last_synced_at || t("common.notProvided") %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

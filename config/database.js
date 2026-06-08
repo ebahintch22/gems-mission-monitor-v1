@@ -419,7 +419,76 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
     ON audit_logs(created_at);
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    type TEXT NOT NULL DEFAULT 'string'
+      CHECK (type IN ('string', 'number', 'boolean', 'json', 'secret')),
+    group_name TEXT NOT NULL DEFAULT 'general',
+    label TEXT NOT NULL,
+    description TEXT,
+    updated_by INTEGER,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (updated_by) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE TABLE IF NOT EXISTS permissions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code_permission TEXT NOT NULL UNIQUE,
+    label TEXT NOT NULL,
+    description TEXT,
+    category TEXT NOT NULL DEFAULT 'general',
+    is_system INTEGER NOT NULL DEFAULT 0
+      CHECK (is_system IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE TABLE IF NOT EXISTS role_permissions (
+    role TEXT NOT NULL,
+    permission_id INTEGER NOT NULL,
+    allowed INTEGER NOT NULL DEFAULT 1
+      CHECK (allowed IN (0, 1)),
+    locked INTEGER NOT NULL DEFAULT 0
+      CHECK (locked IN (0, 1)),
+    source TEXT NOT NULL DEFAULT 'admin'
+      CHECK (source IN ('system', 'admin')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (role, permission_id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE
+  );
+
+  CREATE TABLE IF NOT EXISTS user_permission_overrides (
+    user_id INTEGER NOT NULL,
+    permission_id INTEGER NOT NULL,
+    allowed INTEGER NOT NULL
+      CHECK (allowed IN (0, 1)),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, permission_id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE,
+    FOREIGN KEY (permission_id) REFERENCES permissions(id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_role_permissions_permission_id
+    ON role_permissions(permission_id);
+
+  CREATE INDEX IF NOT EXISTS idx_user_permission_overrides_permission_id
+    ON user_permission_overrides(permission_id);
 `);
+
+seedDefaultSettings();
+seedDefaultPermissions();
 
 module.exports = db;
 
@@ -452,4 +521,311 @@ function addColumnIfMissing(columnNames, tableName, columnName, definition) {
     db.exec(`ALTER TABLE ${tableName} ADD COLUMN ${columnName} ${definition};`);
     columnNames.push(columnName);
   }
+}
+
+function seedDefaultSettings() {
+  const insert = db.prepare(`
+    INSERT OR IGNORE INTO settings (
+      key, value, type, group_name, label, description
+    ) VALUES (
+      @key, @value, @type, @group_name, @label, @description
+    )
+  `);
+
+  [
+    {
+      key: "app.name",
+      value: "GEMS Mission Monitor",
+      type: "string",
+      group_name: "general",
+      label: "Nom de l'application",
+      description: "Libelle principal affiche dans l'application."
+    },
+    {
+      key: "alerts.anomaly_threshold",
+      value: "3",
+      type: "number",
+      group_name: "alerts",
+      label: "Seuil d'anomalies",
+      description: "Nombre d'anomalies a partir duquel une soumission est prioritaire."
+    },
+    {
+      key: "sync.kobo_interval_minutes",
+      value: "60",
+      type: "number",
+      group_name: "sync",
+      label: "Intervalle Kobo",
+      description: "Intervalle de synchronisation KoboToolbox en minutes."
+    },
+    {
+      key: "mail.from",
+      value: process.env.MAIL_FROM || "no-reply@g2m.local",
+      type: "string",
+      group_name: "mail",
+      label: "Expediteur email",
+      description: "Adresse utilisee comme expediteur des emails applicatifs."
+    },
+    {
+      key: "smtp.auth_method",
+      value: process.env.SMTP_AUTH_METHOD || "password",
+      type: "string",
+      group_name: "mail",
+      label: "Mode d'authentification SMTP",
+      description: "Utiliser password pour SMTP classique ou oauth2 pour Gmail OAuth2."
+    },
+    {
+      key: "smtp.host",
+      value: process.env.SMTP_HOST || "",
+      type: "string",
+      group_name: "mail",
+      label: "Serveur SMTP",
+      description: "Hote SMTP utilise pour l'envoi des emails."
+    },
+    {
+      key: "smtp.port",
+      value: process.env.SMTP_PORT || "",
+      type: "number",
+      group_name: "mail",
+      label: "Port SMTP",
+      description: "Port SMTP."
+    },
+    {
+      key: "smtp.secure",
+      value: process.env.SMTP_SECURE || "false",
+      type: "boolean",
+      group_name: "mail",
+      label: "SMTP securise",
+      description: "Utiliser une connexion SMTP TLS directe."
+    },
+    {
+      key: "smtp.user",
+      value: process.env.SMTP_USER || "",
+      type: "string",
+      group_name: "mail",
+      label: "Utilisateur SMTP",
+      description: "Identifiant SMTP si le serveur exige une authentification."
+    },
+    {
+      key: "smtp.password",
+      value: process.env.SMTP_PASSWORD || "",
+      type: "secret",
+      group_name: "mail",
+      label: "Mot de passe SMTP",
+      description: "Secret SMTP masque dans l'interface."
+    },
+    {
+      key: "gmail.oauth_client_id",
+      value: process.env.GMAIL_OAUTH_CLIENT_ID || "",
+      type: "secret",
+      group_name: "mail",
+      label: "Client ID OAuth2 Gmail",
+      description: "Identifiant client OAuth2 cree dans Google Cloud Console."
+    },
+    {
+      key: "gmail.oauth_client_secret",
+      value: process.env.GMAIL_OAUTH_CLIENT_SECRET || "",
+      type: "secret",
+      group_name: "mail",
+      label: "Client secret OAuth2 Gmail",
+      description: "Secret client OAuth2 Google, masque dans l'interface."
+    },
+    {
+      key: "gmail.oauth_refresh_token",
+      value: process.env.GMAIL_OAUTH_REFRESH_TOKEN || "",
+      type: "secret",
+      group_name: "mail",
+      label: "Refresh token OAuth2 Gmail",
+      description: "Jeton long terme obtenu avec le consentement Google OAuth2."
+    }
+  ].forEach((setting) => insert.run(setting));
+}
+
+function seedDefaultPermissions() {
+  const permissions = [
+    ["dashboard.read", "Acces au dashboard", "Consultation du tableau de bord.", "dashboard", 0],
+    ["missions.read", "Consultation des missions", "Lecture des missions.", "missions", 0],
+    ["missions.manage", "Gestion des missions", "Creation et modification des missions.", "missions", 0],
+    ["teams.read", "Consultation des equipes", "Lecture des equipes.", "teams", 0],
+    ["teams.manage", "Gestion des equipes", "Creation et modification des equipes.", "teams", 0],
+    ["agents.read", "Consultation des agents", "Lecture des agents de collecte.", "agents", 0],
+    ["agents.manage", "Gestion des agents", "Creation et modification des agents.", "agents", 0],
+    ["users.read", "Consultation des utilisateurs", "Lecture du registre des utilisateurs.", "users", 0],
+    ["users.manage", "Gestion des utilisateurs", "Creation et modification des utilisateurs.", "users", 1],
+    ["users.invite.read", "Consultation des invitations", "Lecture des invitations utilisateurs.", "users", 0],
+    ["users.invite.manage", "Gestion des invitations", "Creation et modification des invitations.", "users", 1],
+    ["admin.access", "Acces administration", "Acces au hub d'administration.", "admin", 1],
+    ["settings.manage", "Gestion des parametres", "Modification des parametres globaux.", "admin", 1],
+    ["db.stats.read", "Rapport base de donnees", "Consultation du rapport dynamique SQLite.", "admin", 1],
+    ["email.test", "Test email", "Envoi d'emails de test SMTP.", "admin", 1],
+    ["monitoring.read", "Monitoring", "Consultation du monitoring applicatif.", "admin", 0],
+    ["kobo.manage", "Administration Kobo", "Gestion de la connexion et des synchronisations KoboToolbox.", "kobo", 1],
+    ["sig.read", "Consultation SIG", "Acces a la cartographie.", "sig", 0],
+    ["sig.manage", "Gestion SIG", "Parametrage ou fonctions avancees SIG.", "sig", 0],
+    ["infographics.read", "Infographies", "Consultation des infographies.", "infographics", 0],
+    ["quality.read", "Consultation qualite", "Lecture des controles qualite.", "quality", 0],
+    ["quality.manage", "Gestion qualite", "Actions de controle et validation.", "quality", 0],
+    ["exports.manage", "Gestion des exports", "Generation et gestion des exports.", "exports", 0],
+    ["permissions.manage", "Gestion des habilitations", "Administration de la matrice des droits.", "admin", 1]
+  ];
+
+  const upsertPermission = db.prepare(`
+    INSERT INTO permissions (
+      code_permission, label, description, category, is_system
+    ) VALUES (
+      @code_permission, @label, @description, @category, @is_system
+    )
+    ON CONFLICT(code_permission) DO UPDATE SET
+      label = excluded.label,
+      description = excluded.description,
+      category = excluded.category,
+      is_system = excluded.is_system
+  `);
+
+  const grantRolePermission = db.prepare(`
+    INSERT INTO role_permissions (
+      role, permission_id, allowed, locked, source
+    )
+    SELECT @role, id, @allowed, @locked, @source
+    FROM permissions
+    WHERE code_permission = @code_permission
+    ON CONFLICT(role, permission_id) DO UPDATE SET
+      allowed = CASE
+        WHEN role_permissions.locked = 1 THEN role_permissions.allowed
+        ELSE excluded.allowed
+      END,
+      locked = CASE
+        WHEN excluded.locked = 1 THEN 1
+        ELSE role_permissions.locked
+      END,
+      source = CASE
+        WHEN excluded.locked = 1 THEN 'system'
+        ELSE role_permissions.source
+      END,
+      updated_at = CURRENT_TIMESTAMP
+  `);
+  const insertDefaultRolePermission = db.prepare(`
+    INSERT INTO role_permissions (
+      role, permission_id, allowed, locked, source
+    )
+    SELECT @role, id, 1, 0, 'admin'
+    FROM permissions
+    WHERE code_permission = @code_permission
+    ON CONFLICT(role, permission_id) DO NOTHING
+  `);
+
+  db.transaction(() => {
+    permissions.forEach(([code, label, description, category, isSystem]) => {
+      upsertPermission.run({
+        code_permission: code,
+        label,
+        description,
+        category,
+        is_system: isSystem
+      });
+    });
+
+    permissions.forEach(([code]) => {
+      grantRolePermission.run({
+        role: "admin",
+        code_permission: code,
+        allowed: 1,
+        locked: 1,
+        source: "system"
+      });
+    });
+
+    seedDefaultRoleMatrix(insertDefaultRolePermission);
+  })();
+}
+
+function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+  const matrix = {
+    directeur_mission: [
+      "dashboard.read",
+      "missions.read",
+      "teams.read",
+      "agents.read",
+      "users.read",
+      "users.invite.read",
+      "monitoring.read",
+      "sig.read",
+      "infographics.read",
+      "quality.read",
+      "exports.manage"
+    ],
+    coordinateur: [
+      "dashboard.read",
+      "missions.read",
+      "missions.manage",
+      "teams.read",
+      "teams.manage",
+      "agents.read",
+      "agents.manage",
+      "users.read",
+      "users.invite.read",
+      "monitoring.read",
+      "sig.read",
+      "infographics.read",
+      "quality.read",
+      "exports.manage"
+    ],
+    superviseur: [
+      "dashboard.read",
+      "missions.read",
+      "teams.read",
+      "teams.manage",
+      "agents.read",
+      "agents.manage",
+      "sig.read",
+      "infographics.read",
+      "quality.read"
+    ],
+    controleur: [
+      "dashboard.read",
+      "missions.read",
+      "teams.read",
+      "agents.read",
+      "sig.read",
+      "infographics.read",
+      "quality.read",
+      "quality.manage",
+      "exports.manage"
+    ],
+    specialiste_gis: [
+      "dashboard.read",
+      "missions.read",
+      "teams.read",
+      "agents.read",
+      "sig.read",
+      "sig.manage",
+      "infographics.read",
+      "exports.manage"
+    ],
+    specialiste_analyste_donnees: [
+      "dashboard.read",
+      "missions.read",
+      "teams.read",
+      "agents.read",
+      "monitoring.read",
+      "sig.read",
+      "infographics.read",
+      "quality.read",
+      "exports.manage"
+    ],
+    partenaire: [
+      "dashboard.read",
+      "missions.read",
+      "infographics.read"
+    ],
+    agent: []
+  };
+
+  Object.entries(matrix).forEach(([role, permissionCodes]) => {
+    permissionCodes.forEach((codePermission) => {
+      insertDefaultRolePermission.run({
+        role,
+        code_permission: codePermission
+      });
+    });
+  });
 }

@@ -14,14 +14,17 @@ const { importAgents } = require("../services/agentImportService");
 const { seedSubmissions } = require("../services/submissionSeedService");
 const { listKoboAssets } = require("../services/koboSyncService");
 const { hashToken } = require("../services/tokenService");
+const { hashPassword } = require("../services/passwordService");
 
 const roleCsv = [
   "Role;Label;description",
   "admin;Administrateur systeme;Parametrage general",
+  "directeur_mission;Directeur de Mission;Pilotage global",
   "coordinateur;Coordinateur national;Vue globale",
   "superviseur;Superviseur regional;Suivi des agents",
   "agent;Enqueteur;Collecte de donnees",
   "controleur;Controleur qualite;Detection des anomalies",
+  "specialiste_analyste_donnees;Specialiste Analyste de Donnees;Analyse et indicateurs",
   "partenaire;Partenaire;Consultation",
   "specialiste_gis;Responsable SIG;Cartographie"
 ].join("\n");
@@ -29,6 +32,60 @@ const roleCsv = [
 importRoles(db, roleCsv);
 
 test.after(() => db.close());
+
+async function loginTestUser({ email, role }) {
+  const password = "AdminTest123";
+  const existing = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
+  const passwordHash = await hashPassword(password);
+
+  if (existing) {
+    db.prepare(`
+      UPDATE users
+      SET role = ?, statut = 'actif', email_verified = 1, password_hash = ?
+      WHERE id = ?
+    `).run(role, passwordHash, existing.id);
+  } else {
+    db.prepare(`
+      INSERT INTO users (
+        nom, prenoms, email, role, statut, email_verified, password_hash
+      ) VALUES (
+        ?, ?, ?, ?, 'actif', 1, ?
+      )
+    `).run("Test", role, email, role, passwordHash);
+  }
+
+  const loginResponse = await request(app)
+    .post("/login")
+    .type("form")
+    .send({ email, password });
+
+  assert.equal(loginResponse.status, 302);
+  return loginResponse.headers["set-cookie"];
+}
+
+async function loginAdmin(email = "admin.tests@g2m.test") {
+  return loginTestUser({ email, role: "admin" });
+}
+
+function grantRolePermission(role, permissionCode, options = {}) {
+  db.prepare(`
+    INSERT INTO role_permissions (role, permission_id, allowed, locked, source)
+    SELECT ?, id, ?, ?, ?
+    FROM permissions
+    WHERE code_permission = ?
+    ON CONFLICT(role, permission_id) DO UPDATE SET
+      allowed = excluded.allowed,
+      locked = excluded.locked,
+      source = excluded.source,
+      updated_at = CURRENT_TIMESTAMP
+  `).run(
+    role,
+    options.allowed ?? 1,
+    options.locked ?? 0,
+    options.source || "admin",
+    permissionCode
+  );
+}
 
 test("les favicons G2M locale et en ligne sont disponibles", () => {
   [
@@ -139,12 +196,13 @@ test("l'import territorial agrege les geometries et peut etre rejoue", () => {
 });
 
 test("l'import des roles alimente le referentiel utilise par les utilisateurs", async () => {
+  const adminCookie = await loginAdmin("admin.roles@g2m.test");
   const secondImport = importRoles(db, roleCsv);
   const roles = db.prepare("SELECT code_role, label FROM roles ORDER BY code_role").all();
-  const formResponse = await request(app).get("/users/new");
+  const formResponse = await request(app).get("/users/new").set("Cookie", adminCookie);
 
-  assert.deepEqual(secondImport, { roles: 7 });
-  assert.equal(roles.length, 7);
+  assert.deepEqual(secondImport, { roles: 9 });
+  assert.equal(roles.length, 9);
   assert.deepEqual(
     roles.find((role) => role.code_role === "controleur"),
     { code_role: "controleur", label: "Controleur qualite" }
@@ -175,7 +233,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /localStorage\.getItem\("g2m_display_size"\)/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.ico"/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.png"/);
-  assert.match(response.text, /Livraison v0\.3 du 04 juin 2026 \[KoboConnect \+ Gestion Utilisateurs\]/);
+  assert.match(response.text, /Livraison v0\.4 du 07 juin 2026 \[View Transposition \+ UserMngr\]/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);
   assert.match(response.text, /data-label-open="Afficher le menu de navigation"/);
@@ -273,9 +331,19 @@ test("GET /?lang=es utilise les ressources espagnoles du dashboard", async () =>
 });
 
 test("GET /infographies expose les pages factices", async () => {
-  const globalResponse = await request(app).get("/infographies/mission-globale");
-  const supervisorResponse = await request(app).get("/infographies/par-superviseur");
-  const regionResponse = await request(app).get("/infographies/par-region?lang=en");
+  const readerCookie = await loginTestUser({
+    email: "partenaire.infographies@g2m.test",
+    role: "partenaire"
+  });
+  const globalResponse = await request(app)
+    .get("/infographies/mission-globale")
+    .set("Cookie", readerCookie);
+  const supervisorResponse = await request(app)
+    .get("/infographies/par-superviseur")
+    .set("Cookie", readerCookie);
+  const regionResponse = await request(app)
+    .get("/infographies/par-region?lang=en")
+    .set("Cookie", readerCookie);
 
   assert.equal(globalResponse.status, 200);
   assert.match(globalResponse.text, /Infographie mission globale/);
@@ -289,6 +357,22 @@ test("GET /infographies expose les pages factices", async () => {
   assert.match(regionResponse.text, /<html lang="en" data-display-size="medium">/);
   assert.match(regionResponse.text, /Infographic by region/);
   assert.match(regionResponse.text, /Infographic about regions - Page under construction/);
+});
+
+test("GET /infographies exige infographics.read", async () => {
+  const userCookie = await loginTestUser({
+    email: "agent.infographies-denied@g2m.test",
+    role: "agent"
+  });
+
+  const anonymousResponse = await request(app).get("/infographies/mission-globale");
+  const deniedResponse = await request(app)
+    .get("/infographies/mission-globale")
+    .set("Cookie", userCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, "/login?next=%2Finfographies%2Fmission-globale");
+  assert.equal(deniedResponse.status, 403);
 });
 
 test("le choix de langue est conserve dans un cookie", async () => {
@@ -307,7 +391,8 @@ test("le choix de langue est conserve dans un cookie", async () => {
 });
 
 test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => {
-  const response = await request(app).get("/parametrages/kobo");
+  const adminCookie = await loginAdmin("admin.kobo@g2m.test");
+  const response = await request(app).get("/parametrages/kobo").set("Cookie", adminCookie);
   const styleResponse = await request(app).get("/css/app.css");
   const viewerScriptResponse = await request(app).get("/js/kobo-json-viewer.js");
   const editorBundleResponse = await request(app).get("/vendor/vanilla-jsoneditor/standalone.js");
@@ -336,6 +421,21 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(viewerScriptResponse.text, /createJSONEditor/);
   assert.match(viewerScriptResponse.text, /readOnly: true/);
   assert.match(viewerScriptResponse.text, /navigator\.clipboard\.writeText/);
+});
+
+test("GET /parametrages/kobo exige kobo.manage", async () => {
+  const anonymousResponse = await request(app).get("/parametrages/kobo");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.kobo-denied@g2m.test",
+    role: "coordinateur"
+  });
+  const coordinatorResponse = await request(app)
+    .get("/parametrages/kobo")
+    .set("Cookie", coordinatorCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.match(anonymousResponse.headers.location, /^\/login\?next=%2Fparametrages%2Fkobo/);
+  assert.equal(coordinatorResponse.status, 403);
 });
 
 test("listKoboAssets peut retourner le payload Kobo brut sur demande", async () => {
@@ -376,9 +476,11 @@ test("GET /login affiche la page de connexion fermee", async () => {
 });
 
 test("creation invitation puis demande de lien d'activation depuis login", async () => {
+  const adminCookie = await loginAdmin("admin.invitation-create@g2m.test");
   const email = "invite.activation@g2m.test";
   const createResponse = await request(app)
     .post("/users/invitations")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Activation",
@@ -459,8 +561,357 @@ test("activation par token valide puis connexion reussie", async () => {
   assert.match(String(loginResponse.headers["set-cookie"]), /g2m_auth=/);
 });
 
+test("GET /admin protege le panneau d'administration", async () => {
+  const anonymousResponse = await request(app).get("/admin");
+  assert.equal(anonymousResponse.status, 302);
+  assert.match(anonymousResponse.headers.location, /^\/login\?next=/);
+
+  const supervisorCookie = await loginTestUser({
+    email: "superviseur.admin-access@g2m.test",
+    role: "superviseur"
+  });
+  const supervisorResponse = await request(app)
+    .get("/admin")
+    .set("Cookie", supervisorCookie);
+
+  assert.equal(supervisorResponse.status, 403);
+  assert.match(supervisorResponse.text, /Acc.s non autoris/);
+});
+
+test("GET /admin affiche le hub admin pour un administrateur", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.panel@g2m.test",
+    role: "admin"
+  });
+  const response = await request(app)
+    .get("/admin")
+    .set("Cookie", adminCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Panneau d&#39;administration/);
+  assert.match(response.text, /Parametres globaux/);
+  assert.match(response.text, /Rapport base de donnees/);
+  assert.match(response.text, /href="\/admin\/settings"/);
+  assert.match(response.text, /href="\/users\/invitations"/);
+  assert.match(response.text, /href="\/admin\/email-test"/);
+  assert.match(response.text, /href="\/admin" role="menuitem">Administration/);
+});
+
+test("les permissions systeme sont initialisees et verrouillees pour admin", () => {
+  const permissionRows = db.prepare(`
+    SELECT code_permission, is_system
+    FROM permissions
+    WHERE code_permission IN (
+      'admin.access',
+      'settings.manage',
+      'users.manage',
+      'users.invite.manage',
+      'permissions.manage',
+      'db.stats.read',
+      'kobo.manage',
+      'email.test',
+      'exports.manage'
+    )
+    ORDER BY code_permission
+  `).all();
+  const adminLockedCount = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM role_permissions rp
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE rp.role = 'admin'
+      AND rp.allowed = 1
+      AND rp.locked = 1
+      AND p.code_permission IN (
+        'admin.access',
+        'settings.manage',
+        'users.manage',
+        'users.invite.manage',
+        'permissions.manage',
+        'db.stats.read',
+        'kobo.manage',
+        'email.test'
+      )
+  `).get().total;
+
+  assert.equal(permissionRows.length, 9);
+  assert.equal(permissionRows.find((row) => row.code_permission === "kobo.manage").is_system, 1);
+  assert.equal(permissionRows.find((row) => row.code_permission === "email.test").is_system, 1);
+  assert.equal(permissionRows.find((row) => row.code_permission === "exports.manage").is_system, 0);
+  assert.equal(adminLockedCount, 8);
+});
+
+test("la matrice fonctionnelle par defaut est initialisee sans verrouillage systeme", () => {
+  const rows = db.prepare(`
+    SELECT rp.role, p.code_permission, rp.allowed, rp.locked, rp.source
+    FROM role_permissions rp
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE rp.role IN (
+      'directeur_mission',
+      'coordinateur',
+      'superviseur',
+      'controleur',
+      'specialiste_gis',
+      'specialiste_analyste_donnees',
+      'partenaire',
+      'agent'
+    )
+    ORDER BY rp.role, p.code_permission
+  `).all();
+  const byRole = rows.reduce((index, row) => {
+    index[row.role] = index[row.role] || new Set();
+    index[row.role].add(row.code_permission);
+    assert.equal(row.locked, 0);
+    assert.equal(row.source, "admin");
+    return index;
+  }, {});
+
+  assert.equal(byRole.coordinateur.has("missions.manage"), true);
+  assert.equal(byRole.coordinateur.has("agents.manage"), true);
+  assert.equal(byRole.directeur_mission.has("exports.manage"), true);
+  assert.equal(byRole.superviseur.has("teams.manage"), true);
+  assert.equal(byRole.controleur.has("quality.manage"), true);
+  assert.equal(byRole.specialiste_gis.has("sig.manage"), true);
+  assert.equal(byRole.specialiste_analyste_donnees.has("monitoring.read"), true);
+  assert.equal(byRole.partenaire.has("infographics.read"), true);
+  assert.equal(Boolean(byRole.agent), false);
+  assert.equal(rows.some((row) => row.code_permission === "kobo.manage"), false);
+  assert.equal(rows.some((row) => row.code_permission === "email.test"), false);
+});
+
+test("GET /admin/settings exige settings.manage meme avec admin.access", async () => {
+  grantRolePermission("coordinateur", "admin.access");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.permission@g2m.test",
+    role: "coordinateur"
+  });
+
+  const hubResponse = await request(app)
+    .get("/admin")
+    .set("Cookie", coordinatorCookie);
+  const settingsResponse = await request(app)
+    .get("/admin/settings")
+    .set("Cookie", coordinatorCookie);
+
+  assert.equal(hubResponse.status, 200);
+  assert.match(hubResponse.text, /Panneau d&#39;administration/);
+  assert.equal(settingsResponse.status, 403);
+});
+
+test("GET /admin/permissions affiche la matrice pour permissions.manage", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.permissions@g2m.test",
+    role: "admin"
+  });
+  const response = await request(app)
+    .get("/admin/permissions")
+    .set("Cookie", adminCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Matrice des habilitations/);
+  assert.match(response.text, /directeur_mission/);
+  assert.match(response.text, /exports\.manage/);
+  assert.match(response.text, /email\.test/);
+  assert.match(response.text, /disabled/);
+});
+
+test("GET /admin/permissions refuse un role sans permissions.manage", async () => {
+  grantRolePermission("coordinateur", "admin.access");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.no-permissions@g2m.test",
+    role: "coordinateur"
+  });
+  const response = await request(app)
+    .get("/admin/permissions")
+    .set("Cookie", coordinatorCookie);
+
+  assert.equal(response.status, 403);
+});
+
+test("POST /admin/permissions modifie uniquement les permissions parametrables", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.permissions-update@g2m.test",
+    role: "admin"
+  });
+
+  const response = await request(app)
+    .post("/admin/permissions")
+    .set("Cookie", adminCookie)
+    .type("form")
+    .send({
+      "matrix[partenaire][dashboard.read]": "on",
+      "matrix[partenaire][infographics.read]": "on",
+      "matrix[partenaire][exports.manage]": "on",
+      "matrix[partenaire][email.test]": "on"
+    });
+
+  const partnerPermissions = db.prepare(`
+    SELECT p.code_permission
+    FROM role_permissions rp
+    JOIN permissions p ON p.id = rp.permission_id
+    WHERE rp.role = 'partenaire'
+      AND rp.allowed = 1
+    ORDER BY p.code_permission
+  `).all().map((row) => row.code_permission);
+  const auditLog = db.prepare(`
+    SELECT action
+    FROM audit_logs
+    WHERE action = 'permissions.role_matrix_updated'
+    ORDER BY id DESC
+  `).get();
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /changement\(s\) enregistre/);
+  assert.equal(partnerPermissions.includes("exports.manage"), true);
+  assert.equal(partnerPermissions.includes("email.test"), false);
+  assert.equal(auditLog.action, "permissions.role_matrix_updated");
+});
+
+test("GET /users redirige un utilisateur non connecte", async () => {
+  const response = await request(app).get("/users");
+
+  assert.equal(response.status, 302);
+  assert.match(response.headers.location, /^\/login\?next=%2Fusers/);
+});
+
+test("les routes utilisateurs distinguent lecture et gestion", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.users-read@g2m.test",
+    role: "coordinateur"
+  });
+
+  const indexResponse = await request(app)
+    .get("/users")
+    .set("Cookie", coordinatorCookie);
+  const newResponse = await request(app)
+    .get("/users/new")
+    .set("Cookie", coordinatorCookie);
+  const invitationsResponse = await request(app)
+    .get("/users/invitations")
+    .set("Cookie", coordinatorCookie);
+  const newInvitationResponse = await request(app)
+    .get("/users/invitations/new")
+    .set("Cookie", coordinatorCookie);
+
+  assert.equal(indexResponse.status, 200);
+  assert.match(indexResponse.text, /Registre des utilisateurs/);
+  assert.equal(newResponse.status, 403);
+  assert.equal(invitationsResponse.status, 200);
+  assert.match(invitationsResponse.text, /Invitations utilisateurs/);
+  assert.equal(newInvitationResponse.status, 403);
+});
+
+test("POST /admin/settings persiste les parametres et masque les secrets", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.settings@g2m.test",
+    role: "admin"
+  });
+
+  const updateResponse = await request(app)
+    .post("/admin/settings")
+    .set("Cookie", adminCookie)
+    .type("form")
+    .send({
+      settings: {
+        "app.name": "G2M Test",
+        "alerts.anomaly_threshold": "5",
+        "sync.kobo_interval_minutes": "30",
+        "mail.from": "tests@g2m.local",
+        "smtp.auth_method": "password",
+        "smtp.host": "",
+        "smtp.port": "",
+        "smtp.secure": "false",
+        "smtp.user": "",
+        "smtp.password": "secret-smtp-test"
+      }
+    });
+
+  assert.equal(updateResponse.status, 200);
+  assert.match(updateResponse.text, /parametre\(s\) mis a jour/);
+
+  const persistedName = db.prepare("SELECT value FROM settings WHERE key = ?").get("app.name");
+  const persistedSecret = db.prepare("SELECT value FROM settings WHERE key = ?").get("smtp.password");
+  assert.equal(persistedName.value, "G2M Test");
+  assert.equal(persistedSecret.value, "secret-smtp-test");
+
+  const formResponse = await request(app)
+    .get("/admin/settings")
+    .set("Cookie", adminCookie);
+  assert.equal(formResponse.status, 200);
+  assert.match(formResponse.text, /Secret deja renseigne/);
+  assert.doesNotMatch(formResponse.text, /secret-smtp-test/);
+});
+
+test("GET /admin/db-stats genere le rapport dynamique SQLite", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.dbstats@g2m.test",
+    role: "admin"
+  });
+  const response = await request(app)
+    .get("/admin/db-stats")
+    .set("Cookie", adminCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Rapport base de donnees/);
+  assert.match(response.text, /Tables applicatives/);
+  assert.match(response.text, /users/);
+  assert.match(response.text, /settings/);
+  assert.match(response.text, /soumissions_collecte/);
+});
+
+test("POST /admin/email-test utilise le mode developpement si SMTP absent", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.email@g2m.test",
+    role: "admin"
+  });
+
+  db.prepare("UPDATE settings SET value = '' WHERE key IN ('smtp.host', 'smtp.port')").run();
+  const response = await request(app)
+    .post("/admin/email-test")
+    .set("Cookie", adminCookie)
+    .type("form")
+    .send({
+      to: "destinataire@g2m.test",
+      subject: "Test",
+      message: "Message test"
+    });
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /mode development/);
+  assert.doesNotMatch(response.text, /secret-smtp-test/);
+});
+
+test("GET /admin/email-test reconnait une configuration Gmail OAuth2 complete", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.gmail-oauth@g2m.test",
+    role: "admin"
+  });
+
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("oauth2", "smtp.auth_method");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("operagis2022@gmail.com", "mail.from");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("smtp.gmail.com", "smtp.host");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("465", "smtp.port");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("true", "smtp.secure");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("operagis2022@gmail.com", "smtp.user");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("client-id", "gmail.oauth_client_id");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("client-secret", "gmail.oauth_client_secret");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?").run("refresh-token", "gmail.oauth_refresh_token");
+
+  const response = await request(app)
+    .get("/admin/email-test")
+    .set("Cookie", adminCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /SMTP_AUTH_METHOD/);
+  assert.match(response.text, /oauth2/);
+  assert.match(response.text, /prêt/);
+  assert.match(response.text, /GMAIL_REFRESH_TOKEN/);
+  assert.doesNotMatch(response.text, /client-secret/);
+  assert.doesNotMatch(response.text, /refresh-token/);
+});
+
 test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async () => {
-  const response = await request(app).get("/parametrages/kobo?lang=en");
+  const adminCookie = await loginAdmin("admin.kobo-i18n@g2m.test");
+  const response = await request(app).get("/parametrages/kobo?lang=en").set("Cookie", adminCookie);
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
@@ -473,7 +924,11 @@ test("GET /parametrages/kobo?lang=en utilise les ressources anglaises", async ()
 });
 
 test("GET /missions?lang=en utilise les ressources anglaises Missions", async () => {
-  const response = await request(app).get("/missions?lang=en");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.missions-i18n@g2m.test",
+    role: "coordinateur"
+  });
+  const response = await request(app).get("/missions?lang=en").set("Cookie", coordinatorCookie);
   const scriptResponse = await request(app).get("/js/missions.js");
 
   assert.equal(response.status, 200);
@@ -490,7 +945,11 @@ test("GET /missions?lang=en utilise les ressources anglaises Missions", async ()
 });
 
 test("GET /agents/new?lang=en utilise les ressources anglaises Agents", async () => {
-  const response = await request(app).get("/agents/new?lang=en");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.agents-i18n@g2m.test",
+    role: "coordinateur"
+  });
+  const response = await request(app).get("/agents/new?lang=en").set("Cookie", coordinatorCookie);
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
@@ -506,7 +965,8 @@ test("GET /agents/new?lang=en utilise les ressources anglaises Agents", async ()
 });
 
 test("GET /users/new?lang=en utilise les ressources anglaises Utilisateurs", async () => {
-  const response = await request(app).get("/users/new?lang=en");
+  const adminCookie = await loginAdmin("admin.users-i18n@g2m.test");
+  const response = await request(app).get("/users/new?lang=en").set("Cookie", adminCookie);
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
@@ -520,7 +980,11 @@ test("GET /users/new?lang=en utilise les ressources anglaises Utilisateurs", asy
 });
 
 test("GET /equipes/new?lang=en utilise les ressources anglaises Equipes", async () => {
-  const response = await request(app).get("/equipes/new?lang=en");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.teams-i18n@g2m.test",
+    role: "coordinateur"
+  });
+  const response = await request(app).get("/equipes/new?lang=en").set("Cookie", coordinatorCookie);
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
@@ -549,8 +1013,10 @@ test("GET /route-inconnue localise la page 404", async () => {
 });
 
 test("POST /parametrages/kobo/config conserve le jeton masque dans l'interface", async () => {
+  const adminCookie = await loginAdmin("admin.kobo-config@g2m.test");
   const response = await request(app)
     .post("/parametrages/kobo/config")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       base_url: "https://kf.kobotoolbox.org",
@@ -565,8 +1031,14 @@ test("POST /parametrages/kobo/config conserve le jeton masque dans l'interface",
 });
 
 test("creation et affichage d'une mission", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.missions-crud@g2m.test",
+    role: "coordinateur"
+  });
+
   const createResponse = await request(app)
     .post("/missions")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       name: "Mission pilote",
@@ -581,11 +1053,11 @@ test("creation et affichage d'une mission", async () => {
   assert.equal(createResponse.status, 302);
   assert.equal(createResponse.headers.location, "/missions");
 
-  const listResponse = await request(app).get("/missions");
+  const listResponse = await request(app).get("/missions").set("Cookie", coordinatorCookie);
   assert.equal(listResponse.status, 200);
   assert.match(listResponse.text, /Mission pilote/);
 
-  const detailResponse = await request(app).get("/missions/1");
+  const detailResponse = await request(app).get("/missions/1").set("Cookie", coordinatorCookie);
   assert.equal(detailResponse.status, 200);
   assert.match(detailResponse.text, /kobo-test/);
 
@@ -597,8 +1069,14 @@ test("creation et affichage d'une mission", async () => {
 });
 
 test("POST /missions refuse des coordonnees invalides", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.missions-invalid@g2m.test",
+    role: "coordinateur"
+  });
+
   const response = await request(app)
     .post("/missions")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({ name: "Erreur", region: "Nord", latitude: "100" });
 
@@ -606,13 +1084,31 @@ test("POST /missions refuse des coordonnees invalides", async () => {
   assert.match(response.text, /Vérifiez/);
 });
 
+test("controle d'acces du bloc missions", async () => {
+  const readerCookie = await loginTestUser({
+    email: "gis.missions-read@g2m.test",
+    role: "specialiste_gis"
+  });
+
+  const anonymousResponse = await request(app).get("/missions");
+  const listResponse = await request(app).get("/missions").set("Cookie", readerCookie);
+  const newResponse = await request(app).get("/missions/new").set("Cookie", readerCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, "/login?next=%2Fmissions");
+  assert.equal(listResponse.status, 200);
+  assert.equal(newResponse.status, 403);
+});
+
 test("creation d'un superviseur avec plusieurs regions", async () => {
+  const adminCookie = await loginAdmin("admin.users-crud@g2m.test");
   const regions = db.prepare(`
     SELECT id FROM regions WHERE code_region IN ('CI01', 'TEST01') ORDER BY code_region
   `).all();
 
   const createResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Kone",
@@ -627,7 +1123,7 @@ test("creation d'un superviseur avec plusieurs regions", async () => {
   assert.equal(createResponse.status, 302);
   assert.match(createResponse.headers.location, /^\/users\/\d+$/);
 
-  const detailResponse = await request(app).get(createResponse.headers.location);
+  const detailResponse = await request(app).get(createResponse.headers.location).set("Cookie", adminCookie);
   assert.equal(detailResponse.status, 200);
   assert.match(detailResponse.text, /awa\.kone@example\.org/);
   assert.match(detailResponse.text, /Superviseur regional/);
@@ -643,8 +1139,10 @@ test("creation d'un superviseur avec plusieurs regions", async () => {
 });
 
 test("POST /users refuse un email duplique et une region inexistante", async () => {
+  const adminCookie = await loginAdmin("admin.users-validation@g2m.test");
   const duplicateResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Autre",
@@ -655,6 +1153,7 @@ test("POST /users refuse un email duplique et une region inexistante", async () 
     });
   const invalidRegionResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Traore",
@@ -666,6 +1165,7 @@ test("POST /users refuse un email duplique et une region inexistante", async () 
     });
   const invalidRoleResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Traore",
@@ -683,9 +1183,10 @@ test("POST /users refuse un email duplique et une region inexistante", async () 
 });
 
 test("modification d'un utilisateur et remplacement de ses regions", async () => {
+  const adminCookie = await loginAdmin("admin.users-update@g2m.test");
   const user = db.prepare("SELECT id FROM users WHERE email = ?").get("awa.kone@example.org");
   const region = db.prepare("SELECT id FROM regions WHERE code_region = ?").get("TEST01");
-  const editResponse = await request(app).get(`/users/${user.id}/edit`);
+  const editResponse = await request(app).get(`/users/${user.id}/edit`).set("Cookie", adminCookie);
 
   assert.equal(editResponse.status, 200);
   assert.match(editResponse.text, /Modifier l&#39;utilisateur/);
@@ -693,6 +1194,7 @@ test("modification d'un utilisateur et remplacement de ses regions", async () =>
 
   const updateResponse = await request(app)
     .post(`/users/${user.id}`)
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Kone",
@@ -707,7 +1209,7 @@ test("modification d'un utilisateur et remplacement de ses regions", async () =>
   assert.equal(updateResponse.status, 302);
   assert.equal(updateResponse.headers.location, `/users/${user.id}`);
 
-  const detailResponse = await request(app).get(`/users/${user.id}`);
+  const detailResponse = await request(app).get(`/users/${user.id}`).set("Cookie", adminCookie);
   assert.match(detailResponse.text, /Awa Marie/);
   assert.match(detailResponse.text, /Controleur qualite/);
   assert.match(detailResponse.text, /suspendu/);
@@ -719,9 +1221,11 @@ test("modification d'un utilisateur et remplacement de ses regions", async () =>
 });
 
 test("modification d'un utilisateur refuse l'email d'un autre compte", async () => {
+  const adminCookie = await loginAdmin("admin.users-duplicate-update@g2m.test");
   const region = db.prepare("SELECT id FROM regions WHERE code_region = ?").get("TEST01");
   const createResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Yao",
@@ -735,6 +1239,7 @@ test("modification d'un utilisateur refuse l'email d'un autre compte", async () 
 
   const updateResponse = await request(app)
     .post(`/users/${secondUserId}`)
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Yao",
@@ -750,11 +1255,17 @@ test("modification d'un utilisateur refuse l'email d'un autre compte", async () 
 });
 
 test("creation d'une equipe rattachee a une mission, un superviseur et des regions", async () => {
+  const adminCookie = await loginAdmin("admin.team-user-create@g2m.test");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.teams-crud@g2m.test",
+    role: "coordinateur"
+  });
   const regionIds = db.prepare(`
     SELECT id FROM regions WHERE code_region IN ('CI01', 'TEST01') ORDER BY code_region
   `).all().map((region) => String(region.id));
   const supervisorResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Coulibaly",
@@ -767,13 +1278,14 @@ test("creation d'une equipe rattachee a une mission, un superviseur et des regio
   const supervisorId = Number(supervisorResponse.headers.location.split("/").pop());
   const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
 
-  const formResponse = await request(app).get("/equipes/new");
+  const formResponse = await request(app).get("/equipes/new").set("Cookie", coordinatorCookie);
   assert.equal(formResponse.status, 200);
   assert.match(formResponse.text, /Mission pilote/);
   assert.match(formResponse.text, /Fatou Coulibaly/);
 
   const createResponse = await request(app)
     .post("/equipes")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom_equipe: "Equipe Centre 1",
@@ -786,7 +1298,7 @@ test("creation d'une equipe rattachee a une mission, un superviseur et des regio
   assert.equal(createResponse.status, 302);
   assert.match(createResponse.headers.location, /^\/equipes\/\d+$/);
 
-  const detailResponse = await request(app).get(createResponse.headers.location);
+  const detailResponse = await request(app).get(createResponse.headers.location).set("Cookie", coordinatorCookie);
   assert.equal(detailResponse.status, 200);
   assert.match(detailResponse.text, /Equipe Centre 1/);
   assert.match(detailResponse.text, /Mission pilote/);
@@ -800,12 +1312,17 @@ test("creation d'une equipe rattachee a une mission, un superviseur et des regio
 });
 
 test("POST /equipes exige une region et refuse un non-superviseur", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.teams-invalid@g2m.test",
+    role: "coordinateur"
+  });
   const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
   const controllerId = db.prepare("SELECT id FROM users WHERE email = ?").get("awa.marie@example.org").id;
   const regionId = db.prepare("SELECT id FROM regions WHERE code_region = ?").get("TEST01").id;
 
   const noRegionResponse = await request(app)
     .post("/equipes")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom_equipe: "Equipe sans zone",
@@ -814,6 +1331,7 @@ test("POST /equipes exige une region et refuse un non-superviseur", async () => 
     });
   const invalidSupervisorResponse = await request(app)
     .post("/equipes")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom_equipe: "Equipe invalide",
@@ -830,17 +1348,22 @@ test("POST /equipes exige une region et refuse un non-superviseur", async () => 
 });
 
 test("modification d'une equipe remplace son affectation et peut retirer le superviseur", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.teams-update@g2m.test",
+    role: "coordinateur"
+  });
   const equipe = db.prepare("SELECT id FROM equipes WHERE nom_equipe = ?").get("Equipe Centre 1");
   const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
   const regionId = db.prepare("SELECT id FROM regions WHERE code_region = ?").get("TEST01").id;
 
-  const editResponse = await request(app).get(`/equipes/${equipe.id}/edit`);
+  const editResponse = await request(app).get(`/equipes/${equipe.id}/edit`).set("Cookie", coordinatorCookie);
   assert.equal(editResponse.status, 200);
   assert.match(editResponse.text, /Modifier l&#39;équipe/);
   assert.match(editResponse.text, /Equipe Centre 1/);
 
   const updateResponse = await request(app)
     .post(`/equipes/${equipe.id}`)
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom_equipe: "Equipe Centre Revisee",
@@ -853,7 +1376,7 @@ test("modification d'une equipe remplace son affectation et peut retirer le supe
   assert.equal(updateResponse.status, 302);
   assert.equal(updateResponse.headers.location, `/equipes/${equipe.id}`);
 
-  const detailResponse = await request(app).get(`/equipes/${equipe.id}`);
+  const detailResponse = await request(app).get(`/equipes/${equipe.id}`).set("Cookie", coordinatorCookie);
   assert.match(detailResponse.text, /Equipe Centre Revisee/);
   assert.match(detailResponse.text, /suspendue/);
   assert.match(detailResponse.text, /Non affecté/);
@@ -867,6 +1390,10 @@ test("modification d'une equipe remplace son affectation et peut retirer le supe
 });
 
 test("modification d'une equipe refuse un utilisateur non superviseur", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.teams-invalid-update@g2m.test",
+    role: "coordinateur"
+  });
   const equipe = db.prepare("SELECT id FROM equipes WHERE nom_equipe = ?").get("Equipe Centre Revisee");
   const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
   const controllerId = db.prepare("SELECT id FROM users WHERE email = ?").get("awa.marie@example.org").id;
@@ -874,6 +1401,7 @@ test("modification d'une equipe refuse un utilisateur non superviseur", async ()
 
   const response = await request(app)
     .post(`/equipes/${equipe.id}`)
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom_equipe: "Equipe Centre Revisee",
@@ -887,10 +1415,32 @@ test("modification d'une equipe refuse un utilisateur non superviseur", async ()
   assert.match(response.text, /superviseur actif/);
 });
 
+test("controle d'acces du bloc equipes", async () => {
+  const readerCookie = await loginTestUser({
+    email: "gis.teams-read@g2m.test",
+    role: "specialiste_gis"
+  });
+
+  const anonymousResponse = await request(app).get("/equipes");
+  const listResponse = await request(app).get("/equipes").set("Cookie", readerCookie);
+  const newResponse = await request(app).get("/equipes/new").set("Cookie", readerCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, "/login?next=%2Fequipes");
+  assert.equal(listResponse.status, 200);
+  assert.equal(newResponse.status, 403);
+});
+
 test("creation d'un agent de collecte associe a un utilisateur et une equipe", async () => {
+  const adminCookie = await loginAdmin("admin.agent-user-create@g2m.test");
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.agents-crud@g2m.test",
+    role: "coordinateur"
+  });
   const regionId = db.prepare("SELECT id FROM regions WHERE code_region = ?").get("TEST01").id;
   const userResponse = await request(app)
     .post("/users")
+    .set("Cookie", adminCookie)
     .type("form")
     .send({
       nom: "Nguessan",
@@ -903,13 +1453,14 @@ test("creation d'un agent de collecte associe a un utilisateur et une equipe", a
   const userId = Number(userResponse.headers.location.split("/").pop());
   const equipeId = db.prepare("SELECT id FROM equipes WHERE nom_equipe = ?").get("Equipe Centre Revisee").id;
 
-  const formResponse = await request(app).get("/agents/new");
+  const formResponse = await request(app).get("/agents/new").set("Cookie", coordinatorCookie);
   assert.equal(formResponse.status, 200);
   assert.match(formResponse.text, /Alain Nguessan/);
   assert.match(formResponse.text, /Equipe Centre Revisee/);
 
   const createResponse = await request(app)
     .post("/agents")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom: "Nguessan",
@@ -925,7 +1476,7 @@ test("creation d'un agent de collecte associe a un utilisateur et une equipe", a
   assert.equal(createResponse.status, 302);
   assert.match(createResponse.headers.location, /^\/agents\/\d+$/);
 
-  const detailResponse = await request(app).get(createResponse.headers.location);
+  const detailResponse = await request(app).get(createResponse.headers.location).set("Cookie", coordinatorCookie);
   assert.equal(detailResponse.status, 200);
   assert.match(detailResponse.text, /Alain Nguessan/);
   assert.match(detailResponse.text, /AG-001/);
@@ -935,10 +1486,15 @@ test("creation d'un agent de collecte associe a un utilisateur et une equipe", a
 });
 
 test("POST /agents refuse un code duplique et un utilisateur non agent", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.agents-invalid@g2m.test",
+    role: "coordinateur"
+  });
   const equipeId = db.prepare("SELECT id FROM equipes WHERE nom_equipe = ?").get("Equipe Centre Revisee").id;
   const nonAgentId = db.prepare("SELECT id FROM users WHERE email = ?").get("fatou.superviseur@example.org").id;
   const duplicateResponse = await request(app)
     .post("/agents")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom: "Duplicata",
@@ -949,6 +1505,7 @@ test("POST /agents refuse un code duplique et un utilisateur non agent", async (
     });
   const invalidUserResponse = await request(app)
     .post("/agents")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom: "Agent",
@@ -966,14 +1523,19 @@ test("POST /agents refuse un code duplique et un utilisateur non agent", async (
 });
 
 test("modification d'un agent permet de retirer son compte et son equipe", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.agents-update@g2m.test",
+    role: "coordinateur"
+  });
   const agent = db.prepare("SELECT id FROM agents_collecte WHERE code_agent = ?").get("AG-001");
-  const editResponse = await request(app).get(`/agents/${agent.id}/edit`);
+  const editResponse = await request(app).get(`/agents/${agent.id}/edit`).set("Cookie", coordinatorCookie);
 
   assert.equal(editResponse.status, 200);
   assert.match(editResponse.text, /Modifier l&#39;agent de collecte/);
 
   const updateResponse = await request(app)
     .post(`/agents/${agent.id}`)
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom: "Nguessan",
@@ -987,7 +1549,7 @@ test("modification d'un agent permet de retirer son compte et son equipe", async
     });
 
   assert.equal(updateResponse.status, 302);
-  const detailResponse = await request(app).get(`/agents/${agent.id}`);
+  const detailResponse = await request(app).get(`/agents/${agent.id}`).set("Cookie", coordinatorCookie);
   assert.match(detailResponse.text, /Alain Serge Nguessan/);
   assert.match(detailResponse.text, /AG-001-M/);
   assert.match(detailResponse.text, /Smartphone B02/);
@@ -1007,8 +1569,14 @@ test("modification d'un agent permet de retirer son compte et son equipe", async
 });
 
 test("POST /agents exige le nom et les prenoms meme sans compte utilisateur", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.agents-create-basic@g2m.test",
+    role: "coordinateur"
+  });
+
   const invalidResponse = await request(app)
     .post("/agents")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       code_agent: "AG-003",
@@ -1016,6 +1584,7 @@ test("POST /agents exige le nom et les prenoms meme sans compte utilisateur", as
     });
   const createResponse = await request(app)
     .post("/agents")
+    .set("Cookie", coordinatorCookie)
     .type("form")
     .send({
       nom: "Bamba",
@@ -1028,9 +1597,25 @@ test("POST /agents exige le nom et les prenoms meme sans compte utilisateur", as
   assert.match(invalidResponse.text, /nom, les prénoms/);
   assert.equal(createResponse.status, 302);
 
-  const detailResponse = await request(app).get(createResponse.headers.location);
+  const detailResponse = await request(app).get(createResponse.headers.location).set("Cookie", coordinatorCookie);
   assert.match(detailResponse.text, /Aminata Bamba/);
   assert.match(detailResponse.text, /Sans compte applicatif/);
+});
+
+test("controle d'acces du bloc agents", async () => {
+  const readerCookie = await loginTestUser({
+    email: "gis.agents-read@g2m.test",
+    role: "specialiste_gis"
+  });
+
+  const anonymousResponse = await request(app).get("/agents");
+  const listResponse = await request(app).get("/agents").set("Cookie", readerCookie);
+  const newResponse = await request(app).get("/agents/new").set("Cookie", readerCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, "/login?next=%2Fagents");
+  assert.equal(listResponse.status, 200);
+  assert.equal(newResponse.status, 403);
 });
 
 test("l'import CSV des agents rapproche equipe et compte agent puis peut etre rejoue", () => {
@@ -1104,7 +1689,11 @@ test("le seed des soumissions produit des points et un raw_data_json conforme au
 });
 
 test("GET /cartographie expose l'espace SIG et ses points cartographiques", async () => {
-  const response = await request(app).get("/cartographie");
+  const gisCookie = await loginTestUser({
+    email: "gis.cartographie@g2m.test",
+    role: "specialiste_gis"
+  });
+  const response = await request(app).get("/cartographie").set("Cookie", gisCookie);
   const scriptResponse = await request(app).get("/js/cartographie.js");
   const styleResponse = await request(app).get("/css/app.css");
 
@@ -1196,8 +1785,26 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.doesNotMatch(scriptResponse.text, /http:\/\/\{s\}\.tile\.openstreetmap\.org/);
 });
 
+test("GET /cartographie exige sig.read", async () => {
+  const userCookie = await loginTestUser({
+    email: "agent.cartographie-denied@g2m.test",
+    role: "agent"
+  });
+
+  const anonymousResponse = await request(app).get("/cartographie");
+  const deniedResponse = await request(app).get("/cartographie").set("Cookie", userCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, "/login?next=%2Fcartographie");
+  assert.equal(deniedResponse.status, 403);
+});
+
 test("GET /cartographie?lang=en utilise les ressources anglaises SIG", async () => {
-  const response = await request(app).get("/cartographie?lang=en");
+  const gisCookie = await loginTestUser({
+    email: "gis.cartographie-i18n@g2m.test",
+    role: "specialiste_gis"
+  });
+  const response = await request(app).get("/cartographie?lang=en").set("Cookie", gisCookie);
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
