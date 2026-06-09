@@ -2,7 +2,7 @@ const AuditLog = require("../models/AuditLog");
 const Permission = require("../models/Permission");
 const Setting = require("../models/Setting");
 const { getMonitoringSnapshot } = require("../services/adminMonitoringService");
-const { getDatabaseStats } = require("../services/databaseStatsService");
+const { getDatabaseStats, getTablePreview } = require("../services/databaseStatsService");
 const { hasSmtpConfig, resolveMailEnv, sendMail } = require("../services/mailService");
 
 exports.index = (req, res) => {
@@ -35,9 +35,17 @@ exports.updateSettings = (req, res) => {
 };
 
 exports.databaseStats = (req, res) => {
+  const stats = getDatabaseStats();
+  const tablePreview = getTablePreview(req.query.table, {
+    page: req.query.page,
+    limit: req.query.limit
+  });
+
   res.render("admin/db-stats", {
     title: req.t("admin.dbStats.title"),
-    stats: getDatabaseStats(),
+    stats,
+    tablePreview,
+    selectedTable: req.query.table || "",
     categoryLabels: categoryLabels(req)
   });
 };

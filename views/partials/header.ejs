@@ -29,6 +29,32 @@
     <% } %>
     </head>
   <body>
+    <%
+      const permissionSet = typeof permissions !== "undefined" && permissions ? permissions : new Set();
+      const can = (permission) => permissionSet.has(permission);
+      const showInfographicsNav = can("infographics.read");
+      const showVisualizationNav = can("sig.read") || showInfographicsNav;
+      const showSettingsNav = can("missions.read")
+        || can("teams.read")
+        || can("agents.read")
+        || can("users.read")
+        || can("kobo.manage")
+        || can("admin.access");
+      const currentUserName = currentUser
+        ? [currentUser.prenoms, currentUser.nom].filter(Boolean).join(" ").trim()
+        : "";
+      const currentUserRoleLabel = currentUser?.role_label || currentUser?.role || "";
+      const currentUserInitials = currentUser
+        ? (
+            [currentUser.prenoms, currentUser.nom]
+              .filter(Boolean)
+              .map((part) => String(part).trim().charAt(0).toUpperCase())
+              .join("")
+              || String(currentUser.email || "").slice(0, 2).toUpperCase()
+              || "U"
+          ).slice(0, 2)
+        : "";
+    %>
     <header class="site-header">
       <a class="brand" href="/" aria-label="<%= t("app.homeAria") %>">
         <img class="brand-logo" src="/assets/images/Logo%20Rakall.png" alt="Rakall">
@@ -55,28 +81,32 @@
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           <span><%= t("nav.dashboard") %></span>
         </a>
-        <a class="nav-button" href="/cartographie">
-          <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
-          <span><%= t("nav.cartography") %></span>
-        </a>
-        <div class="nav-menu nav-infographics">
-          <button
-            class="nav-button nav-menu-trigger"
-            type="button"
-            aria-haspopup="true"
-            aria-expanded="false"
-            title="<%= t("nav.infographics") %>"
-          >
-            <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
-            <span><%= t("nav.infographics") %></span>
-            <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
-          </button>
-          <div class="nav-menu-panel" role="menu">
-            <a href="/infographies/mission-globale" role="menuitem"><%= t("nav.infographicsGlobal") %></a>
-            <a href="/infographies/par-superviseur" role="menuitem"><%= t("nav.infographicsSupervisor") %></a>
-            <a href="/infographies/par-region" role="menuitem"><%= t("nav.infographicsRegion") %></a>
+        <% if (showVisualizationNav) { %>
+          <div class="nav-menu nav-visualization">
+            <button
+              class="nav-button nav-menu-trigger"
+              type="button"
+              aria-haspopup="true"
+              aria-expanded="false"
+              title="<%= t("nav.visualization") %>"
+            >
+              <i class="fa-solid fa-eye" aria-hidden="true"></i>
+              <span><%= t("nav.visualization") %></span>
+              <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="nav-menu-panel" role="menu">
+              <% if (can("sig.read")) { %>
+                <a href="/cartographie" role="menuitem"><%= t("nav.cartography") %></a>
+              <% } %>
+              <% if (showInfographicsNav) { %>
+                <span class="nav-menu-panel-title"><%= t("nav.infographics") %></span>
+                <a href="/infographies/mission-globale" role="menuitem"><%= t("nav.infographicsGlobal") %></a>
+                <a href="/infographies/par-superviseur" role="menuitem"><%= t("nav.infographicsSupervisor") %></a>
+                <a href="/infographies/par-region" role="menuitem"><%= t("nav.infographicsRegion") %></a>
+              <% } %>
+            </div>
           </div>
-        </div>
+        <% } %>
         <div class="nav-menu nav-personalization">
           <button
             class="nav-button nav-menu-trigger"
@@ -125,29 +155,73 @@
             </div>
           </div>
         </div>
-        <div class="nav-menu">
-          <button
-            class="nav-button nav-menu-trigger"
-            type="button"
-            aria-haspopup="true"
-            aria-expanded="false"
-            title="<%= t("nav.settings") %>"
-          >
-            <i class="fa-solid fa-gear" aria-hidden="true"></i>
-            <span><%= t("nav.settings") %></span>
-            <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
-          </button>
-          <div class="nav-menu-panel" role="menu">
-            <a href="/missions" role="menuitem"><%= t("nav.missions") %></a>
-            <a href="/equipes" role="menuitem"><%= t("nav.teams") %></a>
-            <a href="/agents" role="menuitem"><%= t("nav.agents") %></a>
-            <a href="/users" role="menuitem"><%= t("nav.users") %></a>
-            <a href="/parametrages/kobo" role="menuitem"><%= t("nav.kobo") %></a>
-            <% if (currentUser && currentUser.role === "admin") { %>
+        <% if (showSettingsNav) { %>
+          <div class="nav-menu">
+            <button
+              class="nav-button nav-menu-trigger"
+              type="button"
+              aria-haspopup="true"
+              aria-expanded="false"
+              title="<%= t("nav.settings") %>"
+            >
+              <i class="fa-solid fa-gear" aria-hidden="true"></i>
+              <span><%= t("nav.settings") %></span>
+              <i class="fa-solid fa-chevron-down nav-menu-chevron" aria-hidden="true"></i>
+            </button>
+            <div class="nav-menu-panel" role="menu">
+              <% if (can("missions.read")) { %>
+                <a href="/missions" role="menuitem"><%= t("nav.missions") %></a>
+              <% } %>
+              <% if (can("teams.read")) { %>
+                <a href="/equipes" role="menuitem"><%= t("nav.teams") %></a>
+              <% } %>
+              <% if (can("agents.read")) { %>
+                <a href="/agents" role="menuitem"><%= t("nav.agents") %></a>
+              <% } %>
+              <% if (can("users.read")) { %>
+                <a href="/users" role="menuitem"><%= t("nav.users") %></a>
+              <% } %>
+              <% if (can("kobo.manage")) { %>
+                <a href="/parametrages/kobo" role="menuitem"><%= t("nav.kobo") %></a>
+              <% } %>
+              <% if (can("admin.access")) { %>
               <a href="/admin" role="menuitem"><%= t("nav.admin") %></a>
-            <% } %>
+              <% } %>
+            </div>
           </div>
-        </div>
+        <% } %>
+        <% if (currentUser) { %>
+          <div class="nav-menu nav-session">
+            <button
+              class="nav-button nav-menu-trigger nav-session-trigger"
+              type="button"
+              aria-haspopup="true"
+              aria-expanded="false"
+              title="<%= t("session.currentUser") %>"
+            >
+              <i class="fa-solid fa-circle-user" aria-hidden="true"></i>
+              <span class="nav-session-initials"><%= currentUserInitials %></span>
+            </button>
+            <div class="nav-menu-panel nav-session-panel" role="menu">
+              <div class="nav-session-identity" aria-label="<%= t("session.currentUser") %>">
+                <strong><%= currentUserName || currentUser.email %></strong>
+                <span><%= currentUser.email %></span>
+                <span><%= t("session.role") %> : <%= currentUserRoleLabel %></span>
+              </div>
+              <form action="/logout" method="post" class="nav-session-form">
+                <button type="submit" class="nav-session-logout" role="menuitem">
+                  <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+                  <span><%= t("auth.logout") %></span>
+                </button>
+              </form>
+            </div>
+          </div>
+        <% } else { %>
+          <a class="nav-button nav-login-link" href="/login">
+            <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i>
+            <span><%= t("auth.login.title") %></span>
+          </a>
+        <% } %>
       </nav>
     </header>
     <main class="container <%= typeof wideLayout !== "undefined" && wideLayout ? "container-wide" : "" %>">

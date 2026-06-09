@@ -231,6 +231,7 @@
     siteIdentificationStatus.className = `site-identification-status status-${point.statut_validation}`;
     siteIdentificationStatus.textContent = statusLabel(point.statut_validation);
     siteIdentificationBody.replaceChildren();
+    addDetailAction(point.id);
 
     addSection(t("identification"), [
       [t("sheetId"), modA.fiche_id || point.source_submission_id],
@@ -273,6 +274,18 @@
 
     siteIdentification.classList.add("is-open");
     siteIdentification.setAttribute("aria-hidden", "false");
+  }
+
+  function addDetailAction(submissionId) {
+    const actions = document.createElement("div");
+    const link = document.createElement("a");
+
+    actions.className = "site-identification-actions";
+    link.className = "button button-primary";
+    link.href = `/soumissions/${submissionId}/detail`;
+    link.textContent = t("detailLink");
+    actions.append(link);
+    siteIdentificationBody.append(actions);
   }
 
   function hideSiteIdentification() {

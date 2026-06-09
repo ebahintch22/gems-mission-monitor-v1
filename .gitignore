@@ -20,3 +20,8 @@ node_modules/
 # =========================
 *.log
 npm-debug.log*
+
+# =========================
+# Fichiers temporaires Office
+# =========================
+~$*.docx

@@ -242,6 +242,9 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /font-awesome\/6\.5\.2\/css\/all\.min\.css/);
   assert.match(navigation, /class="nav-button" href="\/"/);
   assert.match(navigation, /fa-solid fa-chart-line/);
+  assert.match(navigation, /href="\/login"/);
+  assert.match(navigation, /Connexion/);
+  assert.match(navigation, /fa-solid fa-right-to-bracket/);
   assert.match(navigation, /fa-solid fa-sliders/);
   assert.match(navigation, /title="Personnalisation"/);
   assert.match(navigation, /Personnalisation/);
@@ -253,23 +256,25 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigation, /data-display-size-value="medium"[\s\S]*Moyen/);
   assert.match(navigation, /data-display-size-value="large"[\s\S]*Grand/);
   assert.match(navigation, /class="nav-button nav-menu-trigger"/);
-  assert.match(navigation, /fa-solid fa-gear/);
-  assert.match(navigation, /Paramétrages/);
+  assert.doesNotMatch(navigation, /fa-solid fa-gear/);
+  assert.doesNotMatch(navigation, /Param/);
   assert.match(navigation, /fa-solid fa-chevron-down nav-menu-chevron/);
-  assert.match(navigation, /class="nav-button" href="\/cartographie"/);
-  assert.match(navigation, /fa-solid fa-map-location-dot/);
-  assert.match(navigation, /fa-solid fa-chart-pie/);
-  assert.match(navigation, /Infographie/);
-  assert.match(navigation, /href="\/infographies\/mission-globale" role="menuitem">Mission globale/);
-  assert.match(navigation, /href="\/infographies\/par-superviseur" role="menuitem">Par superviseur/);
-  assert.match(navigation, /href="\/infographies\/par-region" role="menuitem">Par r/);
-  assert.match(navigation, /Dashboard[\s\S]*Cartographie[\s\S]*Infographie[\s\S]*Paramétrages/);
+  assert.doesNotMatch(navigation, /Visualisation/);
+  assert.doesNotMatch(navigation, /fa-solid fa-eye/);
+  assert.doesNotMatch(navigation, /class="nav-button" href="\/cartographie"/);
+  assert.doesNotMatch(navigation, /fa-solid fa-map-location-dot/);
+  assert.doesNotMatch(navigation, /fa-solid fa-chart-pie/);
+  assert.doesNotMatch(navigation, /Infographie/);
+  assert.doesNotMatch(navigation, /href="\/infographies\/mission-globale" role="menuitem">Mission globale/);
+  assert.doesNotMatch(navigation, /href="\/infographies\/par-superviseur" role="menuitem">Par superviseur/);
+  assert.doesNotMatch(navigation, /href="\/infographies\/par-region" role="menuitem">Par r/);
+  assert.doesNotMatch(navigation, /Cartographie[\s\S]*Infographie/);
   assert.doesNotMatch(navigation, /Configuration/);
-  assert.match(response.text, /role="menuitem">Missions/);
-  assert.match(response.text, /role="menuitem">Équipes/);
-  assert.match(response.text, /role="menuitem">Agents/);
-  assert.match(response.text, /role="menuitem">Utilisateurs/);
-  assert.match(response.text, /href="\/parametrages\/kobo" role="menuitem">KoboToolbox/);
+  assert.doesNotMatch(response.text, /role="menuitem">Missions/);
+  assert.doesNotMatch(response.text, /role="menuitem">.*quipes/);
+  assert.doesNotMatch(response.text, /role="menuitem">Agents/);
+  assert.doesNotMatch(response.text, /role="menuitem">Utilisateurs/);
+  assert.doesNotMatch(response.text, /href="\/parametrages\/kobo" role="menuitem">KoboToolbox/);
   assert.doesNotMatch(navigation, /href="\/missions\/new"/);
   assert.match(response.text, /\/js\/navigation\.js/);
   assert.match(styleResponse.text, /\.nav-menu\.is-open \.nav-menu-panel/);
@@ -296,6 +301,61 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
+});
+
+test("la navigation affiche seulement les liens autorises", async () => {
+  const adminCookie = await loginAdmin("admin.navigation@g2m.test");
+  const agentCookie = await loginTestUser({
+    email: "agent.navigation@g2m.test",
+    role: "agent"
+  });
+  const partnerCookie = await loginTestUser({
+    email: "partenaire.navigation@g2m.test",
+    role: "partenaire"
+  });
+
+  const adminResponse = await request(app).get("/").set("Cookie", adminCookie);
+  const agentResponse = await request(app).get("/").set("Cookie", agentCookie);
+  const partnerResponse = await request(app).get("/").set("Cookie", partnerCookie);
+  const adminNavigation = adminResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
+  const agentNavigation = agentResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
+  const partnerNavigation = partnerResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
+
+  assert.match(adminNavigation, /Visualisation/);
+  assert.match(adminNavigation, /fa-solid fa-eye/);
+  assert.match(adminNavigation, /href="\/cartographie" role="menuitem">Cartographie/);
+  assert.match(adminNavigation, /class="nav-menu-panel-title">Infographie/);
+  assert.match(adminNavigation, /href="\/infographies\/mission-globale"/);
+  assert.match(adminNavigation, /href="\/missions" role="menuitem">Missions/);
+  assert.match(adminNavigation, /href="\/equipes" role="menuitem">/);
+  assert.match(adminNavigation, /href="\/agents" role="menuitem">Agents/);
+  assert.match(adminNavigation, /href="\/users" role="menuitem">Utilisateurs/);
+  assert.match(adminNavigation, /href="\/parametrages\/kobo" role="menuitem">KoboToolbox/);
+  assert.match(adminNavigation, /href="\/admin" role="menuitem">Administration/);
+  assert.match(adminNavigation, /class="nav-session-initials">AT</);
+  assert.match(adminNavigation, /admin Test/);
+  assert.match(adminNavigation, /admin\.navigation@g2m\.test/);
+  assert.match(adminNavigation, /Administrateur systeme/);
+  assert.match(adminNavigation, /action="\/logout" method="post"/);
+  assert.match(adminNavigation, /Déconnexion/);
+
+  assert.match(agentNavigation, /class="nav-button" href="\/"/);
+  assert.match(agentNavigation, /Personnalisation/);
+  assert.match(agentNavigation, /class="nav-session-initials">AT</);
+  assert.match(agentNavigation, /agent Test/);
+  assert.match(agentNavigation, /agent\.navigation@g2m\.test/);
+  assert.match(agentNavigation, /Enqueteur/);
+  assert.match(agentNavigation, /action="\/logout" method="post"/);
+  assert.doesNotMatch(agentNavigation, /href="\/login"/);
+  assert.doesNotMatch(agentNavigation, /href="\/cartographie"/);
+  assert.doesNotMatch(agentNavigation, /href="\/infographies\/mission-globale"/);
+  assert.doesNotMatch(agentNavigation, /href="\/missions" role="menuitem">Missions/);
+  assert.doesNotMatch(agentNavigation, /href="\/admin" role="menuitem">Administration/);
+
+  assert.match(partnerNavigation, /Visualisation/);
+  assert.match(partnerNavigation, /class="nav-menu-panel-title">Infographie/);
+  assert.match(partnerNavigation, /href="\/infographies\/mission-globale"/);
+  assert.doesNotMatch(partnerNavigation, /href="\/cartographie" role="menuitem">Cartographie/);
 });
 
 test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => {
@@ -473,6 +533,17 @@ test("GET /login affiche la page de connexion fermee", async () => {
   assert.match(response.text, /name="password"/);
   assert.doesNotMatch(response.text, /id="site-nav"/);
   assert.doesNotMatch(response.text, /nav-button/);
+});
+
+test("POST /logout ferme la session courante", async () => {
+  const adminCookie = await loginAdmin("admin.logout@g2m.test");
+  const response = await request(app)
+    .post("/logout")
+    .set("Cookie", adminCookie);
+
+  assert.equal(response.status, 302);
+  assert.equal(response.headers.location, "/login");
+  assert.match(String(response.headers["set-cookie"]), /g2m_auth=;/);
 });
 
 test("creation invitation puis demande de lien d'activation depuis login", async () => {
@@ -723,8 +794,22 @@ test("GET /admin/permissions refuse un role sans permissions.manage", async () =
   const response = await request(app)
     .get("/admin/permissions")
     .set("Cookie", coordinatorCookie);
+  const auditLog = db.prepare(`
+    SELECT actor_user_id, action, entity_type, entity_id, details_json
+    FROM audit_logs
+    WHERE action = 'auth.access_denied'
+    ORDER BY id DESC
+  `).get();
+  const details = JSON.parse(auditLog.details_json);
 
   assert.equal(response.status, 403);
+  assert.equal(auditLog.action, "auth.access_denied");
+  assert.equal(auditLog.entity_type, "route");
+  assert.equal(auditLog.entity_id, "/admin/permissions");
+  assert.equal(details.method, "GET");
+  assert.equal(details.path, "/admin/permissions");
+  assert.equal(details.role, "coordinateur");
+  assert.equal(details.required_permission, "permissions.manage");
 });
 
 test("POST /admin/permissions modifie uniquement les permissions parametrables", async () => {
@@ -856,6 +941,30 @@ test("GET /admin/db-stats genere le rapport dynamique SQLite", async () => {
   assert.match(response.text, /users/);
   assert.match(response.text, /settings/);
   assert.match(response.text, /soumissions_collecte/);
+  assert.match(response.text, /Donnees d&#39;une table/);
+  assert.match(response.text, /Voir les donnees/);
+});
+
+test("GET /admin/db-stats permet de visualiser les donnees d'une table avec masquage", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.dbstats-preview@g2m.test",
+    role: "admin"
+  });
+  const previewResponse = await request(app)
+    .get("/admin/db-stats?table=users&limit=10")
+    .set("Cookie", adminCookie);
+  const invalidResponse = await request(app)
+    .get("/admin/db-stats?table=users%3Bdrop%20table%20users")
+    .set("Cookie", adminCookie);
+
+  assert.equal(previewResponse.status, 200);
+  assert.match(previewResponse.text, /Donnees d&#39;une table/);
+  assert.match(previewResponse.text, /admin\.dbstats-preview@g2m\.test/);
+  assert.match(previewResponse.text, /password_hash/);
+  assert.match(previewResponse.text, /\*{8}/);
+  assert.doesNotMatch(previewResponse.text, /\$2[aby]\$/);
+  assert.equal(invalidResponse.status, 200);
+  assert.match(invalidResponse.text, /La table demandee n&#39;existe pas/);
 });
 
 test("POST /admin/email-test utilise le mode developpement si SMTP absent", async () => {
@@ -1725,6 +1834,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="site-identification-body"/);
   assert.match(response.text, /SIM-AG-I01-001/);
   assert.match(response.text, /raw_data_json/);
+  assert.match(response.text, /Voir le d.tail d.cisionnel/);
   assert.match(response.text, /leaflet\.markercluster@1\.5\.3/);
   assert.match(response.text, /\/js\/cartographie\.js/);
   assert.match(scriptResponse.text, /sig-i18n-data/);
@@ -1737,6 +1847,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
   assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
   assert.match(scriptResponse.text, /function showSiteIdentification\(point\)/);
+  assert.match(scriptResponse.text, /function addDetailAction\(submissionId\)/);
+  assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/detail/);
   assert.match(scriptResponse.text, /rowClick: function \(event, row\)/);
   assert.match(scriptResponse.text, /siteIdentificationClose\.addEventListener\("click", hideSiteIdentification\)/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
@@ -1772,6 +1884,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transform: translateX\(-104%\)/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transition: transform 0\.3s ease/);
   assert.match(styleResponse.text, /\.sig-workspace\.is-tools-open \.sig-tools\s*\{[\s\S]*transform: translateX\(0\)/);
+  assert.match(styleResponse.text, /\.site-identification-actions/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*bottom: var\(--mobile-map-control-bottom\)/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*top: auto/);
@@ -1783,6 +1896,42 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /map\.fitBounds\(bounds/);
   assert.match(scriptResponse.text, /renderPoints\(true\)/);
   assert.doesNotMatch(scriptResponse.text, /http:\/\/\{s\}\.tile\.openstreetmap\.org/);
+});
+
+test("GET /soumissions/:id/detail affiche la fiche decisionnelle et exige infographics.read", async () => {
+  const readerCookie = await loginTestUser({
+    email: "partenaire.submission-detail@g2m.test",
+    role: "partenaire"
+  });
+  const deniedCookie = await loginTestUser({
+    email: "agent.submission-detail-denied@g2m.test",
+    role: "agent"
+  });
+  const submission = db.prepare(`
+    SELECT id FROM soumissions_collecte WHERE source_submission_id = ?
+  `).get("SIM-AG-I01-001");
+
+  const anonymousResponse = await request(app).get(`/soumissions/${submission.id}/detail`);
+  const deniedResponse = await request(app)
+    .get(`/soumissions/${submission.id}/detail`)
+    .set("Cookie", deniedCookie);
+  const response = await request(app)
+    .get(`/soumissions/${submission.id}/detail`)
+    .set("Cookie", readerCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, `/login?next=%2Fsoumissions%2F${submission.id}%2Fdetail`);
+  assert.equal(deniedResponse.status, 403);
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Visualisation decisionnelle/);
+  assert.match(response.text, /Questionnaire PADCI - Enquete terrain v12/);
+  assert.match(response.text, /2026060404v12/);
+  assert.match(response.text, /Synthese decisionnelle/);
+  assert.match(response.text, /Identification de la fiche/);
+  assert.match(response.text, /Module D[\s\S]*nergie/);
+  assert.match(response.text, /Module F[\s\S]*Internet/);
+  assert.match(response.text, /id="submission-detail-map"/);
+  assert.match(response.text, /leaflet@1\.9\.4/);
 });
 
 test("GET /cartographie exige sig.read", async () => {

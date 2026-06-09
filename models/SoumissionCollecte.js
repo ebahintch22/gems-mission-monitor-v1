@@ -51,6 +51,29 @@ class SoumissionCollecte {
     `).all();
   }
 
+  static findById(id) {
+    return db.prepare(`
+      SELECT
+        s.id, s.source, s.source_submission_id, s.kobo_asset_uid,
+        s.mission_id, s.equipe_id, s.agent_id, s.sous_prefecture_id,
+        s.code_agent_source, s.submitted_at,
+        s.latitude, s.longitude, s.precision_m,
+        s.statut_validation, s.anomaly_count,
+        s.formulaire_type, s.raw_data_json, s.synced_at, s.created_at,
+        a.code_agent, a.nom AS agent_nom, a.prenoms AS agent_prenoms,
+        e.nom_equipe, m.name AS mission_name,
+        sp.nom_sous_prefecture, d.nom_departement, r.nom_region
+      FROM soumissions_collecte s
+      JOIN missions m ON m.id = s.mission_id
+      LEFT JOIN agents_collecte a ON a.id = s.agent_id
+      LEFT JOIN equipes e ON e.id = s.equipe_id
+      LEFT JOIN sous_prefectures sp ON sp.id = s.sous_prefecture_id
+      LEFT JOIN departements d ON d.id = sp.departement_id
+      LEFT JOIN regions r ON r.id = d.region_id
+      WHERE s.id = ?
+    `).get(id);
+  }
+
   static mapFilters() {
     return {
       missions: db.prepare(`

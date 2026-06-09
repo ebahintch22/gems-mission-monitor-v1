@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const { resolveUserPermissions } = require("../services/permissionService");
+const { logAccessDenied } = require("./permissionMiddleware");
 
 const AUTH_COOKIE = "g2m_auth";
 
@@ -61,6 +62,9 @@ function requireAuth(req, res, next) {
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.currentUser || !roles.includes(req.currentUser.role)) {
+      if (req.currentUser) {
+        logAccessDenied(req, { required_roles: roles });
+      }
       return res.status(403).render("errors/403", { title: req.t("errors.403.title") });
     }
 

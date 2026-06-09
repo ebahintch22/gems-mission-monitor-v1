@@ -376,6 +376,99 @@ nav {
   font-weight: 700;
 }
 
+.nav-menu-panel-title {
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: var(--font-small);
+  font-weight: 700;
+  margin-top: 5px;
+  padding: 8px var(--field-padding-x) 3px;
+}
+
+.nav-menu-panel-title:first-child {
+  border-top: 0;
+  margin-top: 0;
+  padding-top: 3px;
+}
+
+.nav-session-trigger {
+  border-radius: 50%;
+  gap: 0;
+  height: 38px;
+  justify-content: center;
+  min-height: 38px;
+  overflow: hidden;
+  padding: 0;
+  position: relative;
+  width: 38px;
+}
+
+.nav-session-trigger i {
+  color: rgba(38, 122, 127, 0.16);
+  font-size: 28px;
+  position: absolute;
+}
+
+.nav-session-initials {
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  position: relative;
+}
+
+.nav-session-panel {
+  gap: 6px;
+  min-width: 250px;
+}
+
+.nav-session-identity {
+  border-bottom: 1px solid var(--border);
+  display: grid;
+  gap: 3px;
+  padding: 4px var(--field-padding-x) 9px;
+}
+
+.nav-session-identity strong {
+  color: var(--ink);
+  font-size: var(--font-body);
+}
+
+.nav-session-identity span {
+  color: var(--muted);
+  font-size: var(--font-small);
+  overflow-wrap: anywhere;
+}
+
+.nav-session-form {
+  margin: 0;
+}
+
+.nav-session-logout {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  gap: 8px;
+  padding: var(--nav-button-padding-y) var(--field-padding-x);
+  text-align: left;
+  width: 100%;
+}
+
+.nav-session-logout:hover,
+.nav-session-logout:focus {
+  background: var(--background);
+  outline: none;
+}
+
+.nav-session-logout i {
+  color: var(--primary);
+}
+
 .nav-personalization-panel {
   gap: 8px;
   min-width: 210px;
@@ -786,6 +879,12 @@ h2 {
 
 .site-identification-status.status-rejetee {
   background: #b84545;
+}
+
+.site-identification-actions {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+  padding-bottom: 16px;
 }
 
 .site-identification-section {
@@ -1209,6 +1308,51 @@ h2 {
   font-size: var(--font-small);
 }
 
+.admin-db-preview-link {
+  margin-left: auto;
+}
+
+.admin-db-preview {
+  margin-top: 22px;
+}
+
+.admin-db-preview-form {
+  align-items: end;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: minmax(220px, 1fr) 170px auto;
+  margin-bottom: 18px;
+}
+
+.admin-db-preview-header {
+  margin-top: 12px;
+}
+
+.admin-db-preview-header h3 {
+  margin: 0;
+}
+
+.admin-db-preview-scroll {
+  overflow-x: auto;
+}
+
+.admin-db-preview-table {
+  min-width: 760px;
+}
+
+.admin-db-preview-table td {
+  max-width: 360px;
+  overflow-wrap: anywhere;
+  vertical-align: top;
+}
+
+.admin-db-preview-pagination {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 .admin-inline-list {
   color: var(--muted);
   display: flex;
@@ -1294,6 +1438,93 @@ h2 {
 
 .admin-permissions-table td.is-locked {
   background: #f5f7f8;
+}
+
+.submission-summary-grid {
+  display: grid;
+  gap: 18px;
+  grid-template-columns: repeat(4, 1fr);
+  margin-bottom: 22px;
+}
+
+.submission-summary-grid .stat strong {
+  display: block;
+  font-size: var(--font-summary);
+  overflow-wrap: anywhere;
+}
+
+.submission-status {
+  border-radius: 6px;
+  color: #fff;
+  padding: 5px 10px;
+}
+
+.submission-status.status-validee {
+  background: #16856f;
+}
+
+.submission-status.status-a_verifier {
+  background: #d38b13;
+}
+
+.submission-status.status-rejetee {
+  background: #b84545;
+}
+
+.submission-detail-layout {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.submission-detail-main,
+.submission-detail-side {
+  display: grid;
+  gap: 22px;
+}
+
+.submission-detail-side {
+  align-content: start;
+  position: sticky;
+  top: calc(var(--site-header-height) + 22px);
+}
+
+.submission-kpi-list,
+.submission-field-list {
+  display: grid;
+  gap: 0 18px;
+  grid-template-columns: 190px minmax(0, 1fr);
+  margin: 0;
+}
+
+.submission-kpi-list dt,
+.submission-kpi-list dd,
+.submission-field-list dt,
+.submission-field-list dd {
+  border-bottom: 1px solid var(--border);
+  margin: 0;
+  padding: 10px 0;
+}
+
+.submission-kpi-list dt,
+.submission-field-list dt {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.submission-kpi-list dd,
+.submission-field-list dd {
+  overflow-wrap: anywhere;
+}
+
+.submission-field-list-compact {
+  grid-template-columns: 135px minmax(0, 1fr);
+}
+
+.submission-detail-map {
+  border-radius: 6px;
+  height: 320px;
+  overflow: hidden;
 }
 
 .kobo-error-list {
@@ -1583,6 +1814,7 @@ textarea::placeholder {
     .agent-form,
     .admin-card-grid,
     .admin-settings-grid,
+    .admin-db-preview-form,
     .kobo-layout,
     .kobo-sync-form,
     .kobo-summary,

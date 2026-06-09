@@ -1,0 +1,124 @@
+<%- include("../partials/header", { title, mapAssets: true }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Visualisation decisionnelle</p>
+    <h1><%= detail.title %></h1>
+    <p class="muted"><%= detail.mapping.label %> - <%= detail.subtitle || detail.record.source_submission_id %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/cartographie">Retour cartographie</a>
+  </div>
+</section>
+
+<section class="submission-summary-grid" aria-label="Synthese de la soumission">
+  <div class="stat">
+    <span>Statut</span>
+    <strong class="submission-status status-<%= detail.record.statut_validation %>">
+      <%= t(`status.${detail.record.statut_validation}`) %>
+    </strong>
+  </div>
+  <div class="stat">
+    <span>Soumis le</span>
+    <strong><%= new Date(detail.record.submitted_at).toLocaleDateString(locale) %></strong>
+  </div>
+  <div class="stat">
+    <span>Anomalies</span>
+    <strong><%= detail.record.anomaly_count %></strong>
+  </div>
+  <div class="stat">
+    <span>Source</span>
+    <strong><%= detail.record.source %></strong>
+  </div>
+</section>
+
+<section class="submission-detail-layout">
+  <div class="submission-detail-main">
+    <section class="panel">
+      <div class="panel-header">
+        <h2>Synthese decisionnelle</h2>
+        <span class="status"><%= detail.mapping.version %></span>
+      </div>
+      <dl class="submission-kpi-list">
+        <% detail.summary.forEach((field) => { %>
+          <dt><%= field.label %></dt>
+          <dd><%= field.value %></dd>
+        <% }) %>
+      </dl>
+    </section>
+
+    <% detail.sections.forEach((section) => { %>
+      <section class="panel submission-section">
+        <h2><%= section.label %></h2>
+        <dl class="submission-field-list">
+          <% section.fields.forEach((field) => { %>
+            <dt><%= field.label %></dt>
+            <dd><%= field.value %></dd>
+          <% }) %>
+        </dl>
+      </section>
+    <% }) %>
+  </div>
+
+  <aside class="submission-detail-side">
+    <section class="panel">
+      <h2>Contexte collecte</h2>
+      <dl class="submission-field-list submission-field-list-compact">
+        <dt>ID soumission</dt>
+        <dd><%= detail.record.source_submission_id %></dd>
+        <dt>Mission</dt>
+        <dd><%= detail.record.mission_name || "-" %></dd>
+        <dt>Equipe</dt>
+        <dd><%= detail.record.nom_equipe || "-" %></dd>
+        <dt>Agent</dt>
+        <dd><%= detail.record.code_agent || detail.record.code_agent_source || "-" %></dd>
+        <dt>Region</dt>
+        <dd><%= detail.record.nom_region || "-" %></dd>
+        <dt>Departement</dt>
+        <dd><%= detail.record.nom_departement || "-" %></dd>
+        <dt>Sous-prefecture</dt>
+        <dd><%= detail.record.nom_sous_prefecture || "-" %></dd>
+        <dt>Precision GPS</dt>
+        <dd><%= detail.record.precision_m || "-" %> m</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>Localisation</h2>
+      <div id="submission-detail-map" class="submission-detail-map"></div>
+    </section>
+  </aside>
+</section>
+
+<script id="submission-map-data" type="application/json"><%- JSON.stringify({
+  latitude: detail.record.latitude,
+  longitude: detail.record.longitude,
+  title: detail.title,
+  precision: detail.record.precision_m
+}).replace(/</g, "\\u003c") %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  (function () {
+    var payload = JSON.parse(document.getElementById("submission-map-data").textContent);
+    var map = L.map("submission-detail-map", { maxZoom: 20 }).setView([payload.latitude, payload.longitude], 15);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 20,
+      attribution: "&copy; OpenStreetMap contributors"
+    }).addTo(map);
+    L.circleMarker([payload.latitude, payload.longitude], {
+      color: "#006b5b",
+      fillColor: "#006b5b",
+      fillOpacity: 0.85,
+      radius: 7,
+      weight: 1
+    }).bindPopup(payload.title).addTo(map);
+    if (payload.precision) {
+      L.circle([payload.latitude, payload.longitude], {
+        color: "#006b5b",
+        fillColor: "#d9f0eb",
+        fillOpacity: 0.18,
+        radius: Number(payload.precision)
+      }).addTo(map);
+    }
+  }());
+</script>
+<%- include("../partials/footer") %>
