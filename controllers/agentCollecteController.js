@@ -27,6 +27,7 @@ function submittedValues(body) {
     nom: body.nom?.trim(),
     prenoms: body.prenoms?.trim(),
     code_agent: body.code_agent?.trim().toUpperCase(),
+    kobo_code_agent: normalizeKoboCode(body.kobo_code_agent),
     telephone: body.telephone?.trim() || null,
     equipement: body.equipement?.trim() || null,
     statut: body.statut || "actif",
@@ -48,10 +49,18 @@ function validationError(req, values, body, excludedId = null) {
   if (AgentCollecte.findByCode(values.code_agent, excludedId)) {
     return req.t("agents.errors.duplicateCode");
   }
+  if (values.kobo_code_agent && AgentCollecte.findByKoboCode(values.kobo_code_agent, excludedId)) {
+    return req.t("agents.errors.duplicateKoboCode");
+  }
   if (values.user_id && AgentCollecte.findByUserId(values.user_id, excludedId)) {
     return req.t("agents.errors.duplicateUser");
   }
   return null;
+}
+
+function normalizeKoboCode(value) {
+  const normalized = String(value || "").trim();
+  return normalized || null;
 }
 
 exports.index = (req, res) => {

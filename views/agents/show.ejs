@@ -17,6 +17,7 @@
     <h2><%= t("sig.table.agent") %></h2>
     <dl>
       <dt><%= t("agents.fields.code").replace(" *", "") %></dt><dd><%= agent.code_agent %></dd>
+      <dt><%= t("agents.fields.koboCode") %></dt><dd><%= agent.kobo_code_agent || "-" %></dd>
       <dt><%= t("common.phone") %></dt><dd><%= agent.telephone || "-" %></dd>
       <dt><%= t("common.equipment") %></dt><dd><%= agent.equipement || "-" %></dd>
       <dt><%= t("common.user") %></dt>

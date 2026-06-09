@@ -42,6 +42,7 @@ function mapKoboSubmission(submission, options = {}) {
     mission_id: missionId,
     equipe_id: null,
     agent_id: null,
+    assignment_id: null,
     sous_prefecture_id: null,
     code_agent_source: agentCodeField ? valueAtPath(submission, agentCodeField) || null : null,
     submitted_at: normalizeDateString(submittedAt),

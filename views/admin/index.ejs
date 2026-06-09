@@ -18,6 +18,13 @@
     <h2><%= t("admin.cards.dbStats.title") %></h2>
     <p><%= t("admin.cards.dbStats.description") %></p>
   </a>
+  <% if (permissions && permissions.has("system.status.read")) { %>
+    <a class="panel admin-card" href="/admin/system-status">
+      <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+      <h2><%= t("admin.cards.systemStatus.title") %></h2>
+      <p><%= t("admin.cards.systemStatus.description") %></p>
+    </a>
+  <% } %>
   <a class="panel admin-card" href="/users">
     <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
     <h2><%= t("admin.cards.users.title") %></h2>

@@ -1,5 +1,6 @@
 const Mission = require("../models/Mission");
 const SoumissionCollecte = require("../models/SoumissionCollecte");
+const AgentMissionAssignment = require("../models/AgentMissionAssignment");
 const { KoboClient, extractResults } = require("./koboClient");
 const { mapKoboSubmission } = require("./koboPayloadMapper");
 const { getEffectiveKoboConfig, maskSecret } = require("./koboRuntimeConfig");
@@ -122,6 +123,7 @@ async function syncKoboSubmissions({
         agentCodeField,
         formType
       });
+      attachActiveAssignment(row);
 
       summary.valid += 1;
 
@@ -145,6 +147,25 @@ async function syncKoboSubmissions({
   }
 
   return summary;
+}
+
+function attachActiveAssignment(row) {
+  if (!row.code_agent_source) {
+    return;
+  }
+
+  const assignment = AgentMissionAssignment.activeByCodeAndMission(
+    String(row.code_agent_source).trim().toUpperCase(),
+    row.mission_id
+  );
+
+  if (!assignment) {
+    return;
+  }
+
+  row.assignment_id = assignment.id;
+  row.agent_id = assignment.agent_id;
+  row.equipe_id = assignment.equipe_id;
 }
 
 function buildKoboQuery(since) {

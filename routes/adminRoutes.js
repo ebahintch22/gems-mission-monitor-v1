@@ -11,6 +11,7 @@ router.get("/", requirePermission("admin.access"), adminController.index);
 router.get("/settings", requirePermission("settings.manage"), adminController.settings);
 router.post("/settings", requirePermission("settings.manage"), adminController.updateSettings);
 router.get("/db-stats", requirePermission("db.stats.read"), adminController.databaseStats);
+router.get("/system-status", requirePermission("system.status.read"), adminController.systemStatus);
 router.get("/email-test", requirePermission("email.test"), adminController.emailTest);
 router.post("/email-test", requirePermission("email.test"), adminController.sendEmailTest);
 router.get("/monitoring", requirePermission("monitoring.read"), adminController.monitoring);

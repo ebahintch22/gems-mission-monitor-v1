@@ -21,6 +21,7 @@
         <tr>
           <th><%= t("sig.table.agent") %></th>
           <th><%= t("common.code") %></th>
+          <th><%= t("agents.fields.koboCode") %></th>
           <th><%= t("common.account") %></th>
           <th><%= t("common.team") %></th>
           <th><%= t("common.status") %></th>
@@ -32,6 +33,7 @@
           <tr>
             <td><a href="/agents/<%= agent.id %>"><%= agent.prenoms %> <%= agent.nom %></a></td>
             <td><%= agent.code_agent %></td>
+            <td><%= agent.kobo_code_agent || "-" %></td>
             <td><%= agent.user_name || t("common.noAccount") %></td>
             <td><%= agent.nom_equipe || t("common.notAssigned") %></td>
             <td><span class="status status-<%= agent.statut %>"><%= t(`status.${agent.statut}`) %></span></td>

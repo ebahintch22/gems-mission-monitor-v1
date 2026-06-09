@@ -151,9 +151,17 @@ function seedSubmissions(db, options = {}) {
   const inactiveSubmissions = options.inactiveSubmissions || 4;
   const endDate = options.endDate || new Date().toISOString();
   const agents = db.prepare(`
-    SELECT a.id, a.nom, a.prenoms, a.code_agent, a.equipe_id, e.mission_id, e.nom_equipe
+    SELECT
+      a.id, a.nom, a.prenoms, a.code_agent, a.equipe_id,
+      e.mission_id, e.nom_equipe,
+      ama.id AS assignment_id
     FROM agents_collecte a
     JOIN equipes e ON e.id = a.equipe_id
+    LEFT JOIN agent_mission_assignments ama
+      ON ama.agent_id = a.id
+      AND ama.equipe_id = e.id
+      AND ama.mission_id = e.mission_id
+      AND ama.statut = 'active'
     WHERE a.statut = 'actif'
     ORDER BY a.code_agent
   `).all();
@@ -178,12 +186,12 @@ function seedSubmissions(db, options = {}) {
   const upsert = db.prepare(`
     INSERT INTO soumissions_collecte (
       source, source_submission_id, kobo_asset_uid, mission_id, equipe_id,
-      agent_id, sous_prefecture_id, code_agent_source, submitted_at,
+      agent_id, assignment_id, sous_prefecture_id, code_agent_source, submitted_at,
       latitude, longitude, precision_m, statut_validation, anomaly_count,
       formulaire_type, raw_data_json
     ) VALUES (
       'simulation', @source_submission_id, @kobo_asset_uid, @mission_id, @equipe_id,
-      @agent_id, @sous_prefecture_id, @code_agent_source, @submitted_at,
+      @agent_id, @assignment_id, @sous_prefecture_id, @code_agent_source, @submitted_at,
       @latitude, @longitude, @precision_m, @statut_validation, @anomaly_count,
       @formulaire_type, @raw_data_json
     )
@@ -191,6 +199,7 @@ function seedSubmissions(db, options = {}) {
       mission_id = excluded.mission_id,
       equipe_id = excluded.equipe_id,
       agent_id = excluded.agent_id,
+      assignment_id = excluded.assignment_id,
       sous_prefecture_id = excluded.sous_prefecture_id,
       code_agent_source = excluded.code_agent_source,
       submitted_at = excluded.submitted_at,
@@ -264,6 +273,7 @@ function seedSubmissions(db, options = {}) {
           mission_id: agent.mission_id,
           equipe_id: agent.equipe_id,
           agent_id: agent.id,
+          assignment_id: agent.assignment_id,
           sous_prefecture_id: territory.id,
           code_agent_source: agent.code_agent,
           submitted_at: submittedAt,

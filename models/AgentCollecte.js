@@ -1,10 +1,12 @@
 const db = require("../config/database");
+const AgentMissionAssignment = require("./AgentMissionAssignment");
 
 class AgentCollecte {
   static all() {
     return db.prepare(`
       SELECT
-        a.id, a.nom, a.prenoms, a.code_agent, a.telephone, a.equipement, a.statut, a.created_at,
+        a.id, a.nom, a.prenoms, a.code_agent, a.kobo_code_agent,
+        a.telephone, a.equipement, a.statut, a.created_at,
         CASE
           WHEN u.id IS NULL THEN NULL
           ELSE u.prenoms || ' ' || u.nom
@@ -40,6 +42,19 @@ class AgentCollecte {
       `).get(codeAgent, excludedId);
     }
     return db.prepare("SELECT id FROM agents_collecte WHERE code_agent = ?").get(codeAgent);
+  }
+
+  static findByKoboCode(koboCodeAgent, excludedId = null) {
+    if (!koboCodeAgent) {
+      return null;
+    }
+
+    if (excludedId) {
+      return db.prepare(`
+        SELECT id FROM agents_collecte WHERE kobo_code_agent = ? AND id <> ?
+      `).get(koboCodeAgent, excludedId);
+    }
+    return db.prepare("SELECT id FROM agents_collecte WHERE kobo_code_agent = ?").get(koboCodeAgent);
   }
 
   static findByUserId(userId, excludedId = null) {
@@ -83,30 +98,46 @@ class AgentCollecte {
   }
 
   static create(input) {
-    const result = db.prepare(`
-      INSERT INTO agents_collecte (
-        nom, prenoms, user_id, equipe_id, code_agent, telephone, equipement, statut
-      ) VALUES (
-        @nom, @prenoms, @user_id, @equipe_id, @code_agent, @telephone, @equipement, @statut
-      )
-    `).run(input);
-    return this.findById(result.lastInsertRowid);
+    return db.transaction(() => {
+      const result = db.prepare(`
+        INSERT INTO agents_collecte (
+          nom, prenoms, user_id, equipe_id, code_agent, kobo_code_agent, telephone, equipement, statut
+        ) VALUES (
+          @nom, @prenoms, @user_id, @equipe_id, @code_agent, @kobo_code_agent, @telephone, @equipement, @statut
+        )
+      `).run(input);
+
+      if (input.equipe_id) {
+        AgentMissionAssignment.replaceActive(result.lastInsertRowid, input.equipe_id);
+      }
+
+      return this.findById(result.lastInsertRowid);
+    })();
   }
 
   static update(id, input) {
-    const result = db.prepare(`
-      UPDATE agents_collecte SET
-        nom = @nom,
-        prenoms = @prenoms,
-        user_id = @user_id,
-        equipe_id = @equipe_id,
-        code_agent = @code_agent,
-        telephone = @telephone,
-        equipement = @equipement,
-        statut = @statut
-      WHERE id = @id
-    `).run({ id, ...input });
-    return result.changes ? this.findById(id) : null;
+    return db.transaction(() => {
+      const result = db.prepare(`
+        UPDATE agents_collecte SET
+          nom = @nom,
+          prenoms = @prenoms,
+          user_id = @user_id,
+          equipe_id = @equipe_id,
+          code_agent = @code_agent,
+          kobo_code_agent = @kobo_code_agent,
+          telephone = @telephone,
+          equipement = @equipement,
+          statut = @statut
+        WHERE id = @id
+      `).run({ id, ...input });
+
+      if (!result.changes) {
+        return null;
+      }
+
+      AgentMissionAssignment.replaceActive(id, input.equipe_id);
+      return this.findById(id);
+    })();
   }
 }
 

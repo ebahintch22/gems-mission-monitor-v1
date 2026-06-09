@@ -1,4 +1,5 @@
 const AuditLog = require("../models/AuditLog");
+const AppMetadata = require("../models/AppMetadata");
 const Mission = require("../models/Mission");
 const Permission = require("../models/Permission");
 const Setting = require("../models/Setting");
@@ -50,6 +51,13 @@ exports.databaseStats = (req, res) => {
     tablePreview,
     selectedTable: req.query.table || "",
     categoryLabels: categoryLabels(req)
+  });
+};
+
+exports.systemStatus = (req, res) => {
+  res.render("admin/system-status", {
+    title: req.t("admin.systemStatus.title"),
+    metadata: AppMetadata.get()
   });
 };
 

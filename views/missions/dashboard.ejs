@@ -1,0 +1,102 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= isHomeDashboard ? t("missionDashboard.eyebrowHome") : t("missionDashboard.eyebrow") %></p>
+    <h1><%= dashboard.mission.name %></h1>
+    <p class="muted"><%= t("missionDashboard.description") %></p>
+    <span class="status status-<%= dashboard.mission.status %>"><%= t(`status.${dashboard.mission.status}`) %></span>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/missions/<%= dashboard.mission.id %>"><%= t("missionDashboard.actions.mission") %></a>
+    <a class="button" href="/missions"><%= t("missions.show.back") %></a>
+  </div>
+</section>
+
+<section class="stats" aria-label="<%= t("missionDashboard.stats.ariaLabel") %>">
+  <article class="stat"><span><%= t("missionDashboard.stats.activeTeams") %></span><strong><%= dashboard.metrics.activeTeams %></strong></article>
+  <article class="stat"><span><%= t("missionDashboard.stats.activeAgents") %></span><strong><%= dashboard.metrics.activeAgents %></strong></article>
+  <article class="stat"><span><%= t("missionDashboard.stats.submissions") %></span><strong><%= dashboard.metrics.totalSubmissions %></strong></article>
+  <article class="stat"><span><%= t("missionDashboard.stats.toReview") %></span><strong><%= dashboard.metrics.toReview %></strong></article>
+</section>
+
+<section class="detail-grid">
+  <article class="panel details">
+    <h2><%= t("missionDashboard.sections.identity") %></h2>
+    <dl>
+      <dt><%= t("common.region") %></dt><dd><%= dashboard.mission.region %></dd>
+      <dt><%= t("common.period") %></dt><dd><%= t("missions.show.periodValue", { start: dashboard.mission.start_date || "-", end: dashboard.mission.end_date || "-" }) %></dd>
+      <dt><%= t("missions.show.koboForm") %></dt><dd><%= dashboard.mission.kobo_asset_uid || t("missions.show.notConfigured") %></dd>
+      <dt><%= t("missionDashboard.stats.lastSubmission") %></dt><dd><%= dashboard.metrics.lastSubmissionAt || "-" %></dd>
+    </dl>
+  </article>
+
+  <article class="panel details">
+    <h2><%= t("missionDashboard.sections.collection") %></h2>
+    <dl>
+      <dt><%= t("missionDashboard.stats.validated") %></dt><dd><%= dashboard.metrics.validated %></dd>
+      <dt><%= t("missionDashboard.stats.toReview") %></dt><dd><%= dashboard.metrics.toReview %></dd>
+      <dt><%= t("missionDashboard.stats.rejected") %></dt><dd><%= dashboard.metrics.rejected %></dd>
+    </dl>
+  </article>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("missionDashboard.sections.teams") %></h2>
+  </div>
+  <% if (!dashboard.activeTeams.length) { %>
+    <p class="empty"><%= t("missionDashboard.empty.teams") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("common.team") %></th>
+          <th><%= t("missionDashboard.stats.activeAgents") %></th>
+          <th><%= t("missionDashboard.stats.submissions") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% dashboard.activeTeams.forEach((team) => { %>
+          <tr>
+            <td><a href="/equipes/<%= team.id %>"><%= team.nom_equipe %></a></td>
+            <td><%= team.active_agents %></td>
+            <td><%= team.submissions %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("missionDashboard.sections.recentSubmissions") %></h2>
+  </div>
+  <% if (!dashboard.recentSubmissions.length) { %>
+    <p class="empty"><%= t("missionDashboard.empty.submissions") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("common.submission") %></th>
+          <th><%= t("common.agent") %></th>
+          <th><%= t("common.team") %></th>
+          <th><%= t("common.status") %></th>
+          <th><%= t("missionDashboard.stats.anomalies") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% dashboard.recentSubmissions.forEach((submission) => { %>
+          <tr>
+            <td><a href="/soumissions/<%= submission.id %>/detail"><%= submission.source_submission_id %></a></td>
+            <td><%= submission.code_agent || "-" %></td>
+            <td><%= submission.nom_equipe || "-" %></td>
+            <td><span class="status status-<%= submission.statut_validation %>"><%= t(`status.${submission.statut_validation}`) %></span></td>
+            <td><%= submission.anomaly_count %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

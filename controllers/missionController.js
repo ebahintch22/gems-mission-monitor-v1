@@ -1,4 +1,5 @@
 const Mission = require("../models/Mission");
+const { getMissionDashboard } = require("../services/missionDashboardService");
 
 const statuses = ["planifiee", "en_cours", "terminee", "suspendue"];
 
@@ -85,6 +86,19 @@ exports.show = (req, res, next) => {
   return res.render("missions/show", {
     title: mission.name,
     mission
+  });
+};
+
+exports.dashboard = (req, res, next) => {
+  const dashboard = getMissionDashboard(req.params.id);
+  if (!dashboard) {
+    return next();
+  }
+
+  return res.render("missions/dashboard", {
+    title: req.t("missionDashboard.title", { name: dashboard.mission.name }),
+    dashboard,
+    isHomeDashboard: false
   });
 };
 

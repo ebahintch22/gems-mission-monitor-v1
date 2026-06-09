@@ -5,12 +5,12 @@ class SoumissionCollecte {
     const result = db.prepare(`
       INSERT OR IGNORE INTO soumissions_collecte (
         source, source_submission_id, kobo_asset_uid, mission_id, equipe_id,
-        agent_id, sous_prefecture_id, code_agent_source, submitted_at,
+        agent_id, assignment_id, sous_prefecture_id, code_agent_source, submitted_at,
         latitude, longitude, precision_m, statut_validation, anomaly_count,
         formulaire_type, raw_data_json
       ) VALUES (
         @source, @source_submission_id, @kobo_asset_uid, @mission_id, @equipe_id,
-        @agent_id, @sous_prefecture_id, @code_agent_source, @submitted_at,
+        @agent_id, @assignment_id, @sous_prefecture_id, @code_agent_source, @submitted_at,
         @latitude, @longitude, @precision_m, @statut_validation, @anomaly_count,
         @formulaire_type, @raw_data_json
       )
@@ -34,6 +34,7 @@ class SoumissionCollecte {
     return db.prepare(`
       SELECT
         s.id, s.source_submission_id, s.mission_id, s.equipe_id, s.agent_id,
+        s.assignment_id,
         s.submitted_at,
         s.latitude, s.longitude, s.precision_m,
         s.statut_validation, s.anomaly_count, s.raw_data_json,
@@ -55,7 +56,7 @@ class SoumissionCollecte {
     return db.prepare(`
       SELECT
         s.id, s.source, s.source_submission_id, s.kobo_asset_uid,
-        s.mission_id, s.equipe_id, s.agent_id, s.sous_prefecture_id,
+        s.mission_id, s.equipe_id, s.agent_id, s.assignment_id, s.sous_prefecture_id,
         s.code_agent_source, s.submitted_at,
         s.latitude, s.longitude, s.precision_m,
         s.statut_validation, s.anomaly_count,

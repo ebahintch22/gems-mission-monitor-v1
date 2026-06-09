@@ -136,10 +136,124 @@ Pour rendre cette évolution propre, il faudra probablement ajouter ou stabilise
 - une mission d’accueil globale pour l’application, par exemple un paramètre `app.default_mission_id` dans la table `settings` ;
 - une relation utilisateurs x missions ;
 - une relation équipes x missions déjà probablement existante ;
-- une relation agents x équipes x missions ;
+- une relation agents x équipes x missions historisée ;
 - des permissions de lecture par mission.
 
-## 6. Proposition de première version
+## 6. Orientation multi-missions pour les agents
+
+### 6.1. Limite de la structure actuelle
+
+Dans la structure actuelle, la table `agents_collecte` contient directement un champ `equipe_id`. Cela signifie qu’un agent est rattaché à une seule équipe courante, et donc indirectement à une seule mission courante, puisque chaque équipe appartient à une mission.
+
+Cette approche est simple, mais elle atteint ses limites dès que l’application doit gérer plusieurs missions dans le temps :
+
+- un agent peut avoir participé à une mission de simulation, puis être affecté à une mission terrain ;
+- l’historique de ses affectations n’est pas explicitement conservé ;
+- le déplacement d’un agent vers une nouvelle équipe peut rendre moins lisible son rattachement historique ;
+- les indicateurs du Dashboard-Mission doivent pouvoir distinguer les agents actuellement affectés, les agents ayant déjà collecté, et les agents associés aux soumissions historiques.
+
+Les soumissions disposent déjà de `mission_id`, `equipe_id` et `agent_id`. Ces champs doivent être conservés comme instantané opérationnel de la collecte. Ils permettent de rattacher chaque soumission à la mission, à l’équipe et à l’agent au moment de l’enregistrement ou de l’import.
+
+### 6.2. Règle métier cible
+
+La règle métier proposée est la suivante :
+
+> Un agent peut travailler sur plusieurs missions dans le temps, mais ne peut pas être affecté simultanément à deux missions actives.
+
+Cette règle implique une gestion historisée des affectations :
+
+- une affectation active au maximum par agent ;
+- plusieurs affectations passées possibles ;
+- une date de début et une date de fin d’affectation ;
+- un statut d’affectation permettant de distinguer actif, terminé, suspendu ou annulé ;
+- une cohérence entre la mission, l’équipe et l’agent.
+
+### 6.3. Modèle de données recommandé
+
+Il est recommandé de créer une nouvelle table dédiée aux affectations des agents :
+
+```text
+agent_mission_assignments
+```
+
+Structure indicative :
+
+| Champ | Rôle |
+| --- | --- |
+| `id` | Identifiant technique de l’affectation |
+| `agent_id` | Agent concerné |
+| `mission_id` | Mission d’affectation |
+| `equipe_id` | Équipe d’affectation dans cette mission |
+| `start_date` | Date de début d’affectation |
+| `end_date` | Date de fin d’affectation |
+| `statut` | `active`, `terminee`, `suspendue`, `annulee` |
+| `created_by` | Utilisateur ayant créé l’affectation |
+| `created_at` | Date de création |
+| `updated_at` | Date de dernière mise à jour |
+
+La contrainte “un agent ne peut pas être sur deux missions simultanément” peut être portée par :
+
+- une validation applicative dans le modèle et le contrôleur ;
+- un index unique partiel SQLite sur les affectations actives, par exemple sur `agent_id` lorsque `statut = 'active'` ;
+- une validation supplémentaire vérifiant que `equipe_id` appartient bien à `mission_id`.
+
+Le champ `agents_collecte.equipe_id` pourrait être conservé temporairement comme raccourci d’affectation courante, puis progressivement remplacé par une lecture de l’affectation active dans `agent_mission_assignments`.
+
+### 6.4. Impact sur les soumissions
+
+La table `soumissions_collecte` doit continuer à stocker `mission_id`, `equipe_id` et `agent_id`, car ces champs représentent le contexte réel de collecte d’une soumission.
+
+Une évolution utile serait d’ajouter un champ optionnel :
+
+```text
+assignment_id
+```
+
+Ce champ permettrait de rattacher une soumission à l’affectation active précise utilisée lors de l’import ou de la collecte. Il faciliterait :
+
+- le calcul des indicateurs par période d’affectation ;
+- l’audit des changements d’équipe ;
+- la distinction entre agent courant et agent historique ;
+- la production de rapports par mission, équipe et agent.
+
+Cette évolution n’oblige pas à créer une nouvelle table de soumissions. La table actuelle peut rester la table principale, à condition d’être enrichie progressivement et de préserver les instantanés `mission_id`, `equipe_id`, `agent_id`.
+
+### 6.5. Impact sur les Dashboards-Mission
+
+Avec une gestion historisée des affectations, le Dashboard-Mission pourra calculer plus proprement :
+
+- les agents actuellement affectés à la mission ;
+- les agents ayant produit au moins une soumission sur la mission ;
+- les agents sans activité récente ;
+- les équipes actives de la mission ;
+- les soumissions par équipe et par agent ;
+- les écarts entre agents affectés et agents effectivement actifs ;
+- les indicateurs historiques sans être perturbés par les réaffectations futures.
+
+Il faudra distinguer deux familles d’indicateurs :
+
+- les indicateurs d’affectation, calculés depuis `agent_mission_assignments` ;
+- les indicateurs de collecte, calculés depuis `soumissions_collecte`.
+
+### 6.6. Proposition d’implémentation progressive
+
+L’implémentation recommandée se ferait en quatre temps.
+
+1. Créer la table `agent_mission_assignments` et initialiser les affectations à partir des équipes et agents existants.
+
+2. Adapter les écrans Agents et Équipes pour afficher l’affectation active d’un agent, sans supprimer immédiatement `agents_collecte.equipe_id`.
+
+3. Adapter l’import Kobo et les scripts de simulation pour résoudre l’affectation active de l’agent au moment de la soumission, puis renseigner `mission_id`, `equipe_id`, `agent_id` et éventuellement `assignment_id`.
+
+4. Basculer les indicateurs Dashboard-Mission vers les nouvelles sources :
+
+- affectations actives depuis `agent_mission_assignments` ;
+- collecte réelle depuis `soumissions_collecte` ;
+- historique agent par jointure entre les deux.
+
+Cette approche limite le risque, car elle ne détruit pas la structure actuelle. Elle introduit d’abord une couche d’affectation historisée, puis migre progressivement les usages.
+
+## 7. Proposition de première version
 
 Pour une première version pragmatique, il est recommandé de commencer par :
 

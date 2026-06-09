@@ -19,6 +19,10 @@
     <label><%= t("agents.fields.code") %>
       <input name="code_agent" required value="<%= values.code_agent || "" %>" placeholder="<%= t("common.placeholderExample", { example: "AG-001" }) %>">
     </label>
+    <label><%= t("agents.fields.koboCode") %>
+      <input name="kobo_code_agent" value="<%= values.kobo_code_agent || "" %>" placeholder="<%= t("common.placeholderExample", { example: "111" }) %>">
+      <span class="form-hint"><%= t("agents.fields.koboCodeHint") %></span>
+    </label>
     <label><%= t("agents.fields.status") %>
       <select name="statut" required>
         <% statuses.forEach((statut) => { %>

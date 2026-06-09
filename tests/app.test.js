@@ -681,7 +681,9 @@ test("GET /admin affiche le hub admin pour un administrateur", async () => {
   assert.match(response.text, /Panneau d&#39;administration/);
   assert.match(response.text, /Parametres globaux/);
   assert.match(response.text, /Rapport base de donnees/);
+  assert.match(response.text, /Statut systeme/);
   assert.match(response.text, /href="\/admin\/settings"/);
+  assert.match(response.text, /href="\/admin\/system-status"/);
   assert.match(response.text, /href="\/users\/invitations"/);
   assert.match(response.text, /href="\/admin\/email-test"/);
   assert.match(response.text, /href="\/admin" role="menuitem">Administration/);
@@ -694,10 +696,12 @@ test("les permissions systeme sont initialisees et verrouillees pour admin", () 
     WHERE code_permission IN (
       'admin.access',
       'settings.manage',
+      'dashboard.mission.read',
       'users.manage',
       'users.invite.manage',
       'permissions.manage',
       'db.stats.read',
+      'system.status.read',
       'kobo.manage',
       'email.test',
       'exports.manage'
@@ -718,16 +722,19 @@ test("les permissions systeme sont initialisees et verrouillees pour admin", () 
         'users.invite.manage',
         'permissions.manage',
         'db.stats.read',
+        'system.status.read',
         'kobo.manage',
         'email.test'
       )
   `).get().total;
 
-  assert.equal(permissionRows.length, 9);
+  assert.equal(permissionRows.length, 11);
+  assert.equal(permissionRows.find((row) => row.code_permission === "dashboard.mission.read").is_system, 0);
+  assert.equal(permissionRows.find((row) => row.code_permission === "system.status.read").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "kobo.manage").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "email.test").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "exports.manage").is_system, 0);
-  assert.equal(adminLockedCount, 8);
+  assert.equal(adminLockedCount, 9);
 });
 
 test("la matrice fonctionnelle par defaut est initialisee sans verrouillage systeme", () => {
@@ -756,6 +763,7 @@ test("la matrice fonctionnelle par defaut est initialisee sans verrouillage syst
   }, {});
 
   assert.equal(byRole.coordinateur.has("missions.manage"), true);
+  assert.equal(byRole.coordinateur.has("dashboard.mission.read"), true);
   assert.equal(byRole.coordinateur.has("agents.manage"), true);
   assert.equal(byRole.directeur_mission.has("exports.manage"), true);
   assert.equal(byRole.superviseur.has("teams.manage"), true);
@@ -763,6 +771,7 @@ test("la matrice fonctionnelle par defaut est initialisee sans verrouillage syst
   assert.equal(byRole.specialiste_gis.has("sig.manage"), true);
   assert.equal(byRole.specialiste_analyste_donnees.has("monitoring.read"), true);
   assert.equal(byRole.partenaire.has("infographics.read"), true);
+  assert.equal(byRole.partenaire.has("dashboard.mission.read"), true);
   assert.equal(Boolean(byRole.agent), false);
   assert.equal(rows.some((row) => row.code_permission === "kobo.manage"), false);
   assert.equal(rows.some((row) => row.code_permission === "email.test"), false);
@@ -785,6 +794,24 @@ test("GET /admin/settings exige settings.manage meme avec admin.access", async (
   assert.equal(hubResponse.status, 200);
   assert.match(hubResponse.text, /Panneau d&#39;administration/);
   assert.equal(settingsResponse.status, 403);
+});
+
+test("GET /admin/system-status affiche les metadonnees applicatives", async () => {
+  const metadata = db.prepare("SELECT * FROM app_metadata WHERE id = 1").get();
+  assert.equal(metadata.app_name, "G2M");
+  assert.equal(metadata.release_version, "v0.5");
+
+  const adminCookie = await loginTestUser({
+    email: "admin.system-status@g2m.test",
+    role: "admin"
+  });
+  const response = await request(app)
+    .get("/admin/system-status")
+    .set("Cookie", adminCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Statut systeme/);
+  assert.match(response.text, /Livraison v0\.5 du 09 juin 2026/);
 });
 
 test("GET /admin/permissions affiche la matrice pour permissions.manage", async () => {
@@ -1234,6 +1261,43 @@ test("POST /admin/settings persiste la mission d'accueil globale", async () => {
 
   assert.equal(invalidResponse.status, 400);
   assert.match(invalidResponse.text, /mission d&#39;accueil selectionnee est invalide/);
+});
+
+test("GET /missions/:id/dashboard affiche le dashboard mission et l'accueil connecte l'utilise", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.mission-dashboard@g2m.test",
+    role: "coordinateur"
+  });
+  const agentCookie = await loginTestUser({
+    email: "agent.mission-dashboard@g2m.test",
+    role: "agent"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+
+  const anonymousResponse = await request(app).get(`/missions/${mission.id}/dashboard`);
+  const deniedResponse = await request(app)
+    .get(`/missions/${mission.id}/dashboard`)
+    .set("Cookie", agentCookie);
+  const response = await request(app)
+    .get(`/missions/${mission.id}/dashboard`)
+    .set("Cookie", coordinatorCookie);
+  const homeResponse = await request(app)
+    .get("/")
+    .set("Cookie", coordinatorCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, `/login?next=%2Fmissions%2F${mission.id}%2Fdashboard`);
+  assert.equal(deniedResponse.status, 403);
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Dashboard mission/);
+  assert.match(response.text, /Mission pilote/);
+  assert.match(response.text, /Équipes actives/);
+  assert.match(response.text, /Agents affectés/);
+  assert.match(response.text, /Soumissions/);
+  assert.match(response.text, /Aucune soumission/);
+  assert.equal(homeResponse.status, 200);
+  assert.match(homeResponse.text, /Mission d&#39;accueil/);
+  assert.match(homeResponse.text, /Mission pilote/);
 });
 
 test("modification des attributs editables d'une mission", async () => {
@@ -1712,6 +1776,7 @@ test("creation d'un agent de collecte associe a un utilisateur et une equipe", a
       nom: "Nguessan",
       prenoms: "Alain",
       code_agent: "ag-001",
+      kobo_code_agent: "1001",
       telephone: "+2250708091011",
       equipement: "Tablette A01",
       statut: "actif",
@@ -1726,9 +1791,25 @@ test("creation d'un agent de collecte associe a un utilisateur et une equipe", a
   assert.equal(detailResponse.status, 200);
   assert.match(detailResponse.text, /Alain Nguessan/);
   assert.match(detailResponse.text, /AG-001/);
+  assert.match(detailResponse.text, /1001/);
   assert.match(detailResponse.text, /Alain Nguessan/);
   assert.match(detailResponse.text, /Equipe Centre Revisee/);
   assert.match(detailResponse.text, /Mission pilote/);
+
+  const agentId = Number(createResponse.headers.location.split("/").pop());
+  const activeAssignment = db.prepare(`
+    SELECT ama.agent_id, ama.mission_id, ama.equipe_id, ama.statut
+    FROM agent_mission_assignments ama
+    WHERE ama.agent_id = ?
+      AND ama.statut = 'active'
+  `).get(agentId);
+  const equipe = db.prepare("SELECT mission_id FROM equipes WHERE id = ?").get(equipeId);
+  assert.deepEqual(activeAssignment, {
+    agent_id: agentId,
+    mission_id: equipe.mission_id,
+    equipe_id: equipeId,
+    statut: "active"
+  });
 });
 
 test("POST /agents refuse un code duplique et un utilisateur non agent", async () => {
@@ -1761,10 +1842,24 @@ test("POST /agents refuse un code duplique et un utilisateur non agent", async (
       user_id: String(nonAgentId),
       equipe_id: String(equipeId)
     });
+  const duplicateKoboResponse = await request(app)
+    .post("/agents")
+    .set("Cookie", coordinatorCookie)
+    .type("form")
+    .send({
+      nom: "Duplicata",
+      prenoms: "Kobo",
+      code_agent: "AG-002-K",
+      kobo_code_agent: "1001",
+      statut: "actif",
+      equipe_id: String(equipeId)
+    });
 
   assert.equal(duplicateResponse.status, 400);
   assert.match(duplicateResponse.text, /code agent est déjà utilisé/);
   assert.equal(invalidUserResponse.status, 400);
+  assert.equal(duplicateKoboResponse.status, 400);
+  assert.match(duplicateKoboResponse.text, /code agent Kobo est/);
   assert.match(invalidUserResponse.text, /rôle agent/);
 });
 
@@ -1787,6 +1882,7 @@ test("modification d'un agent permet de retirer son compte et son equipe", async
       nom: "Nguessan",
       prenoms: "Alain Serge",
       code_agent: "AG-001-M",
+      kobo_code_agent: "1001-M",
       telephone: "+2250000000000",
       equipement: "Smartphone B02",
       statut: "inactif",
@@ -1798,20 +1894,37 @@ test("modification d'un agent permet de retirer son compte et son equipe", async
   const detailResponse = await request(app).get(`/agents/${agent.id}`).set("Cookie", coordinatorCookie);
   assert.match(detailResponse.text, /Alain Serge Nguessan/);
   assert.match(detailResponse.text, /AG-001-M/);
+  assert.match(detailResponse.text, /1001-M/);
   assert.match(detailResponse.text, /Smartphone B02/);
   assert.match(detailResponse.text, /Sans compte applicatif/);
   assert.match(detailResponse.text, /Non affecté/);
 
   const persisted = db.prepare(`
-    SELECT nom, prenoms, user_id, equipe_id, statut FROM agents_collecte WHERE id = ?
+    SELECT nom, prenoms, user_id, equipe_id, kobo_code_agent, statut FROM agents_collecte WHERE id = ?
   `).get(agent.id);
   assert.deepEqual(persisted, {
     nom: "Nguessan",
     prenoms: "Alain Serge",
     user_id: null,
     equipe_id: null,
+    kobo_code_agent: "1001-M",
     statut: "inactif"
   });
+
+  const activeAssignment = db.prepare(`
+    SELECT id FROM agent_mission_assignments
+    WHERE agent_id = ?
+      AND statut = 'active'
+  `).get(agent.id);
+  const closedAssignments = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM agent_mission_assignments
+    WHERE agent_id = ?
+      AND statut = 'terminee'
+      AND end_date IS NOT NULL
+  `).get(agent.id);
+  assert.equal(activeAssignment, undefined);
+  assert.equal(closedAssignments.total >= 1, true);
 });
 
 test("POST /agents exige le nom et les prenoms meme sans compte utilisateur", async () => {
@@ -1866,15 +1979,15 @@ test("controle d'acces du bloc agents", async () => {
 
 test("l'import CSV des agents rapproche equipe et compte agent puis peut etre rejoue", () => {
   const csv = [
-    "Code-agent;Nom ;Prenoms; Equipe; telephone",
-    "AG-I01; Nguessan ; Alain ; Equipe Centre Revisee ; 01 02 03",
-    "AG-I02; Soro ; Mariam ; Equipe inconnue ; 04 05 06"
+    "Code-agent;Code Kobo;Nom ;Prenoms; Equipe; telephone",
+    "AG-I01; 110 ; Nguessan ; Alain ; Equipe Centre Revisee ; 01 02 03",
+    "AG-I02; 111 ; Soro ; Mariam ; Equipe inconnue ; 04 05 06"
   ].join("\n");
 
   const firstImport = importAgents(db, csv);
   const secondImport = importAgents(db, csv);
   const matched = db.prepare(`
-    SELECT a.user_id, a.equipe_id, u.email, e.nom_equipe
+    SELECT a.user_id, a.equipe_id, a.kobo_code_agent, u.email, e.nom_equipe
     FROM agents_collecte a
     LEFT JOIN users u ON u.id = a.user_id
     LEFT JOIN equipes e ON e.id = a.equipe_id
@@ -1886,15 +1999,34 @@ test("l'import CSV des agents rapproche equipe et compte agent puis peut etre re
   const count = db.prepare(`
     SELECT COUNT(*) AS total FROM agents_collecte WHERE code_agent LIKE 'AG-I%'
   `).get().total;
+  const matchedAssignment = db.prepare(`
+    SELECT ama.agent_id, ama.mission_id, ama.equipe_id, ama.statut
+    FROM agent_mission_assignments ama
+    JOIN agents_collecte a ON a.id = ama.agent_id
+    WHERE a.code_agent = ?
+      AND ama.statut = 'active'
+  `).get("AG-I01");
+  const unmatchedAssignment = db.prepare(`
+    SELECT ama.id
+    FROM agent_mission_assignments ama
+    JOIN agents_collecte a ON a.id = ama.agent_id
+    WHERE a.code_agent = ?
+      AND ama.statut = 'active'
+  `).get("AG-I02");
 
   assert.equal(firstImport.inserted, 2);
   assert.equal(firstImport.equipeMatched, 1);
   assert.equal(firstImport.userMatched, 1);
+  assert.equal(firstImport.koboCodeMatched, 2);
   assert.equal(firstImport.equipeUnmatched.length, 1);
   assert.equal(secondImport.updated, 2);
   assert.equal(count, 2);
   assert.equal(matched.email, "alain.agent@example.org");
   assert.equal(matched.nom_equipe, "Equipe Centre Revisee");
+  assert.equal(matched.kobo_code_agent, "110");
+  assert.equal(matchedAssignment.equipe_id, matched.equipe_id);
+  assert.equal(matchedAssignment.statut, "active");
+  assert.equal(unmatchedAssignment, undefined);
   assert.deepEqual(unmatched, { user_id: null, equipe_id: null });
 });
 
@@ -1925,6 +2057,7 @@ test("le seed des soumissions produit des points et un raw_data_json conforme au
   assert.equal(secondSeed.generated, 3);
   assert.equal(records.length, 3);
   assert.equal(records[0].source, "simulation");
+  assert.equal(Number.isInteger(records[0].assignment_id), true);
   assert.equal(records[0].formulaire_type, "padci_survey_terrain_vf");
   assert.equal(raw._form_id, "padci_survey_terrain_vf");
   assert.equal(raw._version, "2026052601");
