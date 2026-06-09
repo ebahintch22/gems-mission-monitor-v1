@@ -5,7 +5,12 @@
     <h1><%= mission.name %></h1>
     <span class="status status-<%= mission.status %>"><%= t(`status.${mission.status}`) %></span>
   </div>
-  <a class="button" href="/missions"><%= t("missions.show.back") %></a>
+  <div class="heading-actions">
+    <% if (permissions?.has("missions.manage")) { %>
+      <a class="button button-primary" href="/missions/<%= mission.id %>/edit"><%= t("common.edit") %></a>
+    <% } %>
+    <a class="button" href="/missions"><%= t("missions.show.back") %></a>
+  </div>
 </section>
 
 <section class="detail-grid">

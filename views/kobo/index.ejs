@@ -1,19 +1,37 @@
-<%- include("../partials/header", { title }) %>
-<section class="page-heading">
-  <div>
-    <p class="eyebrow"><%= t("kobo.admin.eyebrow") %></p>
-    <h1><%= t("kobo.admin.title") %></h1>
-    <p class="muted"><%= t("kobo.admin.description") %></p>
-  </div>
-</section>
+<%- include("../partials/header", { title, wideLayout: true }) %>
+<section class="kobo-workspace" id="kobo-workspace" data-initial-section="<%= activeSection %>">
+  <aside class="kobo-sidebar" aria-label="<%= t("kobo.sections.aria") %>">
+    <div class="kobo-sidebar-heading">
+      <p class="eyebrow"><%= t("kobo.admin.eyebrow") %></p>
+      <h1><%= t("kobo.admin.title") %></h1>
+    </div>
+    <nav class="kobo-section-nav" role="tablist" aria-label="<%= t("kobo.sections.aria") %>">
+      <button class="kobo-section-nav-button" type="button" role="tab" data-kobo-section-target="config">
+        <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+        <span><%= t("kobo.sections.config") %></span>
+      </button>
+      <button class="kobo-section-nav-button" type="button" role="tab" data-kobo-section-target="sync">
+        <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+        <span><%= t("kobo.sections.sync") %></span>
+      </button>
+      <button class="kobo-section-nav-button" type="button" role="tab" data-kobo-section-target="data">
+        <i class="fa-solid fa-code" aria-hidden="true"></i>
+        <span><%= t("kobo.sections.data") %></span>
+      </button>
+    </nav>
+  </aside>
 
-<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
-<% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+  <div class="kobo-content">
+    <section class="kobo-content-heading">
+      <p class="muted"><%= t("kobo.admin.description") %></p>
+      <% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+      <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+    </section>
 
-<section class="kobo-layout">
-  <div class="panel">
+    <section class="kobo-section is-active" data-kobo-section="config" aria-labelledby="kobo-section-config-title">
+      <div class="panel">
     <div class="panel-header">
-      <h2><%= t("kobo.config.title") %></h2>
+      <h2 id="kobo-section-config-title"><%= t("kobo.config.title") %></h2>
       <span class="status <%= config.ready ? "status-actif" : "status-suspendu" %>">
         <%= config.ready ? t("common.ready") : t("common.incomplete") %>
       </span>
@@ -77,10 +95,12 @@
         </button>
       </form>
     </div>
-  </div>
+      </div>
+    </section>
 
-  <div class="panel">
-    <h2><%= t("kobo.sync.title") %></h2>
+    <section class="kobo-section" data-kobo-section="sync" aria-labelledby="kobo-section-sync-title" hidden>
+      <div class="panel">
+    <h2 id="kobo-section-sync-title"><%= t("kobo.sync.title") %></h2>
     <form action="/parametrages/kobo/sync" method="post" class="kobo-sync-form">
       <label><%= t("kobo.sync.mission") %>
         <select name="mission_id" required>
@@ -121,8 +141,62 @@
         </button>
       </div>
     </form>
-  </div>
-</section>
+      </div>
+
+      <% if (summary) { %>
+        <section class="panel">
+          <h2><%= t("kobo.summary.title") %></h2>
+          <div class="kobo-summary">
+            <div><span><%= t("common.mission") %></span><strong><%= summary.missionName %></strong></div>
+            <div><span><%= t("kobo.summary.read") %></span><strong><%= summary.read %></strong></div>
+            <div><span><%= t("kobo.summary.valid") %></span><strong><%= summary.valid %></strong></div>
+            <div><span><%= t("kobo.summary.inserted") %></span><strong><%= summary.inserted %></strong></div>
+            <div><span><%= t("kobo.summary.skipped") %></span><strong><%= summary.skipped %></strong></div>
+            <div><span><%= t("common.errors") %></span><strong><%= summary.errors.length %></strong></div>
+          </div>
+          <% if (summary.errors.length) { %>
+            <ul class="kobo-error-list">
+              <% summary.errors.slice(0, 10).forEach((message) => { %>
+                <li><%= message %></li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </section>
+      <% } %>
+    </section>
+
+    <section class="kobo-section" data-kobo-section="data" aria-labelledby="kobo-section-data-title" hidden>
+      <div class="panel kobo-json-panel" id="kobo-json-panel" data-copy-success-label="<%= t("kobo.debug.copySuccess") %>">
+        <header class="kobo-json-panel-header">
+          <div>
+            <p class="eyebrow"><%= t("kobo.debug.eyebrow") %></p>
+            <h2 id="kobo-section-data-title"><%= t("kobo.debug.title") %></h2>
+          </div>
+          <% if (koboDebugPayloadJson) { %>
+            <div class="kobo-json-panel-actions">
+              <button class="icon-button" type="button" id="kobo-json-copy" title="<%= t("kobo.debug.copy") %>" aria-label="<%= t("kobo.debug.copy") %>">
+                <i class="fa-solid fa-copy" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" type="button" id="kobo-json-download" title="<%= t("kobo.debug.download") %>" aria-label="<%= t("kobo.debug.download") %>">
+                <i class="fa-solid fa-download" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" type="button" id="kobo-json-collapse" title="<%= t("kobo.debug.collapse") %>" aria-label="<%= t("kobo.debug.collapse") %>">
+                <i class="fa-solid fa-minus" aria-hidden="true"></i>
+              </button>
+            </div>
+          <% } %>
+        </header>
+        <% if (koboDebugPayloadJson) { %>
+          <div class="kobo-json-panel-body">
+            <div id="kobo-json-editor" class="kobo-json-editor"></div>
+          </div>
+          <p id="kobo-json-feedback" class="kobo-json-feedback" role="status" aria-live="polite"></p>
+        <% } else { %>
+          <div class="empty-state kobo-json-empty">
+            <p><%= t("kobo.debug.empty") %></p>
+          </div>
+        <% } %>
+      </div>
 
 <% if (assets.length) { %>
   <section class="panel">
@@ -149,61 +223,13 @@
     </table>
   </section>
 <% } %>
-
-<% if (summary) { %>
-  <section class="panel">
-    <h2><%= t("kobo.summary.title") %></h2>
-    <div class="kobo-summary">
-      <div><span><%= t("common.mission") %></span><strong><%= summary.missionName %></strong></div>
-      <div><span><%= t("kobo.summary.read") %></span><strong><%= summary.read %></strong></div>
-      <div><span><%= t("kobo.summary.valid") %></span><strong><%= summary.valid %></strong></div>
-      <div><span><%= t("kobo.summary.inserted") %></span><strong><%= summary.inserted %></strong></div>
-      <div><span><%= t("kobo.summary.skipped") %></span><strong><%= summary.skipped %></strong></div>
-      <div><span><%= t("common.errors") %></span><strong><%= summary.errors.length %></strong></div>
-    </div>
-    <% if (summary.errors.length) { %>
-      <ul class="kobo-error-list">
-        <% summary.errors.slice(0, 10).forEach((message) => { %>
-          <li><%= message %></li>
-        <% }) %>
-      </ul>
-    <% } %>
-  </section>
-<% } %>
+    </section>
+  </div>
+</section>
 
 <% if (koboDebugPayloadJson) { %>
-  <aside
-    id="kobo-json-panel"
-    class="kobo-json-panel"
-    aria-labelledby="kobo-json-panel-title"
-    data-copy-success-label="<%= t("kobo.debug.copySuccess") %>"
-  >
-    <header class="kobo-json-panel-header">
-      <div>
-        <p class="eyebrow"><%= t("kobo.debug.eyebrow") %></p>
-        <h2 id="kobo-json-panel-title"><%= t("kobo.debug.title") %></h2>
-      </div>
-      <div class="kobo-json-panel-actions">
-        <button class="icon-button" type="button" id="kobo-json-copy" title="<%= t("kobo.debug.copy") %>" aria-label="<%= t("kobo.debug.copy") %>">
-          <i class="fa-solid fa-copy" aria-hidden="true"></i>
-        </button>
-        <button class="icon-button" type="button" id="kobo-json-download" title="<%= t("kobo.debug.download") %>" aria-label="<%= t("kobo.debug.download") %>">
-          <i class="fa-solid fa-download" aria-hidden="true"></i>
-        </button>
-        <button class="icon-button" type="button" id="kobo-json-collapse" title="<%= t("kobo.debug.collapse") %>" aria-label="<%= t("kobo.debug.collapse") %>">
-          <i class="fa-solid fa-minus" aria-hidden="true"></i>
-        </button>
-        <button class="icon-button" type="button" id="kobo-json-close" title="<%= t("kobo.debug.close") %>" aria-label="<%= t("kobo.debug.close") %>">
-          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
-        </button>
-      </div>
-    </header>
-    <div class="kobo-json-panel-body">
-      <div id="kobo-json-editor" class="kobo-json-editor"></div>
-    </div>
-    <p id="kobo-json-feedback" class="kobo-json-feedback" role="status" aria-live="polite"></p>
-  </aside>
   <script id="kobo-debug-payload" type="application/json"><%- koboDebugPayloadJson %></script>
   <script type="module" src="/js/kobo-json-viewer.js"></script>
 <% } %>
+<script src="/js/kobo-admin-tabs.js"></script>
 <%- include("../partials/footer") %>

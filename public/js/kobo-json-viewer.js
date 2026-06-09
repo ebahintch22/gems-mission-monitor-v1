@@ -9,7 +9,6 @@ if (panel && payloadScript && editorTarget) {
   const copyButton = document.getElementById("kobo-json-copy");
   const downloadButton = document.getElementById("kobo-json-download");
   const collapseButton = document.getElementById("kobo-json-collapse");
-  const closeButton = document.getElementById("kobo-json-close");
   const feedback = document.getElementById("kobo-json-feedback");
   const copySuccessLabel = panel.dataset.copySuccessLabel || "JSON copié.";
 
@@ -45,10 +44,6 @@ if (panel && payloadScript && editorTarget) {
     const icon = collapseButton.querySelector("i");
     icon?.classList.toggle("fa-minus", !panel.classList.contains("is-collapsed"));
     icon?.classList.toggle("fa-plus", panel.classList.contains("is-collapsed"));
-  });
-
-  closeButton?.addEventListener("click", () => {
-    panel.hidden = true;
   });
 
   function showFeedback(message) {

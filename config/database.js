@@ -542,6 +542,14 @@ function seedDefaultSettings() {
       description: "Libelle principal affiche dans l'application."
     },
     {
+      key: "app.default_mission_id",
+      value: "",
+      type: "string",
+      group_name: "general",
+      label: "Mission d'accueil",
+      description: "Mission dont le dashboard sera charge comme page d'accueil apres connexion."
+    },
+    {
       key: "alerts.anomaly_threshold",
       value: "3",
       type: "number",

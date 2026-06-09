@@ -1,4 +1,5 @@
 const AuditLog = require("../models/AuditLog");
+const Mission = require("../models/Mission");
 const Permission = require("../models/Permission");
 const Setting = require("../models/Setting");
 const { getMonitoringSnapshot } = require("../services/adminMonitoringService");
@@ -29,6 +30,8 @@ exports.updateSettings = (req, res) => {
     renderSettings(req, res, {
       error: error.message === "invalid_number"
         ? req.t("admin.settings.errors.invalidNumber")
+        : error.message === "invalid_mission"
+          ? req.t("admin.settings.errors.invalidMission")
         : sanitizeError(error)
     }, 400);
   }
@@ -120,6 +123,7 @@ function renderSettings(req, res, options = {}, statusCode = 200) {
     title: req.t("admin.settings.title"),
     groupedSettings: Setting.byGroup(),
     groupLabels: settingGroupLabels(req),
+    missions: Mission.all(),
     notice: options.notice || null,
     error: options.error || null
   });

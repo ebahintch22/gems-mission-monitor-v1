@@ -2,6 +2,7 @@ const db = require("../config/database");
 
 const editableKeys = [
   "app.name",
+  "app.default_mission_id",
   "alerts.anomaly_threshold",
   "sync.kobo_interval_minutes",
   "mail.from",
@@ -83,6 +84,9 @@ class Setting {
         if (!setting) {
           return changes;
         }
+        if (!(key in inputs) && setting.type !== "boolean") {
+          return changes;
+        }
 
         const value = normalizeValue(setting, inputs[key]);
         if (setting.type === "secret" && value === "") {
@@ -101,6 +105,25 @@ class Setting {
 }
 
 function normalizeValue(setting, value) {
+  if (setting.key === "app.default_mission_id") {
+    const trimmed = String(value ?? "").trim();
+    if (!trimmed) {
+      return "";
+    }
+
+    const missionId = Number(trimmed);
+    if (!Number.isInteger(missionId) || missionId <= 0) {
+      throw new Error("invalid_mission");
+    }
+
+    const mission = db.prepare("SELECT id FROM missions WHERE id = ?").get(missionId);
+    if (!mission) {
+      throw new Error("invalid_mission");
+    }
+
+    return String(missionId);
+  }
+
   if (setting.type === "boolean") {
     return value === "on" || value === "true" || value === true ? "true" : "false";
   }

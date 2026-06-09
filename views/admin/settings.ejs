@@ -28,6 +28,15 @@
                 <input type="checkbox" name="settings[<%= setting.key %>]" <%= setting.value === "true" ? "checked" : "" %>>
                 <%= t("admin.settings.booleanEnabled") %>
               </span>
+            <% } else if (setting.key === "app.default_mission_id") { %>
+              <select name="settings[<%= setting.key %>]">
+                <option value=""><%= t("admin.settings.defaultMission.none") %></option>
+                <% missions.forEach((mission) => { %>
+                  <option value="<%= mission.id %>" <%= String(setting.value || "") === String(mission.id) ? "selected" : "" %>>
+                    <%= mission.name %> (<%= t(`status.${mission.status}`) %>)
+                  </option>
+                <% }) %>
+              </select>
             <% } else if (setting.type === "secret") { %>
               <input
                 type="password"

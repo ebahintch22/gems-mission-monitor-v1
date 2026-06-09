@@ -33,6 +33,7 @@ exports.testConnection = async (req, res) => {
     const result = await testKoboConnection();
     renderKoboAdmin(req, res, {
       notice: req.t("kobo.notice.connectionOk", { count: result.assetsPreviewCount }),
+      activeSection: "data",
       koboDebugPayload: buildKoboDebugPayload({
         action: req.t("kobo.debug.actions.testConnection"),
         payload: result.payload
@@ -51,6 +52,7 @@ exports.listAssets = async (req, res) => {
     renderKoboAdmin(req, res, {
       assets: result.assets,
       notice: req.t("kobo.notice.assetsLoaded", { count: result.assets.length }),
+      activeSection: "data",
       koboDebugPayload: buildKoboDebugPayload({
         action: req.t("kobo.debug.actions.loadForms"),
         payload: result.payload,
@@ -84,6 +86,7 @@ exports.sync = async (req, res) => {
       notice: summary.dryRun
         ? req.t("kobo.notice.syncDryRunDone")
         : req.t("kobo.notice.syncDone"),
+      activeSection: "data",
       koboDebugPayload: buildKoboDebugPayload({
         action: req.t("kobo.debug.actions.sync"),
         payload: result.payload,
@@ -93,6 +96,7 @@ exports.sync = async (req, res) => {
   } catch (error) {
     renderKoboAdmin(req, res, {
       error: sanitizeError(error),
+      activeSection: "sync",
       values: req.body
     }, 400);
   }
@@ -118,6 +122,7 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
     assets: options.assets || [],
     summary: options.summary || null,
     koboDebugPayloadJson: serializeDebugPayload(options.koboDebugPayload),
+    activeSection: options.activeSection || "config",
     notice: options.notice || null,
     error: options.error || null,
     values

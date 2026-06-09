@@ -2,13 +2,13 @@
 <section class="page-heading">
   <div>
     <p class="eyebrow"><%= t("missions.form.eyebrow") %></p>
-    <h1><%= t("missions.form.title") %></h1>
+    <h1><%= heading || t("missions.form.title") %></h1>
   </div>
 </section>
 
 <section class="panel form-panel">
   <% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
-  <form action="/missions" method="post" class="mission-form">
+  <form action="<%= action || "/missions" %>" method="post" class="mission-form">
     <label><%= t("missions.fields.name") %>
       <input name="name" required value="<%= values.name || "" %>">
     </label>
@@ -42,7 +42,7 @@
     </label>
     <div class="form-actions">
       <a class="button" href="/missions"><%= t("common.cancel") %></a>
-      <button class="button button-primary" type="submit"><%= t("common.save") %></button>
+      <button class="button button-primary" type="submit"><%= submitLabel || t("common.save") %></button>
     </div>
   </form>
 </section>

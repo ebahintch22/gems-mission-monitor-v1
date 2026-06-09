@@ -1170,11 +1170,98 @@ h2 {
   grid-template-columns: repeat(2, 1fr);
 }
 
-.kobo-layout {
+.kobo-workspace {
+  display: grid;
+  flex: 1 1 auto;
+  gap: 0;
+  grid-template-columns: 280px minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.kobo-sidebar {
+  background: var(--panel);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px;
+}
+
+.kobo-sidebar-heading h1 {
+  font-size: var(--font-h2);
+  margin: 0;
+}
+
+.kobo-section-nav {
+  display: grid;
+  gap: 8px;
+  justify-content: stretch;
+}
+
+.kobo-section-nav-button {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-weight: 700;
+  gap: 10px;
+  justify-content: flex-start;
+  padding: 11px 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.kobo-section-nav-button i {
+  color: var(--primary);
+  width: 18px;
+}
+
+.kobo-section-nav-button:hover,
+.kobo-section-nav-button:focus,
+.kobo-section-nav-button.is-active {
+  background: var(--accent);
+  border-color: var(--primary);
+  outline: none;
+}
+
+.kobo-content {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kobo-content-heading {
+  background: var(--background);
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+  padding: 18px 24px;
+}
+
+.kobo-content-heading .alert {
+  margin: 12px 0 0;
+}
+
+.kobo-section {
+  display: none;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 22px 24px 34px;
+}
+
+.kobo-section.is-active {
   display: grid;
   gap: 22px;
-  grid-template-columns: 0.85fr 1.15fr;
-  margin-bottom: 22px;
+  align-content: start;
 }
 
 .kobo-status-list {
@@ -1534,24 +1621,12 @@ h2 {
 }
 
 .kobo-json-panel {
-  background: #ffffff;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 18px 48px rgba(24, 43, 55, 0.24);
   display: flex;
   flex-direction: column;
-  max-height: min(72vh, 760px);
-  min-height: 360px;
-  position: fixed;
-  right: 28px;
-  top: calc(var(--site-header-height) + 28px);
-  transition: max-height 0.3s ease, min-height 0.3s ease, transform 0.3s ease;
-  width: min(720px, calc(100vw - 56px));
-  z-index: 1100;
+  min-height: min(620px, calc(100vh - var(--site-header-height) - 170px));
 }
 
 .kobo-json-panel.is-collapsed {
-  max-height: 78px;
   min-height: 78px;
   overflow: hidden;
 }
@@ -1576,6 +1651,27 @@ h2 {
   gap: 8px;
 }
 
+.icon-button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  width: 34px;
+}
+
+.icon-button:hover,
+.icon-button:focus {
+  border-color: var(--primary);
+  color: var(--primary);
+  outline: none;
+}
+
 .kobo-json-panel-body {
   flex: 1 1 auto;
   min-height: 0;
@@ -1595,6 +1691,11 @@ h2 {
   font-size: var(--font-small);
   min-height: 18px;
   padding: 0 14px 10px;
+}
+
+.kobo-json-empty {
+  margin: auto;
+  max-width: 520px;
 }
 
 label {
@@ -1815,7 +1916,6 @@ textarea::placeholder {
     .admin-card-grid,
     .admin-settings-grid,
     .admin-db-preview-form,
-    .kobo-layout,
     .kobo-sync-form,
     .kobo-summary,
     .checkbox-grid {
@@ -1826,16 +1926,39 @@ textarea::placeholder {
     grid-template-columns: 1fr;
   }
 
+  .kobo-workspace {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .kobo-sidebar {
+    border-bottom: 1px solid var(--border);
+    border-right: 0;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .kobo-sidebar-heading h1 {
+    font-size: var(--font-brand);
+  }
+
+  .kobo-section-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .kobo-content-heading {
+    padding: 12px;
+  }
+
+  .kobo-section {
+    padding: 12px;
+  }
+
   .kobo-json-panel {
-    max-height: calc(100vh - var(--site-header-mobile-height) - 20px);
-    min-height: min(520px, calc(100vh - var(--site-header-mobile-height) - 20px));
-    right: 10px;
-    top: calc(var(--site-header-mobile-height) + 10px);
-    width: calc(100vw - 20px);
+    min-height: min(520px, calc(100vh - var(--site-header-mobile-height) - 220px));
   }
 
   .kobo-json-panel.is-collapsed {
-    max-height: 76px;
     min-height: 76px;
   }
 

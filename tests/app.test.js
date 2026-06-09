@@ -233,7 +233,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(response.text, /localStorage\.getItem\("g2m_display_size"\)/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.ico"/);
   assert.match(response.text, /href="\/assets\/favicons\/g2m-favicon-local\.png"/);
-  assert.match(response.text, /Livraison v0\.4 du 07 juin 2026 \[View Transposition \+ UserMngr\]/);
+  assert.match(response.text, /Livraison v0\.5 du 09 juin 2026 \[Fiche décisionnelle\]/);
   assert.match(response.text, /id="site-nav-toggle"/);
   assert.match(response.text, /aria-controls="site-nav"/);
   assert.match(response.text, /data-label-open="Afficher le menu de navigation"/);
@@ -382,7 +382,7 @@ test("GET /?lang=es utilise les ressources espagnoles du dashboard", async () =>
 
   assert.equal(response.status, 200);
   assert.match(response.text, /<html lang="es" data-display-size="medium">/);
-  assert.match(response.text, /Entrega v0\.3 del 04 de junio de 2026/);
+  assert.match(response.text, /Entrega v0\.5 del 09 de junio de 2026/);
   assert.match(response.text, /Seguimiento operativo/);
   assert.match(response.text, /Vista sint/);
   assert.match(response.text, /Crear una misi/);
@@ -455,13 +455,26 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   const response = await request(app).get("/parametrages/kobo").set("Cookie", adminCookie);
   const styleResponse = await request(app).get("/css/app.css");
   const viewerScriptResponse = await request(app).get("/js/kobo-json-viewer.js");
+  const tabsScriptResponse = await request(app).get("/js/kobo-admin-tabs.js");
   const editorBundleResponse = await request(app).get("/vendor/vanilla-jsoneditor/standalone.js");
 
   assert.equal(response.status, 200);
   assert.equal(styleResponse.status, 200);
   assert.equal(viewerScriptResponse.status, 200);
+  assert.equal(tabsScriptResponse.status, 200);
   assert.equal(editorBundleResponse.status, 200);
   assert.match(response.text, /Administration KoboToolbox/);
+  assert.match(response.text, /id="kobo-workspace"/);
+  assert.match(response.text, /data-initial-section="config"/);
+  assert.match(response.text, /class="kobo-sidebar"/);
+  assert.match(response.text, /data-kobo-section-target="config"/);
+  assert.match(response.text, /data-kobo-section-target="sync"/);
+  assert.match(response.text, /data-kobo-section-target="data"/);
+  assert.match(response.text, /data-kobo-section="config"/);
+  assert.match(response.text, /data-kobo-section="sync"/);
+  assert.match(response.text, /data-kobo-section="data"/);
+  assert.match(response.text, /Voir les donnees/);
+  assert.match(response.text, /Aucune reponse KoboToolbox/);
   assert.match(response.text, /Tester la connexion/);
   assert.match(response.text, /Charger les formulaires/);
   assert.match(response.text, /Synchroniser les soumissions/);
@@ -472,7 +485,10 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(response.text, /Par exemple : aBcDeF123/);
   assert.match(response.text, /name="mission_id"/);
   assert.match(response.text, /name="dry_run"/);
-  assert.match(styleResponse.text, /\.kobo-layout\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-workspace\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-sidebar\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-content\s*\{/);
+  assert.match(styleResponse.text, /\.kobo-section\.is-active/);
   assert.match(styleResponse.text, /\.kobo-sync-form\s*\{/);
   assert.match(styleResponse.text, /\.kobo-summary\s*\{/);
   assert.match(styleResponse.text, /\.kobo-json-panel\s*\{/);
@@ -481,6 +497,9 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(viewerScriptResponse.text, /createJSONEditor/);
   assert.match(viewerScriptResponse.text, /readOnly: true/);
   assert.match(viewerScriptResponse.text, /navigator\.clipboard\.writeText/);
+  assert.match(tabsScriptResponse.text, /data-kobo-section-target/);
+  assert.match(tabsScriptResponse.text, /dataset\.initialSection/);
+  assert.match(tabsScriptResponse.text, /aria-selected/);
 });
 
 test("GET /parametrages/kobo exige kobo.manage", async () => {
@@ -898,6 +917,7 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
     .send({
       settings: {
         "app.name": "G2M Test",
+        "app.default_mission_id": "",
         "alerts.anomaly_threshold": "5",
         "sync.kobo_interval_minutes": "30",
         "mail.from": "tests@g2m.local",
@@ -922,6 +942,8 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
     .get("/admin/settings")
     .set("Cookie", adminCookie);
   assert.equal(formResponse.status, 200);
+  assert.match(formResponse.text, /Mission d&#39;accueil/);
+  assert.match(formResponse.text, /Aucune mission d&#39;accueil/);
   assert.match(formResponse.text, /Secret deja renseigne/);
   assert.doesNotMatch(formResponse.text, /secret-smtp-test/);
 });
@@ -1177,6 +1199,90 @@ test("creation et affichage d'une mission", async () => {
   assert.doesNotMatch(dashboardResponse.text, /MVP de suivi des missions de collecte GEMS/);
 });
 
+test("POST /admin/settings persiste la mission d'accueil globale", async () => {
+  const adminCookie = await loginTestUser({
+    email: "admin.default-mission@g2m.test",
+    role: "admin"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+
+  const updateResponse = await request(app)
+    .post("/admin/settings")
+    .set("Cookie", adminCookie)
+    .type("form")
+    .send({
+      settings: {
+        "app.default_mission_id": String(mission.id)
+      }
+    });
+
+  assert.equal(updateResponse.status, 200);
+  assert.match(updateResponse.text, /Mission pilote/);
+
+  const persistedMission = db.prepare("SELECT value FROM settings WHERE key = ?").get("app.default_mission_id");
+  assert.equal(persistedMission.value, String(mission.id));
+
+  const invalidResponse = await request(app)
+    .post("/admin/settings")
+    .set("Cookie", adminCookie)
+    .type("form")
+    .send({
+      settings: {
+        "app.default_mission_id": "999999"
+      }
+    });
+
+  assert.equal(invalidResponse.status, 400);
+  assert.match(invalidResponse.text, /mission d&#39;accueil selectionnee est invalide/);
+});
+
+test("modification des attributs editables d'une mission", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.missions-update@g2m.test",
+    role: "coordinateur"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+
+  const editResponse = await request(app)
+    .get(`/missions/${mission.id}/edit`)
+    .set("Cookie", coordinatorCookie);
+  const updateResponse = await request(app)
+    .post(`/missions/${mission.id}`)
+    .set("Cookie", coordinatorCookie)
+    .type("form")
+    .send({
+      name: "Mission pilote",
+      region: "Gbeke",
+      status: "terminee",
+      collectors: "18",
+      start_date: "2026-06-01",
+      end_date: "2026-06-08",
+      latitude: "7.71",
+      longitude: "-5.01",
+      kobo_asset_uid: "kobo-test-updated"
+    });
+
+  assert.equal(editResponse.status, 200);
+  assert.match(editResponse.text, /Modifier la mission/);
+  assert.match(editResponse.text, /Mission pilote/);
+  assert.equal(updateResponse.status, 302);
+  assert.equal(updateResponse.headers.location, `/missions/${mission.id}`);
+
+  const detailResponse = await request(app)
+    .get(`/missions/${mission.id}`)
+    .set("Cookie", coordinatorCookie);
+  const updated = db.prepare("SELECT * FROM missions WHERE id = ?").get(mission.id);
+
+  assert.equal(updated.name, "Mission pilote");
+  assert.equal(updated.region, "Gbeke");
+  assert.equal(updated.status, "terminee");
+  assert.equal(updated.collectors, 18);
+  assert.equal(updated.kobo_asset_uid, "kobo-test-updated");
+  assert.match(detailResponse.text, /Mission pilote/);
+  assert.match(detailResponse.text, /kobo-test-updated/);
+  assert.match(detailResponse.text, /Modifier/);
+});
+
 test("POST /missions refuse des coordonnees invalides", async () => {
   const coordinatorCookie = await loginTestUser({
     email: "coordinateur.missions-invalid@g2m.test",
@@ -1193,6 +1299,29 @@ test("POST /missions refuse des coordonnees invalides", async () => {
   assert.match(response.text, /Vérifiez/);
 });
 
+test("POST /missions/:id refuse une modification invalide", async () => {
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.missions-invalid-update@g2m.test",
+    role: "coordinateur"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+
+  const response = await request(app)
+    .post(`/missions/${mission.id}`)
+    .set("Cookie", coordinatorCookie)
+    .type("form")
+    .send({
+      name: "Mission invalide",
+      region: "Nord",
+      status: "terminee",
+      collectors: "-1"
+    });
+
+  assert.equal(response.status, 400);
+  assert.match(response.text, /Modifier la mission/);
+  assert.match(response.text, /V.rifiez/);
+});
+
 test("controle d'acces du bloc missions", async () => {
   const readerCookie = await loginTestUser({
     email: "gis.missions-read@g2m.test",
@@ -1202,11 +1331,19 @@ test("controle d'acces du bloc missions", async () => {
   const anonymousResponse = await request(app).get("/missions");
   const listResponse = await request(app).get("/missions").set("Cookie", readerCookie);
   const newResponse = await request(app).get("/missions/new").set("Cookie", readerCookie);
+  const editResponse = await request(app).get("/missions/1/edit").set("Cookie", readerCookie);
+  const updateResponse = await request(app)
+    .post("/missions/1")
+    .set("Cookie", readerCookie)
+    .type("form")
+    .send({ name: "Refusee", region: "Nord", status: "planifiee" });
 
   assert.equal(anonymousResponse.status, 302);
   assert.equal(anonymousResponse.headers.location, "/login?next=%2Fmissions");
   assert.equal(listResponse.status, 200);
   assert.equal(newResponse.status, 403);
+  assert.equal(editResponse.status, 403);
+  assert.equal(updateResponse.status, 403);
 });
 
 test("creation d'un superviseur avec plusieurs regions", async () => {

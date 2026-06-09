@@ -10,45 +10,71 @@ exports.index = (req, res) => {
 };
 
 exports.new = (req, res) => {
-  res.render("missions/new", {
+  renderForm(req, res, {
     title: req.t("missions.form.title"),
-    statuses,
-    values: {},
-    error: null
+    heading: req.t("missions.form.title"),
+    action: "/missions",
+    submitLabel: req.t("common.save"),
+    values: {}
   });
 };
 
 exports.create = (req, res) => {
-  const collectors = req.body.collectors ? Number.parseInt(req.body.collectors, 10) : 0;
-  const latitude = req.body.latitude ? Number(req.body.latitude) : null;
-  const longitude = req.body.longitude ? Number(req.body.longitude) : null;
-  const values = {
-    name: req.body.name?.trim(),
-    region: req.body.region?.trim(),
-    status: req.body.status || "planifiee",
-    start_date: req.body.start_date || null,
-    end_date: req.body.end_date || null,
-    collectors,
-    kobo_asset_uid: req.body.kobo_asset_uid?.trim() || null,
-    latitude,
-    longitude
-  };
+  const { values, invalid } = parseMissionInput(req.body);
 
-  const invalidNumbers = !Number.isInteger(collectors) || collectors < 0
-    || (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
-    || (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180));
-
-  if (!values.name || !values.region || !statuses.includes(values.status) || invalidNumbers) {
-    return res.status(400).render("missions/new", {
+  if (invalid) {
+    return renderForm(req, res, {
       title: req.t("missions.form.title"),
-      statuses,
+      heading: req.t("missions.form.title"),
+      action: "/missions",
+      submitLabel: req.t("common.save"),
       values: req.body,
       error: req.t("missions.errors.invalidCreate")
-    });
+    }, 400);
   }
 
   Mission.create(values);
   return res.redirect("/missions");
+};
+
+exports.edit = (req, res, next) => {
+  const mission = Mission.findById(req.params.id);
+  if (!mission) {
+    return next();
+  }
+
+  return renderForm(req, res, {
+    title: req.t("missions.form.editTitle", { name: mission.name }),
+    heading: req.t("missions.form.editHeading"),
+    action: `/missions/${mission.id}`,
+    submitLabel: req.t("common.update"),
+    values: mission,
+    mission
+  });
+};
+
+exports.update = (req, res, next) => {
+  const mission = Mission.findById(req.params.id);
+  if (!mission) {
+    return next();
+  }
+
+  const { values, invalid } = parseMissionInput(req.body);
+
+  if (invalid) {
+    return renderForm(req, res, {
+      title: req.t("missions.form.editTitle", { name: mission.name }),
+      heading: req.t("missions.form.editHeading"),
+      action: `/missions/${mission.id}`,
+      submitLabel: req.t("common.update"),
+      values: { ...req.body, id: mission.id },
+      mission,
+      error: req.t("missions.errors.invalidCreate")
+    }, 400);
+  }
+
+  Mission.update(mission.id, values);
+  return res.redirect(`/missions/${mission.id}`);
 };
 
 exports.show = (req, res, next) => {
@@ -61,3 +87,38 @@ exports.show = (req, res, next) => {
     mission
   });
 };
+
+function renderForm(req, res, options, statusCode = 200) {
+  return res.status(statusCode).render("missions/new", {
+    statuses,
+    error: null,
+    mission: null,
+    ...options
+  });
+}
+
+function parseMissionInput(body) {
+  const collectors = body.collectors ? Number.parseInt(body.collectors, 10) : 0;
+  const latitude = body.latitude ? Number(body.latitude) : null;
+  const longitude = body.longitude ? Number(body.longitude) : null;
+  const values = {
+    name: body.name?.trim(),
+    region: body.region?.trim(),
+    status: body.status || "planifiee",
+    start_date: body.start_date || null,
+    end_date: body.end_date || null,
+    collectors,
+    kobo_asset_uid: body.kobo_asset_uid?.trim() || null,
+    latitude,
+    longitude
+  };
+
+  const invalidNumbers = !Number.isInteger(collectors) || collectors < 0
+    || (latitude !== null && (!Number.isFinite(latitude) || latitude < -90 || latitude > 90))
+    || (longitude !== null && (!Number.isFinite(longitude) || longitude < -180 || longitude > 180));
+
+  return {
+    values,
+    invalid: !values.name || !values.region || !statuses.includes(values.status) || invalidNumbers
+  };
+}

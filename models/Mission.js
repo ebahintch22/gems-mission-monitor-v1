@@ -26,6 +26,25 @@ class Mission {
     return this.findById(result.lastInsertRowid);
   }
 
+  static update(id, input) {
+    db.prepare(`
+      UPDATE missions
+      SET
+        name = @name,
+        region = @region,
+        status = @status,
+        start_date = @start_date,
+        end_date = @end_date,
+        collectors = @collectors,
+        kobo_asset_uid = @kobo_asset_uid,
+        latitude = @latitude,
+        longitude = @longitude
+      WHERE id = @id
+    `).run({ id, ...input });
+
+    return this.findById(id);
+  }
+
   static stats() {
     const totals = db.prepare(`
       SELECT
