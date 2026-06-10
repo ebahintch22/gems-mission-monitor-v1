@@ -1,0 +1,80 @@
+[
+  {
+    "name": "pas_internet",
+    "label": "Pas d'Internet",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "debit_insuf",
+    "label": "Débit insuffisant",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "coupures",
+    "label": "Coupures",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "cout",
+    "label": "Coût",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "pas_equip",
+    "label": "Pas d'équipement",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "pas_compet",
+    "label": "Pas de compétences",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

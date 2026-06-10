@@ -1,0 +1,145 @@
+[
+  {
+    "name": "routeur",
+    "label": "Routeur",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "switch_nm",
+    "label": "Switch non manageable",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "switch_m",
+    "label": "Switch manageable",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "switch_poe",
+    "label": "Switch PoE",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "parefeu",
+    "label": "Pare-feu",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "ctrl_wifi",
+    "label": "Contrôleur Wi-Fi",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "box_wifi",
+    "label": "Box Wi-Fi opérateur",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "point_acces",
+    "label": "Point d'accès Wi-Fi",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "prise_ondulee",
+    "label": "Prise ondulée",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "serveur",
+    "label": "Serveur",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "aucun",
+    "label": "Aucun",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

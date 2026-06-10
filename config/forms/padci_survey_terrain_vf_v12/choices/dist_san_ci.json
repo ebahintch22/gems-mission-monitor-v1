@@ -1,0 +1,223 @@
+[
+  {
+    "name": "dist_san_01",
+    "label": "Direction départementale de la santé Abobo-Est",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_01",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_02",
+    "label": "Direction départementale de la santé Abobo-Ouest",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_01",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_03",
+    "label": "Direction départementale de la santé Anyama",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_01",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_04",
+    "label": "Direction départementale de la santé Yopougon-Est",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_01",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_05",
+    "label": "direction départementale de la santé Yopougon-Ouest Songon",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_01",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_06",
+    "label": "Direction départementale de la santé Adjamé-Plateau-Attécoubé",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_02",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_07",
+    "label": "Direction départementale de la santé Cocody-Bingerville",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_02",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_08",
+    "label": "Direction departementale de la santé Koumassi",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_02",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_09",
+    "label": "Direction départementale de la santé Port-Bouët-Vridi",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_02",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_10",
+    "label": "Direction départementale de la santé Treichville-Marcory",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_02",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_11",
+    "label": "Direction départementale de la santé Bouaké Nord-Est",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_03",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_12",
+    "label": "Direction départementale de la santé Jacqueville",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_04",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_13",
+    "label": "Direction départementale de la santé Daloa",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_05",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_14",
+    "label": "Direction départementrale de la santé Issia",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_05",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_15",
+    "label": "Direction départementale de la santé Vavoua",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_05",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_16",
+    "label": "Direction départementale de la santé Zoukougbeu",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_05",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dist_san_17",
+    "label": "Direction départementale de la santé Yamoussoukro-Attiégoukro",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "dir_san_06",
+      "dist_san": ""
+    }
+  }
+]

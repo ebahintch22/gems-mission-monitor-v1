@@ -1,0 +1,119 @@
+[
+  {
+    "name": "aucun",
+    "label": "Aucune application",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dhis2",
+    "label": "DHIS2 (Santé)",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "sigdep",
+    "label": "SIGDEP (Santé)",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "sih",
+    "label": "SIH / Dossier patient (Santé)",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "sige",
+    "label": "SIGE (Éducation)",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "e_justice",
+    "label": "e-Justice (Justice)",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "rnpp",
+    "label": "RNPP (État civil)",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "plateforme_edu",
+    "label": "Plateforme pédagogique",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "autres",
+    "label": "Autres",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

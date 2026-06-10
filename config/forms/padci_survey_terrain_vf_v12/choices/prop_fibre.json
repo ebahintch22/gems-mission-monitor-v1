@@ -1,0 +1,93 @@
+[
+  {
+    "name": "ansut",
+    "label": "ANSUT",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "orange",
+    "label": "Orange",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "mtn",
+    "label": "MTN",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "autre",
+    "label": "Autre",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "moov",
+    "label": "Moov",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "vitib",
+    "label": "VITIB",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "inconnu",
+    "label": "Inconnu",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

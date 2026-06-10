@@ -31,9 +31,14 @@ function renderForm(req, res, values, error, options = {}) {
 }
 
 exports.index = (req, res) => {
+  const selectedMissionId = normalizedId(req.query.mission_id);
+  const validMissionSelected = selectedMissionId && Equipe.validMissionId(selectedMissionId);
+
   res.render("equipes/index", {
     title: req.t("teams.title"),
-    equipes: Equipe.all()
+    missions: Equipe.availableMissions(),
+    selectedMissionId: validMissionSelected ? selectedMissionId : null,
+    equipes: validMissionSelected ? Equipe.findByMission(selectedMissionId) : []
   });
 };
 

@@ -1,0 +1,600 @@
+[
+  {
+    "name": "CI0101",
+    "label": "Abidjan",
+    "filters": {
+      "secteur": "",
+      "region": "CI01",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0201",
+    "label": "Attiégouakro",
+    "filters": {
+      "secteur": "",
+      "region": "CI02",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0202",
+    "label": "Yamoussoukro",
+    "filters": {
+      "secteur": "",
+      "region": "CI02",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0401",
+    "label": "Koro",
+    "filters": {
+      "secteur": "",
+      "region": "CI04",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0402",
+    "label": "Ouaninou",
+    "filters": {
+      "secteur": "",
+      "region": "CI04",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0403",
+    "label": "Touba",
+    "filters": {
+      "secteur": "",
+      "region": "CI04",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0501",
+    "label": "Boundiali",
+    "filters": {
+      "secteur": "",
+      "region": "CI05",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0502",
+    "label": "Kouto",
+    "filters": {
+      "secteur": "",
+      "region": "CI05",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI0503",
+    "label": "Tengrela",
+    "filters": {
+      "secteur": "",
+      "region": "CI05",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1101",
+    "label": "Béoumi",
+    "filters": {
+      "secteur": "",
+      "region": "CI11",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1102",
+    "label": "Botro",
+    "filters": {
+      "secteur": "",
+      "region": "CI11",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1103",
+    "label": "Bouaké",
+    "filters": {
+      "secteur": "",
+      "region": "CI11",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1104",
+    "label": "Sakassou",
+    "filters": {
+      "secteur": "",
+      "region": "CI11",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1701",
+    "label": "Dabakala",
+    "filters": {
+      "secteur": "",
+      "region": "CI17",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1702",
+    "label": "Katiola",
+    "filters": {
+      "secteur": "",
+      "region": "CI17",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1703",
+    "label": "Niakaramandougou",
+    "filters": {
+      "secteur": "",
+      "region": "CI17",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1801",
+    "label": "Daloa",
+    "filters": {
+      "secteur": "",
+      "region": "CI18",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1802",
+    "label": "Issia",
+    "filters": {
+      "secteur": "",
+      "region": "CI18",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1803",
+    "label": "Vavoua",
+    "filters": {
+      "secteur": "",
+      "region": "CI18",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI1804",
+    "label": "Zoukougbeu",
+    "filters": {
+      "secteur": "",
+      "region": "CI18",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2601",
+    "label": "Buyo",
+    "filters": {
+      "secteur": "",
+      "region": "CI26",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2602",
+    "label": "Guéyo",
+    "filters": {
+      "secteur": "",
+      "region": "CI26",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2603",
+    "label": "Méagui",
+    "filters": {
+      "secteur": "",
+      "region": "CI26",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2604",
+    "label": "Soubré",
+    "filters": {
+      "secteur": "",
+      "region": "CI26",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2801",
+    "label": "Dikodougou",
+    "filters": {
+      "secteur": "",
+      "region": "CI28",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2802",
+    "label": "Korhogo",
+    "filters": {
+      "secteur": "",
+      "region": "CI28",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2803",
+    "label": "M'Bengué",
+    "filters": {
+      "secteur": "",
+      "region": "CI28",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2804",
+    "label": "Sinématiali",
+    "filters": {
+      "secteur": "",
+      "region": "CI28",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2901",
+    "label": "San Pédro",
+    "filters": {
+      "secteur": "",
+      "region": "CI29",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2902",
+    "label": "Tabou",
+    "filters": {
+      "secteur": "",
+      "region": "CI29",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3001",
+    "label": "Aboisso",
+    "filters": {
+      "secteur": "",
+      "region": "CI30",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3002",
+    "label": "Adiaké",
+    "filters": {
+      "secteur": "",
+      "region": "CI30",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3003",
+    "label": "Grand-Bassam",
+    "filters": {
+      "secteur": "",
+      "region": "CI30",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3004",
+    "label": "Tiapoum",
+    "filters": {
+      "secteur": "",
+      "region": "CI30",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3101",
+    "label": "Ferkessédougou",
+    "filters": {
+      "secteur": "",
+      "region": "CI31",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3102",
+    "label": "Kong",
+    "filters": {
+      "secteur": "",
+      "region": "CI31",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3103",
+    "label": "Ouangolodougou",
+    "filters": {
+      "secteur": "",
+      "region": "CI31",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3201",
+    "label": "Biankouma",
+    "filters": {
+      "secteur": "",
+      "region": "CI32",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3202",
+    "label": "Danané",
+    "filters": {
+      "secteur": "",
+      "region": "CI32",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3203",
+    "label": "Man",
+    "filters": {
+      "secteur": "",
+      "region": "CI32",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3204",
+    "label": "Sipilou",
+    "filters": {
+      "secteur": "",
+      "region": "CI32",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI3205",
+    "label": "Zouan-Hounien",
+    "filters": {
+      "secteur": "",
+      "region": "CI32",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2401",
+    "label": "Guiglo",
+    "filters": {
+      "secteur": "",
+      "region": "CI24",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2402",
+    "label": "Bloléquin",
+    "filters": {
+      "secteur": "",
+      "region": "CI24",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2403",
+    "label": "Taï",
+    "filters": {
+      "secteur": "",
+      "region": "CI24",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "CI2404",
+    "label": "Toulepleu",
+    "filters": {
+      "secteur": "",
+      "region": "CI24",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

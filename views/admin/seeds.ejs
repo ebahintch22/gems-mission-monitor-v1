@@ -1,0 +1,99 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+    <h1><%= t("admin.seeds.title") %></h1>
+    <p class="muted"><%= t("admin.seeds.description") %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+  </div>
+</section>
+
+<% if (notice) { %><p class="alert alert-success" role="status"><%= notice %></p><% } %>
+<% if (error) { %><p class="alert" role="alert"><%= error %></p><% } %>
+
+<section class="admin-card-grid">
+  <form class="panel admin-card" action="/admin/seeds/export" method="post">
+    <i class="fa-solid fa-file-export" aria-hidden="true"></i>
+    <h2><%= t("admin.seeds.export.title") %></h2>
+    <p><%= t("admin.seeds.export.description") %></p>
+    <label class="checkbox-label">
+      <input type="checkbox" name="include_sensitive_tables">
+      <span><%= t("admin.seeds.export.includeSensitive") %></span>
+    </label>
+    <span class="form-hint">
+      <%= t("admin.seeds.export.sensitiveTables", { tables: sensitiveTables.join(", ") }) %>
+    </span>
+    <button class="button button-primary" type="submit">
+      <i class="fa-solid fa-download" aria-hidden="true"></i>
+      <%= t("admin.seeds.actions.export") %>
+    </button>
+  </form>
+
+  <form class="panel admin-card" action="/admin/seeds/import" method="post">
+    <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+    <h2><%= t("admin.seeds.import.title") %></h2>
+    <p><%= t("admin.seeds.import.description") %></p>
+    <p class="form-hint"><%= t("admin.seeds.import.allTablesNote") %></p>
+    <label>
+      <span><%= t("admin.seeds.import.file") %></span>
+      <select name="seed_file" required>
+        <option value=""><%= t("admin.seeds.import.select") %></option>
+        <% seedFiles.forEach((seedFile) => { %>
+          <option value="<%= seedFile.fileName %>">
+            <%= seedFile.fileName %> - <%= seedFile.size %> o
+          </option>
+        <% }) %>
+      </select>
+    </label>
+    <button class="button button-primary" type="submit" <%= seedFiles.length ? "" : "disabled" %>>
+      <i class="fa-solid fa-upload" aria-hidden="true"></i>
+      <%= t("admin.seeds.actions.import") %>
+    </button>
+  </form>
+</section>
+
+<section class="panel">
+  <div class="panel-header">
+    <h2><%= t("admin.seeds.files.title") %></h2>
+    <span class="muted"><%= seedDirectory %></span>
+  </div>
+  <% if (!seedFiles.length) { %>
+    <p class="empty"><%= t("admin.seeds.files.empty") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("admin.seeds.files.name") %></th>
+          <th><%= t("admin.seeds.files.size") %></th>
+          <th><%= t("admin.seeds.files.updatedAt") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% seedFiles.forEach((seedFile) => { %>
+          <tr>
+            <td><%= seedFile.fileName %></td>
+            <td><%= seedFile.size %></td>
+            <td><%= seedFile.updatedAt %></td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+
+<% if (exportResult || importResult) { %>
+  <section class="panel">
+    <div class="panel-header">
+      <h2><%= t("admin.seeds.result.title") %></h2>
+    </div>
+    <% if (exportResult) { %>
+      <p><%= t("admin.seeds.result.exported", { file: exportResult.fileName, tables: exportResult.tableCount, rows: exportResult.rowCount }) %></p>
+    <% } %>
+    <% if (importResult) { %>
+      <p><%= t("admin.seeds.result.imported", { file: importResult.fileName, statements: importResult.statementCount }) %></p>
+    <% } %>
+  </section>
+<% } %>
+<%- include("../partials/footer") %>

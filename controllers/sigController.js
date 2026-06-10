@@ -19,3 +19,12 @@ exports.index = (req, res) => {
     filters: SoumissionCollecte.mapFilters()
   });
 };
+
+exports.filterOptions = (req, res) => {
+  const missionId = Number.parseInt(req.query.mission_id, 10);
+  if (!Number.isInteger(missionId) || missionId <= 0) {
+    return res.json({ equipes: [], agents: [] });
+  }
+
+  return res.json(SoumissionCollecte.mapFilterOptionsForMission(missionId));
+};

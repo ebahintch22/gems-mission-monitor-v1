@@ -7,6 +7,7 @@ const router = express.Router();
 
 router.use(requireAuth);
 
+router.get("/options", requirePermission("sig.read"), sigController.filterOptions);
 router.get("/", requirePermission("sig.read"), sigController.index);
 
 module.exports = router;

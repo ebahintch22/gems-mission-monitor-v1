@@ -122,6 +122,10 @@ body {
   font: var(--font-body)/1.5 Arial, sans-serif;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .auth-body {
   background:
     linear-gradient(135deg, rgba(0, 0, 0, 0.08), rgba(26, 188, 192, 0.08)),
@@ -1696,6 +1700,12 @@ h2 {
 .kobo-json-empty {
   margin: auto;
   max-width: 520px;
+}
+
+.filters-form {
+  display: grid;
+  gap: 14px;
+  max-width: 420px;
 }
 
 label {

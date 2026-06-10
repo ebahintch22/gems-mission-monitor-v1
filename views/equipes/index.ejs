@@ -9,11 +9,27 @@
 </section>
 
 <section class="panel">
+  <form class="filters-form" method="get" action="/equipes">
+    <label>
+      <%= t("teams.filters.mission") %>
+      <select name="mission_id" onchange="this.form.submit()">
+        <option value=""><%= t("teams.fields.selectMission") %></option>
+        <% missions.forEach((mission) => { %>
+          <option value="<%= mission.id %>" <%= selectedMissionId === mission.id ? "selected" : "" %>><%= mission.name %></option>
+        <% }) %>
+      </select>
+    </label>
+  </form>
+</section>
+
+<section class="panel">
   <div class="panel-header">
     <h2><%= t("teams.list.title") %></h2>
     <span class="muted"><%= t("teams.list.count", { count: equipes.length }) %></span>
   </div>
-  <% if (!equipes.length) { %>
+  <% if (!selectedMissionId) { %>
+    <p class="empty"><%= t("teams.list.selectMission") %></p>
+  <% } else if (!equipes.length) { %>
     <p class="empty"><%= t("teams.list.empty") %></p>
   <% } else { %>
     <table class="simple-table">

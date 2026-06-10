@@ -13,6 +13,7 @@ const { importRoles } = require("../services/roleImportService");
 const { importAgents } = require("../services/agentImportService");
 const { seedSubmissions } = require("../services/submissionSeedService");
 const { listKoboAssets } = require("../services/koboSyncService");
+const { buildSubmissionReport, resolveValue } = require("../services/submissionReportRenderer");
 const { hashToken } = require("../services/tokenService");
 const { hashPassword } = require("../services/passwordService");
 
@@ -387,7 +388,7 @@ test("GET /?lang=es utilise les ressources espagnoles du dashboard", async () =>
   assert.match(response.text, /Vista sint/);
   assert.match(response.text, /Crear una misi/);
   assert.match(response.text, /Misiones recientes/);
-  assert.match(response.text, /class="is-active"[\s\S]*href="\/\?lang=es"[\s\S]*Espa/);
+  assert.match(response.text, /class="is-active is-hidden"[\s\S]*href="\/\?lang=es"[\s\S]*Espa/);
 });
 
 test("GET /infographies expose les pages factices", async () => {
@@ -702,6 +703,7 @@ test("les permissions systeme sont initialisees et verrouillees pour admin", () 
       'permissions.manage',
       'db.stats.read',
       'system.status.read',
+      'seed.manage',
       'kobo.manage',
       'email.test',
       'exports.manage'
@@ -723,18 +725,20 @@ test("les permissions systeme sont initialisees et verrouillees pour admin", () 
         'permissions.manage',
         'db.stats.read',
         'system.status.read',
+        'seed.manage',
         'kobo.manage',
         'email.test'
       )
   `).get().total;
 
-  assert.equal(permissionRows.length, 11);
+  assert.equal(permissionRows.length, 12);
   assert.equal(permissionRows.find((row) => row.code_permission === "dashboard.mission.read").is_system, 0);
   assert.equal(permissionRows.find((row) => row.code_permission === "system.status.read").is_system, 1);
+  assert.equal(permissionRows.find((row) => row.code_permission === "seed.manage").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "kobo.manage").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "email.test").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "exports.manage").is_system, 0);
-  assert.equal(adminLockedCount, 9);
+  assert.equal(adminLockedCount, 10);
 });
 
 test("la matrice fonctionnelle par defaut est initialisee sans verrouillage systeme", () => {
@@ -812,6 +816,71 @@ test("GET /admin/system-status affiche les metadonnees applicatives", async () =
   assert.equal(response.status, 200);
   assert.match(response.text, /Statut systeme/);
   assert.match(response.text, /Livraison v0\.5 du 09 juin 2026/);
+});
+
+test("GET et POST /admin/seeds exportent puis importent un seed", async () => {
+  const seedDir = path.join(__dirname, "..", "data", "test-seeds");
+  process.env.G2M_SEED_DIR = seedDir;
+
+  try {
+    const adminCookie = await loginTestUser({
+      email: "admin.seeds@g2m.test",
+      role: "admin"
+    });
+
+    const pageResponse = await request(app)
+      .get("/admin/seeds")
+      .set("Cookie", adminCookie);
+
+    assert.equal(pageResponse.status, 200);
+    assert.match(pageResponse.text, /Exporter le seed/);
+    assert.match(pageResponse.text, /Importer un seed/);
+
+    const exportResponse = await request(app)
+      .post("/admin/seeds/export")
+      .set("Cookie", adminCookie);
+
+    assert.equal(exportResponse.status, 200);
+    assert.match(exportResponse.text, /Seed exporte/);
+
+    const seedFiles = fs.readdirSync(seedDir).filter((fileName) => /^data-seed_\d{8}_\d{6}\.txt$/.test(fileName));
+    assert.equal(seedFiles.length, 1);
+    const seedPath = path.join(seedDir, seedFiles[0]);
+    assert.equal(fs.existsSync(seedPath), true);
+    const seedContent = fs.readFileSync(seedPath, "utf8");
+    assert.match(seedContent, /-- G2M data seed/);
+    assert.match(seedContent, /INSERT INTO "users"/);
+    assert.doesNotMatch(seedContent, /activation_tokens/);
+    assert.doesNotMatch(seedContent, /smtp\.password/);
+
+    const sensitiveExportResponse = await request(app)
+      .post("/admin/seeds/export")
+      .type("form")
+      .send({ include_sensitive_tables: "on" })
+      .set("Cookie", adminCookie);
+
+    assert.equal(sensitiveExportResponse.status, 200);
+    const sensitiveSeedFiles = fs.readdirSync(seedDir).filter((fileName) => /^data-seed_\d{8}_\d{6}\.txt$/.test(fileName));
+    const sensitiveSeedPath = path.join(seedDir, sensitiveSeedFiles.sort().at(-1));
+    const sensitiveSeedContent = fs.readFileSync(sensitiveSeedPath, "utf8");
+    assert.match(sensitiveSeedContent, /-- Table: settings/);
+    assert.match(sensitiveSeedContent, /-- Table: app_metadata/);
+    assert.match(sensitiveSeedContent, /-- Table: audit_logs/);
+    assert.match(sensitiveSeedContent, /-- Table: activation_tokens/);
+    assert.match(sensitiveSeedContent, /-- Table: user_invitations/);
+
+    const importResponse = await request(app)
+      .post("/admin/seeds/import")
+      .type("form")
+      .send({ seed_file: path.basename(sensitiveSeedPath) })
+      .set("Cookie", adminCookie);
+
+    assert.equal(importResponse.status, 200);
+    assert.match(importResponse.text, /Seed importe/);
+  } finally {
+    delete process.env.G2M_SEED_DIR;
+    fs.rmSync(seedDir, { recursive: true, force: true });
+  }
 });
 
 test("GET /admin/permissions affiche la matrice pour permissions.manage", async () => {
@@ -1733,11 +1802,19 @@ test("controle d'acces du bloc equipes", async () => {
 
   const anonymousResponse = await request(app).get("/equipes");
   const listResponse = await request(app).get("/equipes").set("Cookie", readerCookie);
+  const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
+  const missionListResponse = await request(app)
+    .get(`/equipes?mission_id=${missionId}`)
+    .set("Cookie", readerCookie);
   const newResponse = await request(app).get("/equipes/new").set("Cookie", readerCookie);
 
   assert.equal(anonymousResponse.status, 302);
   assert.equal(anonymousResponse.headers.location, "/login?next=%2Fequipes");
   assert.equal(listResponse.status, 200);
+  assert.match(listResponse.text, /Sélectionnez une mission pour afficher ses équipes/);
+  assert.equal(missionListResponse.status, 200);
+  assert.match(missionListResponse.text, /Equipe Centre Revisee/);
+  assert.match(missionListResponse.text, /Mission pilote/);
   assert.equal(newResponse.status, 403);
 });
 
@@ -2073,10 +2150,17 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
     role: "specialiste_gis"
   });
   const response = await request(app).get("/cartographie").set("Cookie", gisCookie);
+  const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
+  const optionsResponse = await request(app)
+    .get(`/cartographie/options?mission_id=${missionId}`)
+    .set("Cookie", gisCookie);
   const scriptResponse = await request(app).get("/js/cartographie.js");
   const styleResponse = await request(app).get("/css/app.css");
 
   assert.equal(response.status, 200);
+  assert.equal(optionsResponse.status, 200);
+  assert.equal(optionsResponse.body.equipes.some((equipe) => equipe.nom_equipe === "Equipe Centre Revisee"), true);
+  assert.equal(optionsResponse.body.agents.some((agent) => agent.code_agent === "AG-I01"), true);
   assert.equal(scriptResponse.status, 200);
   assert.equal(styleResponse.status, 200);
   assert.match(response.text, /Cartographie SIG/);
@@ -2118,7 +2202,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
   assert.match(scriptResponse.text, /function showSiteIdentification\(point\)/);
   assert.match(scriptResponse.text, /function addDetailAction\(submissionId\)/);
-  assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/detail/);
+  assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/report/);
   assert.match(scriptResponse.text, /rowClick: function \(event, row\)/);
   assert.match(scriptResponse.text, /siteIdentificationClose\.addEventListener\("click", hideSiteIdentification\)/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
@@ -2202,6 +2286,160 @@ test("GET /soumissions/:id/detail affiche la fiche decisionnelle et exige infogr
   assert.match(response.text, /Module F[\s\S]*Internet/);
   assert.match(response.text, /id="submission-detail-map"/);
   assert.match(response.text, /leaflet@1\.9\.4/);
+});
+
+test("le moteur V1 de rapport resout les chemins, fallbacks et formats", () => {
+  const submission = db.prepare(`
+    SELECT id FROM soumissions_collecte WHERE source_submission_id = ?
+  `).get("SIM-AG-I01-001");
+  const record = db.prepare(`
+    SELECT
+      s.*,
+      m.name AS mission_name,
+      e.nom_equipe,
+      a.code_agent,
+      sp.nom_sous_prefecture,
+      d.nom_departement,
+      r.nom_region
+    FROM soumissions_collecte s
+    JOIN missions m ON m.id = s.mission_id
+    LEFT JOIN equipes e ON e.id = s.equipe_id
+    LEFT JOIN agents_collecte a ON a.id = s.agent_id
+    LEFT JOIN sous_prefectures sp ON sp.id = s.sous_prefecture_id
+    LEFT JOIN departements d ON d.id = sp.departement_id
+    LEFT JOIN regions r ON r.id = d.region_id
+    WHERE s.id = ?
+  `).get(submission.id);
+  const report = buildSubmissionReport(record);
+
+  assert.equal(resolveValue("modB/nom_officiel", { ...JSON.parse(record.raw_data_json) }).found, true);
+  assert.equal(report.template.id, "padci_decision_sheet");
+  assert.equal(report.header.title !== "-", true);
+  assert.equal(report.summary.some((field) => field.label === "Région" && field.value !== "-"), true);
+  assert.equal(report.summary.some((field) => field.label === "Opérateurs"), true);
+  assert.equal(report.map.latitude, record.latitude);
+});
+
+test("le moteur V1 de rapport lit les cles Kobo plates separees par slash", () => {
+  const record = {
+    id: 999,
+    source_submission_id: "FLAT-001",
+    raw_data_json: JSON.stringify({
+      "modA/id_entite": "SITE-FLAT",
+      "modB/nom_officiel": "Site Kobo plat",
+      "modB/type_infra": "education",
+      "modB/region": "Bagoue",
+      "modB/sous_prefecture": "Débété"
+    }),
+    statut_validation: "a_verifier",
+    submitted_at: "2026-06-10T00:00:00.000Z",
+    anomaly_count: 0,
+    source: "kobo",
+    mission_name: "Mission pilote",
+    nom_region: null,
+    nom_sous_prefecture: null,
+    latitude: 7.1,
+    longitude: -5.2,
+    precision_m: 10
+  };
+  const report = buildSubmissionReport(record);
+
+  assert.equal(report.header.title, "Site Kobo plat");
+  assert.equal(report.header.subtitle.includes("SITE-FLAT"), true);
+  assert.equal(report.summary.find((field) => field.label === "Type").value, "Éducation");
+  assert.equal(report.summary.find((field) => field.label === "Région").value, "Bagoue");
+  assert.equal(report.diagnostics.some((entry) => entry.path === "modB/nom_officiel"), false);
+});
+
+test("le moteur V1 de rapport evite les diagnostics pour fallbacks et champs optionnels", () => {
+  const record = {
+    id: 1000,
+    source_submission_id: "FALLBACK-001",
+    raw_data_json: JSON.stringify({
+      "modA/fiche_id": "FICHE-FALLBACK",
+      "modB/nom_officiel": "Site fallback",
+      "modB/region": "Bagoue",
+      "modB/sous_prefecture": "Débété"
+    }),
+    statut_validation: "a_verifier",
+    submitted_at: "2026-06-10T00:00:00.000Z",
+    anomaly_count: 0,
+    source: "kobo",
+    latitude: 7.1,
+    longitude: -5.2
+  };
+  const report = buildSubmissionReport(record);
+  const diagnosticPaths = report.diagnostics.map((entry) => entry.path);
+
+  assert.equal(report.header.subtitle.includes("FICHE-FALLBACK"), true);
+  assert.equal(diagnosticPaths.includes("modA/id_entite"), false);
+  assert.equal(diagnosticPaths.includes("nom_sous_prefecture"), false);
+  assert.equal(diagnosticPaths.includes("nom_region"), false);
+  assert.equal(diagnosticPaths.includes("modE/debit_mob_desc"), false);
+});
+
+test("le moteur V1 de rapport traduit les codes Kobo avec les listes de choix XLSForm", () => {
+  const record = {
+    id: 1001,
+    source_submission_id: "CHOICES-001",
+    raw_data_json: JSON.stringify({
+      "modB/nom_officiel": "Centre de santé codé",
+      "modB/type_infra": "Sante",
+      "modB/region": "CI01",
+      "modB/sous_prefecture": "CI010102",
+      "modD/electricite": "oui",
+      "modE/operateurs": "Orange, Mtn, Moov",
+      "modF/internet": "oui_active"
+    }),
+    statut_validation: "a_verifier",
+    submitted_at: "2026-06-10T00:00:00.000Z",
+    anomaly_count: 0,
+    source: "kobo",
+    latitude: 5.4,
+    longitude: -4.0
+  };
+  const report = buildSubmissionReport(record);
+  const summaryByLabel = Object.fromEntries(report.summary.map((field) => [field.label, field.value]));
+
+  assert.equal(summaryByLabel.Type, "Santé");
+  assert.equal(summaryByLabel.Région, "District Autonome d'Abidjan");
+  assert.equal(summaryByLabel["Sous-préfecture"], "Anyama");
+  assert.equal(summaryByLabel.Électricité, "Oui");
+  assert.equal(summaryByLabel.Opérateurs, "Orange CI, MTN CI, Moov Africa");
+  assert.equal(summaryByLabel.Internet, "Oui — active");
+});
+
+test("GET /soumissions/:id/report affiche la fiche decisionnelle V1 en parallele", async () => {
+  const readerCookie = await loginTestUser({
+    email: "partenaire.submission-report@g2m.test",
+    role: "partenaire"
+  });
+  const deniedCookie = await loginTestUser({
+    email: "agent.submission-report-denied@g2m.test",
+    role: "agent"
+  });
+  const submission = db.prepare(`
+    SELECT id FROM soumissions_collecte WHERE source_submission_id = ?
+  `).get("SIM-AG-I01-001");
+
+  const anonymousResponse = await request(app).get(`/soumissions/${submission.id}/report`);
+  const deniedResponse = await request(app)
+    .get(`/soumissions/${submission.id}/report`)
+    .set("Cookie", deniedCookie);
+  const response = await request(app)
+    .get(`/soumissions/${submission.id}/report`)
+    .set("Cookie", readerCookie);
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, `/login?next=%2Fsoumissions%2F${submission.id}%2Freport`);
+  assert.equal(deniedResponse.status, 403);
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Fiche décisionnelle V1/);
+  assert.match(response.text, /Fiche décisionnelle PADCI/);
+  assert.match(response.text, /Synthese decisionnelle/);
+  assert.match(response.text, /Contexte de collecte/);
+  assert.match(response.text, /Diagnostic rendu/);
+  assert.match(response.text, /Ancienne fiche/);
 });
 
 test("GET /cartographie exige sig.read", async () => {

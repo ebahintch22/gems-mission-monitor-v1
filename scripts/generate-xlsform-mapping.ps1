@@ -116,6 +116,11 @@ function Get-ChoiceListName {
   return ""
 }
 
+function ConvertTo-SafeFileName {
+  param([string] $Value)
+  return ([string]$Value) -replace '[^a-zA-Z0-9_-]', ''
+}
+
 function Get-QuestionKind {
   param([string] $Type)
   if ($Type -match '^begin[\s_]group$') { return "group" }
@@ -294,8 +299,10 @@ try {
     [ordered]@{ path = "modF.internet"; label = "Internet" }
   )
 
+  $formId = if ($settings.id_string) { $settings.id_string } else { "padci_survey_terrain_vf_v12" }
+
   $mapping = [ordered]@{
-    id = if ($settings.id_string) { $settings.id_string } else { "padci_survey_terrain_vf_v12" }
+    id = $formId
     version = if ($settings.version) { $settings.version } else { "2026060404v12" }
     sourceFile = [System.IO.Path]::GetFileName($XlsFormPath)
     label = "Questionnaire PADCI - Enquete terrain v12"
@@ -312,7 +319,11 @@ try {
     summaryFields = $summaryFields
     sections = $sections
     fields = $allFields
-    choiceLists = $choiceLists
+    choiceListStorage = [ordered]@{
+      mode = "external"
+      index = "$formId/choiceLists.index.json"
+      directory = "$formId/choices"
+    }
   }
 
   $outputDirectory = Split-Path -Parent $OutputPath
@@ -320,11 +331,40 @@ try {
     New-Item -ItemType Directory -Path $outputDirectory | Out-Null
   }
 
+  $safeFormId = ConvertTo-SafeFileName $formId
+  $choiceRoot = Join-Path $outputDirectory $safeFormId
+  $choiceDirectory = Join-Path $choiceRoot "choices"
+  if (-not (Test-Path -LiteralPath $choiceDirectory)) {
+    New-Item -ItemType Directory -Path $choiceDirectory -Force | Out-Null
+  }
+
   $json = $mapping | ConvertTo-Json -Depth 30
   $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
   [System.IO.File]::WriteAllText($OutputPath, $json, $utf8NoBom)
 
+  $choiceListIndex = @()
+  foreach ($listName in $choiceLists.Keys) {
+    $safeListName = ConvertTo-SafeFileName $listName
+    $relativePath = "choices/$safeListName.json"
+    $choiceListIndex += ,[ordered]@{
+      name = $listName
+      path = $relativePath
+      choices = $choiceLists[$listName].Count
+    }
+
+    $choiceListJson = $choiceLists[$listName] | ConvertTo-Json -Depth 20
+    [System.IO.File]::WriteAllText((Join-Path $choiceDirectory "$safeListName.json"), $choiceListJson, $utf8NoBom)
+  }
+
+  $indexJson = [ordered]@{
+    formId = $formId
+    generatedAt = $mapping.generatedAt
+    choiceLists = $choiceListIndex
+  } | ConvertTo-Json -Depth 10
+  [System.IO.File]::WriteAllText((Join-Path $choiceRoot "choiceLists.index.json"), $indexJson, $utf8NoBom)
+
   Write-Output "Mapping genere : $OutputPath"
+  Write-Output "ChoiceLists externes : $choiceDirectory"
   Write-Output "Sections : $($sections.Count)"
   Write-Output "Champs : $($allFields.Count)"
   Write-Output "Listes de choix : $($choiceLists.Count)"

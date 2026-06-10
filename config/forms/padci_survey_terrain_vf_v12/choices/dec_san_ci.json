@@ -1,0 +1,67 @@
+[
+  {
+    "name": "dec_san_01",
+    "label": "District autonome d'Abidjan",
+    "filters": {
+      "secteur": "",
+      "region": "CI01",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dec_san_02",
+    "label": "Région du Gbêkê",
+    "filters": {
+      "secteur": "",
+      "region": "CI11",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dec_san_03",
+    "label": "Région du Grands Ponts",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dec_san_04",
+    "label": "Région du Haut-Sassandra",
+    "filters": {
+      "secteur": "",
+      "region": "CI18",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dec_san_05",
+    "label": "District autonome de Yamoussoukro",
+    "filters": {
+      "secteur": "",
+      "region": "CI02",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

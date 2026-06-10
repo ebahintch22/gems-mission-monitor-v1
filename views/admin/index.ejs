@@ -25,6 +25,13 @@
       <p><%= t("admin.cards.systemStatus.description") %></p>
     </a>
   <% } %>
+  <% if (permissions && permissions.has("seed.manage")) { %>
+    <a class="panel admin-card" href="/admin/seeds">
+      <i class="fa-solid fa-seedling" aria-hidden="true"></i>
+      <h2><%= t("admin.cards.seeds.title") %></h2>
+      <p><%= t("admin.cards.seeds.description") %></p>
+    </a>
+  <% } %>
   <a class="panel admin-card" href="/users">
     <i class="fa-solid fa-users-gear" aria-hidden="true"></i>
     <h2><%= t("admin.cards.users.title") %></h2>

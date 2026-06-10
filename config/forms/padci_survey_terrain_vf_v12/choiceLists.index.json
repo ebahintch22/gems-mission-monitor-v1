@@ -1,0 +1,506 @@
+{
+  "formId": "padci_survey_terrain_vf_v12",
+  "generatedAt": "2026-06-08T18:14:21.4014634Z",
+  "choiceLists": [
+    {
+      "name": "oui_non",
+      "path": "choices/oui_non.json",
+      "choices": 2
+    },
+    {
+      "name": "oui_non_nsp",
+      "path": "choices/oui_non_nsp.json",
+      "choices": 3
+    },
+    {
+      "name": "conditions",
+      "path": "choices/conditions.json",
+      "choices": 5
+    },
+    {
+      "name": "ministere",
+      "path": "choices/ministere.json",
+      "choices": 8
+    },
+    {
+      "name": "secteur",
+      "path": "choices/secteur.json",
+      "choices": 8
+    },
+    {
+      "name": "sous_type",
+      "path": "choices/sous_type.json",
+      "choices": 22
+    },
+    {
+      "name": "contrainte_contour",
+      "path": "choices/contrainte_contour.json",
+      "choices": 7
+    },
+    {
+      "name": "milieu",
+      "path": "choices/milieu.json",
+      "choices": 3
+    },
+    {
+      "name": "statut_fonct",
+      "path": "choices/statut_fonct.json",
+      "choices": 4
+    },
+    {
+      "name": "acces_route",
+      "path": "choices/acces_route.json",
+      "choices": 4
+    },
+    {
+      "name": "services_sante",
+      "path": "choices/services_sante.json",
+      "choices": 10
+    },
+    {
+      "name": "plages",
+      "path": "choices/plages.json",
+      "choices": 4
+    },
+    {
+      "name": "source_elec",
+      "path": "choices/source_elec.json",
+      "choices": 5
+    },
+    {
+      "name": "raccord_type",
+      "path": "choices/raccord_type.json",
+      "choices": 3
+    },
+    {
+      "name": "charge_sup",
+      "path": "choices/charge_sup.json",
+      "choices": 4
+    },
+    {
+      "name": "dispo_jour",
+      "path": "choices/dispo_jour.json",
+      "choices": 5
+    },
+    {
+      "name": "freq_coupure",
+      "path": "choices/freq_coupure.json",
+      "choices": 4
+    },
+    {
+      "name": "qualite_courant",
+      "path": "choices/qualite_courant.json",
+      "choices": 3
+    },
+    {
+      "name": "groupe_etat",
+      "path": "choices/groupe_etat.json",
+      "choices": 3
+    },
+    {
+      "name": "solaire_etat",
+      "path": "choices/solaire_etat.json",
+      "choices": 3
+    },
+    {
+      "name": "mise_terre",
+      "path": "choices/mise_terre.json",
+      "choices": 4
+    },
+    {
+      "name": "onduleur_etat",
+      "path": "choices/onduleur_etat.json",
+      "choices": 3
+    },
+    {
+      "name": "operateurs",
+      "path": "choices/operateurs.json",
+      "choices": 4
+    },
+    {
+      "name": "techno_mobile",
+      "path": "choices/techno_mobile.json",
+      "choices": 5
+    },
+    {
+      "name": "qualite_signal",
+      "path": "choices/qualite_signal.json",
+      "choices": 5
+    },
+    {
+      "name": "dist_pylone",
+      "path": "choices/dist_pylone.json",
+      "choices": 4
+    },
+    {
+      "name": "internet_statut",
+      "path": "choices/internet_statut.json",
+      "choices": 4
+    },
+    {
+      "name": "fai",
+      "path": "choices/fai.json",
+      "choices": 8
+    },
+    {
+      "name": "techno_wan",
+      "path": "choices/techno_wan.json",
+      "choices": 9
+    },
+    {
+      "name": "connexion_statut",
+      "path": "choices/connexion_statut.json",
+      "choices": 4
+    },
+    {
+      "name": "meilleur_choix",
+      "path": "choices/meilleur_choix.json",
+      "choices": 3
+    },
+    {
+      "name": "payeur",
+      "path": "choices/payeur.json",
+      "choices": 6
+    },
+    {
+      "name": "usage_wan",
+      "path": "choices/usage_wan.json",
+      "choices": 7
+    },
+    {
+      "name": "satisfaction",
+      "path": "choices/satisfaction.json",
+      "choices": 4
+    },
+    {
+      "name": "adequation",
+      "path": "choices/adequation.json",
+      "choices": 3
+    },
+    {
+      "name": "prop_fibre",
+      "path": "choices/prop_fibre.json",
+      "choices": 7
+    },
+    {
+      "name": "type_point_co",
+      "path": "choices/type_point_co.json",
+      "choices": 7
+    },
+    {
+      "name": "voirie",
+      "path": "choices/voirie.json",
+      "choices": 4
+    },
+    {
+      "name": "ligne_vue",
+      "path": "choices/ligne_vue.json",
+      "choices": 3
+    },
+    {
+      "name": "ciel",
+      "path": "choices/ciel.json",
+      "choices": 3
+    },
+    {
+      "name": "tel_type",
+      "path": "choices/tel_type.json",
+      "choices": 4
+    },
+    {
+      "name": "pabx",
+      "path": "choices/pabx.json",
+      "choices": 3
+    },
+    {
+      "name": "comm_service",
+      "path": "choices/comm_service.json",
+      "choices": 7
+    },
+    {
+      "name": "type_poteau",
+      "path": "choices/type_poteau.json",
+      "choices": 3
+    },
+    {
+      "name": "bat_statut",
+      "path": "choices/bat_statut.json",
+      "choices": 2
+    },
+    {
+      "name": "vocation",
+      "path": "choices/vocation.json",
+      "choices": 6
+    },
+    {
+      "name": "elec_bat",
+      "path": "choices/elec_bat.json",
+      "choices": 3
+    },
+    {
+      "name": "point_alim",
+      "path": "choices/point_alim.json",
+      "choices": 3
+    },
+    {
+      "name": "lan_exist",
+      "path": "choices/lan_exist.json",
+      "choices": 3
+    },
+    {
+      "name": "cablage",
+      "path": "choices/cablage.json",
+      "choices": 7
+    },
+    {
+      "name": "etat_cablage",
+      "path": "choices/etat_cablage.json",
+      "choices": 4
+    },
+    {
+      "name": "faisab",
+      "path": "choices/faisab.json",
+      "choices": 3
+    },
+    {
+      "name": "goulottes",
+      "path": "choices/goulottes.json",
+      "choices": 3
+    },
+    {
+      "name": "equip_actifs",
+      "path": "choices/equip_actifs.json",
+      "choices": 11
+    },
+    {
+      "name": "obstacles",
+      "path": "choices/obstacles.json",
+      "choices": 6
+    },
+    {
+      "name": "baie",
+      "path": "choices/baie.json",
+      "choices": 2
+    },
+    {
+      "name": "interco",
+      "path": "choices/interco.json",
+      "choices": 5
+    },
+    {
+      "name": "appli_metier_list",
+      "path": "choices/appli_metier_list.json",
+      "choices": 9
+    },
+    {
+      "name": "appli_loc",
+      "path": "choices/appli_loc.json",
+      "choices": 4
+    },
+    {
+      "name": "projet_co",
+      "path": "choices/projet_co.json",
+      "choices": 4
+    },
+    {
+      "name": "profil_usage",
+      "path": "choices/profil_usage.json",
+      "choices": 7
+    },
+    {
+      "name": "services_pub",
+      "path": "choices/services_pub.json",
+      "choices": 4
+    },
+    {
+      "name": "comm_outils",
+      "path": "choices/comm_outils.json",
+      "choices": 4
+    },
+    {
+      "name": "qos",
+      "path": "choices/qos.json",
+      "choices": 3
+    },
+    {
+      "name": "debit_cible",
+      "path": "choices/debit_cible.json",
+      "choices": 5
+    },
+    {
+      "name": "sensibilite",
+      "path": "choices/sensibilite.json",
+      "choices": 4
+    },
+    {
+      "name": "freins",
+      "path": "choices/freins.json",
+      "choices": 6
+    },
+    {
+      "name": "type_co_souhait",
+      "path": "choices/type_co_souhait.json",
+      "choices": 6
+    },
+    {
+      "name": "mat_possible",
+      "path": "choices/mat_possible.json",
+      "choices": 4
+    },
+    {
+      "name": "type_lien_radio",
+      "path": "choices/type_lien_radio.json",
+      "choices": 2
+    },
+    {
+      "name": "emplacement_pylone",
+      "path": "choices/emplacement_pylone.json",
+      "choices": 2
+    },
+    {
+      "name": "rehab",
+      "path": "choices/rehab.json",
+      "choices": 3
+    },
+    {
+      "name": "voirie_int",
+      "path": "choices/voirie_int.json",
+      "choices": 2
+    },
+    {
+      "name": "risques_clim",
+      "path": "choices/risques_clim.json",
+      "choices": 6
+    },
+    {
+      "name": "securite",
+      "path": "choices/securite.json",
+      "choices": 4
+    },
+    {
+      "name": "niveau_co",
+      "path": "choices/niveau_co.json",
+      "choices": 3
+    },
+    {
+      "name": "solutions",
+      "path": "choices/solutions.json",
+      "choices": 5
+    },
+    {
+      "name": "travaux",
+      "path": "choices/travaux.json",
+      "choices": 6
+    },
+    {
+      "name": "priorite",
+      "path": "choices/priorite.json",
+      "choices": 3
+    },
+    {
+      "name": "valid_sup",
+      "path": "choices/valid_sup.json",
+      "choices": 3
+    },
+    {
+      "name": "signal3",
+      "path": "choices/signal3.json",
+      "choices": 3
+    },
+    {
+      "name": "pylone_operateur",
+      "path": "choices/pylone_operateur.json",
+      "choices": 5
+    },
+    {
+      "name": "type_pylone",
+      "path": "choices/type_pylone.json",
+      "choices": 4
+    },
+    {
+      "name": "type_transmission",
+      "path": "choices/type_transmission.json",
+      "choices": 3
+    },
+    {
+      "name": "moyen_connexion",
+      "path": "choices/moyen_connexion.json",
+      "choices": 8
+    },
+    {
+      "name": "infra_fibre",
+      "path": "choices/infra_fibre.json",
+      "choices": 6
+    },
+    {
+      "name": "h04_multi",
+      "path": "choices/h04_multi.json",
+      "choices": 4
+    },
+    {
+      "name": "oui_non_autres",
+      "path": "choices/oui_non_autres.json",
+      "choices": 3
+    },
+    {
+      "name": "region_ci",
+      "path": "choices/region_ci.json",
+      "choices": 34
+    },
+    {
+      "name": "dept_ci",
+      "path": "choices/dept_ci.json",
+      "choices": 112
+    },
+    {
+      "name": "drena_ci",
+      "path": "choices/drena_ci.json",
+      "choices": 116
+    },
+    {
+      "name": "ecole_ci",
+      "path": "choices/ecole_ci.json",
+      "choices": 1548
+    },
+    {
+      "name": "dec_san_ci",
+      "path": "choices/dec_san_ci.json",
+      "choices": 5
+    },
+    {
+      "name": "dir_san_ci",
+      "path": "choices/dir_san_ci.json",
+      "choices": 6
+    },
+    {
+      "name": "dist_san_ci",
+      "path": "choices/dist_san_ci.json",
+      "choices": 17
+    },
+    {
+      "name": "etab_san_ci",
+      "path": "choices/etab_san_ci.json",
+      "choices": 331
+    },
+    {
+      "name": "adm1_ci",
+      "path": "choices/adm1_ci.json",
+      "choices": 14
+    },
+    {
+      "name": "adm2_ci",
+      "path": "choices/adm2_ci.json",
+      "choices": 46
+    },
+    {
+      "name": "adm3_ci",
+      "path": "choices/adm3_ci.json",
+      "choices": 225
+    },
+    {
+      "name": "agents",
+      "path": "choices/agents.json",
+      "choices": 12
+    }
+  ]
+}

@@ -98,6 +98,37 @@ class SoumissionCollecte {
     };
   }
 
+  static mapFilterOptionsForMission(missionId) {
+    return {
+      equipes: db.prepare(`
+        SELECT id, nom_equipe
+        FROM equipes
+        WHERE mission_id = ?
+        ORDER BY nom_equipe
+      `).all(missionId),
+      agents: db.prepare(`
+        SELECT DISTINCT
+          a.id,
+          a.code_agent,
+          a.nom,
+          a.prenoms
+        FROM agents_collecte a
+        WHERE a.id IN (
+          SELECT agent_id
+          FROM agent_mission_assignments
+          WHERE mission_id = ?
+            AND statut = 'active'
+          UNION
+          SELECT agent_id
+          FROM soumissions_collecte
+          WHERE mission_id = ?
+            AND agent_id IS NOT NULL
+        )
+        ORDER BY a.code_agent
+      `).all(missionId, missionId)
+    };
+  }
+
   static regionBoundaries() {
     return db.prepare(`
       SELECT id, code_region, nom_region, geometry_geojson

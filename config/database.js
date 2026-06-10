@@ -815,6 +815,7 @@ function seedDefaultPermissions() {
     ["settings.manage", "Gestion des parametres", "Modification des parametres globaux.", "admin", 1],
     ["db.stats.read", "Rapport base de donnees", "Consultation du rapport dynamique SQLite.", "admin", 1],
     ["system.status.read", "Statut systeme", "Consultation des metadonnees applicatives.", "admin", 1],
+    ["seed.manage", "Gestion des seeds", "Export et import des seeds de donnees.", "admin", 1],
     ["email.test", "Test email", "Envoi d'emails de test SMTP.", "admin", 1],
     ["monitoring.read", "Monitoring", "Consultation du monitoring applicatif.", "admin", 0],
     ["kobo.manage", "Administration Kobo", "Gestion de la connexion et des synchronisations KoboToolbox.", "kobo", 1],

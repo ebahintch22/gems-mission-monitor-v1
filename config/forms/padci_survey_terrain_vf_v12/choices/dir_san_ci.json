@@ -1,0 +1,80 @@
+[
+  {
+    "name": "dir_san_01",
+    "label": "Direction Régionale de la santé Abidjan 1",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "dec_san_01",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dir_san_02",
+    "label": "Direction Régionale de la santé Abidjan 2",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "dec_san_01",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dir_san_03",
+    "label": "Direction régionale de la santé Gbêkê",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "dec_san_02",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dir_san_04",
+    "label": "Direction régionale de la santé Grands Ponts",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "dec_san_03",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dir_san_05",
+    "label": "Direction régionale de la santé Haut-Sassandra",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "dec_san_04",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dir_san_06",
+    "label": "Direction régionale de la santé Bélier",
+    "filters": {
+      "secteur": "",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "dec_san_05",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

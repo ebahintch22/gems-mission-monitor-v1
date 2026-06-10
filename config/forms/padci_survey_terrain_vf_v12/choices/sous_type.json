@@ -1,0 +1,288 @@
+[
+  {
+    "name": "chu",
+    "label": "CHU",
+    "filters": {
+      "secteur": "sante",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "chr",
+    "label": "CHR",
+    "filters": {
+      "secteur": "sante",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "hopital",
+    "label": "Hôpital général",
+    "filters": {
+      "secteur": "sante",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "csu",
+    "label": "Centre de santé urbain/rural",
+    "filters": {
+      "secteur": "sante",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "dispensaire",
+    "label": "Dispensaire",
+    "filters": {
+      "secteur": "sante",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "pmi",
+    "label": "PMI",
+    "filters": {
+      "secteur": "sante",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "ecole",
+    "label": "École primaire",
+    "filters": {
+      "secteur": "education",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "college",
+    "label": "Collège",
+    "filters": {
+      "secteur": "education",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "lycee",
+    "label": "Lycée",
+    "filters": {
+      "secteur": "education",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "universite",
+    "label": "Université",
+    "filters": {
+      "secteur": "education",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "centre_fp",
+    "label": "Centre de formation prof.",
+    "filters": {
+      "secteur": "formation",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "lycee_tech",
+    "label": "Lycée technique",
+    "filters": {
+      "secteur": "formation",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "tpi",
+    "label": "Tribunal de 1re instance",
+    "filters": {
+      "secteur": "justice",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "cour_appel",
+    "label": "Cour d'appel",
+    "filters": {
+      "secteur": "justice",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "etat_civil_c",
+    "label": "Centre d'état civil",
+    "filters": {
+      "secteur": "justice",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "prefecture",
+    "label": "Préfecture",
+    "filters": {
+      "secteur": "etat_civil",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "sous_prefecture",
+    "label": "Sous-préfecture",
+    "filters": {
+      "secteur": "etat_civil",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "mairie",
+    "label": "Mairie",
+    "filters": {
+      "secteur": "etat_civil",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "commissariat",
+    "label": "Commissariat",
+    "filters": {
+      "secteur": "etat_civil",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "centre_social_s",
+    "label": "Centre social",
+    "filters": {
+      "secteur": "centre_social",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "direction_reg_s",
+    "label": "Direction régionale",
+    "filters": {
+      "secteur": "direction_reg",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  },
+  {
+    "name": "autres_s",
+    "label": "Autres",
+    "filters": {
+      "secteur": "autres",
+      "region": "",
+      "dept": "",
+      "drena": "",
+      "dec_san": "",
+      "dir_san": "",
+      "dist_san": ""
+    }
+  }
+]

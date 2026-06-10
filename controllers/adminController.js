@@ -6,6 +6,7 @@ const Setting = require("../models/Setting");
 const { getMonitoringSnapshot } = require("../services/adminMonitoringService");
 const { getDatabaseStats, getTablePreview } = require("../services/databaseStatsService");
 const { hasSmtpConfig, resolveMailEnv, sendMail } = require("../services/mailService");
+const seedService = require("../services/seedService");
 
 exports.index = (req, res) => {
   res.render("admin/index", {
@@ -59,6 +60,63 @@ exports.systemStatus = (req, res) => {
     title: req.t("admin.systemStatus.title"),
     metadata: AppMetadata.get()
   });
+};
+
+exports.seeds = (req, res) => {
+  renderSeeds(req, res);
+};
+
+exports.exportSeed = (req, res) => {
+  try {
+    const includeSensitiveTables = req.body?.include_sensitive_tables === "on";
+    const result = seedService.exportSeed({ includeSensitiveTables });
+    AuditLog.create(logContext(req, "admin.seed_exported", {
+      file_name: result.fileName,
+      table_count: result.tableCount,
+      row_count: result.rowCount,
+      include_sensitive_tables: result.includeSensitiveTables
+    }));
+
+    return renderSeeds(req, res, {
+      notice: req.t("admin.seeds.notice.exported", {
+        file: result.fileName,
+        tables: result.tableCount,
+        rows: result.rowCount
+      }),
+      exportResult: result
+    });
+  } catch (error) {
+    return renderSeeds(req, res, {
+      error: seedErrorMessage(req, error)
+    }, 400);
+  }
+};
+
+exports.importSeed = (req, res) => {
+  try {
+    const result = seedService.importSeed(req.body.seed_file);
+    AuditLog.create(logContext(req, "admin.seed_imported", {
+      file_name: result.fileName,
+      statement_count: result.statementCount
+    }));
+
+    return renderSeeds(req, res, {
+      notice: req.t("admin.seeds.notice.imported", {
+        file: result.fileName,
+        statements: result.statementCount
+      }),
+      importResult: result
+    });
+  } catch (error) {
+    AuditLog.create(logContext(req, "admin.seed_import_failed", {
+      file_name: req.body.seed_file || null,
+      error: sanitizeError(error)
+    }));
+
+    return renderSeeds(req, res, {
+      error: seedErrorMessage(req, error)
+    }, 400);
+  }
 };
 
 exports.emailTest = (req, res) => {
@@ -150,6 +208,19 @@ function renderEmailTest(req, res, options = {}, statusCode = 200) {
   });
 }
 
+function renderSeeds(req, res, options = {}, statusCode = 200) {
+  res.status(statusCode).render("admin/seeds", {
+    title: req.t("admin.seeds.title"),
+    seedFiles: seedService.listSeedFiles(),
+    seedDirectory: seedService.getSeedDirectory(),
+    sensitiveTables: seedService.sensitiveTables,
+    notice: options.notice || null,
+    error: options.error || null,
+    exportResult: options.exportResult || null,
+    importResult: options.importResult || null
+  });
+}
+
 function renderPermissions(req, res, options = {}, statusCode = 200) {
   res.status(statusCode).render("admin/permissions", {
     title: req.t("admin.permissions.title"),
@@ -232,6 +303,17 @@ function sanitizeError(error) {
   return String(error.message || error)
     .replace(/(token|authorization|password|secret|api[_-]?key)([^,\n]*)/gi, "$1=***")
     .replace(/Bearer\s+[A-Za-z0-9._-]+/g, "Bearer ***");
+}
+
+function seedErrorMessage(req, error) {
+  const key = String(error.message || "");
+  const messages = {
+    seed_file_not_found: req.t("admin.seeds.errors.notFound"),
+    invalid_seed_file: req.t("admin.seeds.errors.invalidFile"),
+    invalid_seed_file_name: req.t("admin.seeds.errors.invalidFileName")
+  };
+
+  return messages[key] || sanitizeError(error);
 }
 
 function logContext(req, action, details = null) {

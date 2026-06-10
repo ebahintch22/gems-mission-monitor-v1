@@ -22,6 +22,28 @@ class Equipe {
     `).all();
   }
 
+  static findByMission(missionId) {
+    return db.prepare(`
+      SELECT
+        e.id, e.nom_equipe, e.statut, e.created_at,
+        m.name AS mission_name,
+        CASE
+          WHEN u.id IS NULL THEN NULL
+          ELSE u.prenoms || ' ' || u.nom
+        END AS superviseur_name,
+        COUNT(er.region_id) AS region_count,
+        GROUP_CONCAT(r.nom_region, ', ') AS regions
+      FROM equipes e
+      JOIN missions m ON m.id = e.mission_id
+      LEFT JOIN users u ON u.id = e.superviseur_id
+      LEFT JOIN equipe_regions er ON er.equipe_id = e.id
+      LEFT JOIN regions r ON r.id = er.region_id
+      WHERE e.mission_id = ?
+      GROUP BY e.id
+      ORDER BY e.nom_equipe
+    `).all(missionId);
+  }
+
   static findById(id) {
     const equipe = db.prepare(`
       SELECT

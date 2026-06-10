@@ -34,20 +34,14 @@
         </label>
         <label>
           <%= t("sig.filters.team") %>
-          <select id="sig-equipe-filter">
+          <select id="sig-equipe-filter" disabled>
             <option value=""><%= t("sig.filters.allTeams") %></option>
-            <% filters.equipes.forEach((equipe) => { %>
-              <option value="<%= equipe.id %>"><%= equipe.nom_equipe %></option>
-            <% }) %>
           </select>
         </label>
         <label>
           <%= t("sig.filters.agent") %>
-          <select id="sig-agent-filter">
+          <select id="sig-agent-filter" disabled>
             <option value=""><%= t("sig.filters.allAgents") %></option>
-            <% filters.agents.forEach((agent) => { %>
-              <option value="<%= agent.id %>"><%= agent.code_agent %> - <%= agent.prenoms %> <%= agent.nom %></option>
-            <% }) %>
           </select>
         </label>
         <label>
@@ -223,6 +217,10 @@
     mobileSpeed: t("sig.site.fields.mobileSpeed"),
     observations: t("sig.site.fields.observations"),
     detailLink: t("sig.site.detailLink")
+  },
+  filters: {
+    allTeams: t("sig.filters.allTeams"),
+    allAgents: t("sig.filters.allAgents")
   }
 }).replace(/</g, "\\u003c") %></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

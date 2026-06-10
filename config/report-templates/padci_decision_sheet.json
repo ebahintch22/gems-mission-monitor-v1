@@ -1,0 +1,118 @@
+{
+  "id": "padci_decision_sheet",
+  "label": "Fiche décisionnelle PADCI",
+  "version": "20260610-v1-stabilisee",
+  "header": {
+    "eyebrow": "Fiche décisionnelle V1",
+    "title": {
+      "path": "modB/nom_officiel",
+      "fallbackPath": "source_submission_id",
+      "defaultValue": "Soumission sans nom"
+    },
+    "subtitle": [
+      { "path": "modA/id_entite", "fallbackPath": "modA/fiche_id", "optional": true },
+      { "path": "nom_sous_prefecture", "fallbackPath": "modB/sous_prefecture" },
+      { "path": "nom_region", "fallbackPath": "modB/region" }
+    ],
+    "status": {
+      "path": "statut_validation",
+      "format": "choice",
+      "choices": {
+        "validee": "Validée",
+        "a_verifier": "À vérifier",
+        "rejetee": "Rejetée"
+      }
+    }
+  },
+  "summary": [
+    { "label": "Site", "path": "modB/nom_officiel", "fallbackPath": "source_submission_id" },
+    { "label": "Type", "path": "modB/type_infra", "format": "choice" },
+    { "label": "Région", "path": "modB/region", "fallbackPath": "nom_region", "format": "choice" },
+    { "label": "Sous-préfecture", "path": "modB/sous_prefecture", "fallbackPath": "nom_sous_prefecture", "format": "choice" },
+    { "label": "Électricité", "path": "modD/electricite", "format": "yes_no" },
+    { "label": "Internet", "path": "modF/internet", "format": "choice" },
+    { "label": "Opérateurs", "path": "modE/operateurs", "format": "choice_list" },
+    { "label": "Statut validation", "path": "statut_validation", "format": "choice", "choices": {
+      "validee": "Validée",
+      "a_verifier": "À vérifier",
+      "rejetee": "Rejetée"
+    } }
+  ],
+  "sections": [
+    {
+      "label": "Contexte de collecte",
+      "fields": [
+        { "label": "Mission", "path": "mission_name", "optional": true },
+        { "label": "Équipe", "path": "nom_equipe", "optional": true },
+        { "label": "Agent", "path": "code_agent", "fallbackPath": "code_agent_source", "optional": true },
+        { "label": "Soumis le", "path": "submitted_at", "format": "date" },
+        { "label": "ID soumission", "path": "source_submission_id" },
+        { "label": "Anomalies", "path": "anomaly_count", "format": "number" }
+      ]
+    },
+    {
+      "label": "Identification du site",
+      "fields": [
+        { "label": "ID entité", "path": "modA/id_entite", "fallbackPath": "modA/fiche_id", "optional": true },
+        { "label": "Nom officiel", "path": "modB/nom_officiel", "fallbackPath": "source_submission_id" },
+        { "label": "Type d'infrastructure", "path": "modB/type_infra", "format": "choice" },
+        { "label": "Ministère", "path": "modB/ministere", "format": "choice", "optional": true },
+        { "label": "Statut fonctionnel", "path": "modB/statut_fonct", "format": "choice", "optional": true },
+        { "label": "Milieu", "path": "modB/milieu", "format": "choice", "optional": true }
+      ]
+    },
+    {
+      "label": "Localisation",
+      "fields": [
+        { "label": "Région", "path": "modB/region", "fallbackPath": "nom_region", "format": "choice" },
+        { "label": "Département", "path": "modB/departement", "fallbackPath": "nom_departement", "format": "choice", "optional": true },
+        { "label": "Sous-préfecture", "path": "modB/sous_prefecture", "fallbackPath": "nom_sous_prefecture", "format": "choice" },
+        { "label": "Commune", "path": "modB/commune", "optional": true },
+        { "label": "Latitude", "path": "latitude", "format": "number", "decimals": 6 },
+        { "label": "Longitude", "path": "longitude", "format": "number", "decimals": 6 },
+        { "label": "Précision GPS", "path": "precision_m", "format": "number", "unit": "m", "optional": true }
+      ]
+    },
+    {
+      "label": "Capacité et infrastructure",
+      "fields": [
+        { "label": "Bâtiments", "path": "modC/nb_batiments", "format": "number", "optional": true },
+        { "label": "Personnel", "path": "modC/personnel", "format": "number", "optional": true },
+        { "label": "Public cible", "path": "modC/utilisateurs_cible", "format": "number", "optional": true },
+        { "label": "Electricite", "path": "modD/electricite", "format": "yes_no" },
+        { "label": "Source électrique", "path": "modD/source_elec", "format": "choice_list", "optional": true },
+        { "label": "Disponibilité électrique", "path": "modD/dispo_jour", "format": "choice", "optional": true }
+      ]
+    },
+    {
+      "label": "Connectivité",
+      "fields": [
+        { "label": "Opérateurs disponibles", "path": "modE/operateurs", "format": "choice_list" },
+        { "label": "Qualité Orange", "path": "modE/orange_qual", "format": "choice", "optional": true },
+        { "label": "Qualité MTN", "path": "modE/mtn_qual", "format": "choice", "optional": true },
+        { "label": "Qualité Moov", "path": "modE/moov_qual", "format": "choice", "optional": true },
+        { "label": "Internet", "path": "modF/internet", "format": "choice" },
+        { "label": "Opérateurs internet", "path": "modF/operateurs_internet", "format": "choice_list", "optional": true },
+        { "label": "Débit mobile", "path": "modE/debit_mob_desc", "format": "choice", "optional": true }
+      ]
+    },
+    {
+      "label": "Points de vigilance",
+      "fields": [
+        { "label": "Anomalies détectées", "path": "anomaly_count", "format": "number" },
+        { "label": "Observation internet", "path": "modF/obs_internet", "optional": true },
+        { "label": "Statut validation", "path": "statut_validation", "format": "choice", "choices": {
+          "validee": "Validée",
+          "a_verifier": "À vérifier",
+          "rejetee": "Rejetée"
+        } }
+      ]
+    }
+  ],
+  "map": {
+    "type": "map_point",
+    "latitudePath": "latitude",
+    "longitudePath": "longitude",
+    "precisionPath": "precision_m"
+  }
+}

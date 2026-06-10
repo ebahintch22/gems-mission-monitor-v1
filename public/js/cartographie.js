@@ -3,6 +3,7 @@
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
   const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
   const messages = i18nPayload.messages || {};
+  const filterLabels = i18nPayload.filters || {};
   const locale = i18nPayload.locale || "fr";
   function t(key) {
     return messages[key] || key;
@@ -282,7 +283,7 @@
 
     actions.className = "site-identification-actions";
     link.className = "button button-primary";
-    link.href = `/soumissions/${submissionId}/detail`;
+    link.href = `/soumissions/${submissionId}/report`;
     link.textContent = t("detailLink");
     actions.append(link);
     siteIdentificationBody.append(actions);
@@ -393,6 +394,46 @@
     }
   }
 
+  function resetSelect(select, label) {
+    select.replaceChildren(new Option(label, ""));
+    select.value = "";
+  }
+
+  function setMissionScopedFilters(options) {
+    const equipeSelect = document.getElementById("sig-equipe-filter");
+    const agentSelect = document.getElementById("sig-agent-filter");
+    resetSelect(equipeSelect, filterLabels.allTeams || t("team"));
+    resetSelect(agentSelect, filterLabels.allAgents || t("agent"));
+
+    (options.equipes || []).forEach(function (equipe) {
+      equipeSelect.add(new Option(equipe.nom_equipe, String(equipe.id)));
+    });
+    (options.agents || []).forEach(function (agent) {
+      const name = [agent.code_agent, [agent.prenoms, agent.nom].filter(Boolean).join(" ")]
+        .filter(Boolean)
+        .join(" - ");
+      agentSelect.add(new Option(name, String(agent.id)));
+    });
+
+    const enabled = Boolean(document.getElementById("sig-mission-filter").value);
+    equipeSelect.disabled = !enabled;
+    agentSelect.disabled = !enabled;
+  }
+
+  async function loadMissionScopedFilters(missionId) {
+    if (!missionId) {
+      setMissionScopedFilters({ equipes: [], agents: [] });
+      renderPoints(true);
+      return;
+    }
+
+    const response = await fetch(`/cartographie/options?mission_id=${encodeURIComponent(missionId)}`, {
+      headers: { Accept: "application/json" }
+    });
+    setMissionScopedFilters(response.ok ? await response.json() : { equipes: [], agents: [] });
+    renderPoints(true);
+  }
+
   function setClustering(enabled) {
     clusteringEnabled = enabled;
     collectionLayer.removeLayer(activeMarkersLayer);
@@ -405,11 +446,16 @@
       : t("clusterEnable");
   }
 
-  document.getElementById("sig-filters").addEventListener("change", function () {
+  document.getElementById("sig-filters").addEventListener("change", function (event) {
+    if (event.target.id === "sig-mission-filter") {
+      loadMissionScopedFilters(event.target.value);
+      return;
+    }
     renderPoints(true);
   });
   document.getElementById("sig-reset-filters").addEventListener("click", function () {
     document.getElementById("sig-filters").reset();
+    setMissionScopedFilters({ equipes: [], agents: [] });
     renderPoints(true);
   });
   clusterToggle.addEventListener("click", function () {
@@ -489,5 +535,6 @@
   if (territoryLayer.getBounds().isValid()) {
     map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
   }
+  setMissionScopedFilters({ equipes: [], agents: [] });
   renderPoints(false);
 }());
