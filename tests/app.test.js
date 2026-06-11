@@ -14,6 +14,7 @@ const { importAgents } = require("../services/agentImportService");
 const { seedSubmissions } = require("../services/submissionSeedService");
 const { listKoboAssets } = require("../services/koboSyncService");
 const { buildSubmissionReport, resolveValue } = require("../services/submissionReportRenderer");
+const { displaySubmissionId } = require("../services/submissionIdentityService");
 const { hashToken } = require("../services/tokenService");
 const { hashPassword } = require("../services/passwordService");
 
@@ -2401,6 +2402,21 @@ test("le moteur V1 de rapport lit les cles Kobo plates separees par slash", () =
   assert.equal(report.summary.find((field) => field.label === "Type").value, "Éducation");
   assert.equal(report.summary.find((field) => field.label === "Région").value, "Bagoue");
   assert.equal(report.diagnostics.some((entry) => entry.path === "modB/nom_officiel"), false);
+});
+
+test("l'affichage visuel d'une soumission utilise le nom officiel avant les identifiants techniques", () => {
+  assert.equal(displaySubmissionId({
+    source_submission_id: "UUID-001",
+    raw_data_json: JSON.stringify({
+      "_id": 12345,
+      "modB/nom_officiel": "Centre communautaire principal"
+    })
+  }), "Centre communautaire principal");
+
+  assert.equal(displaySubmissionId({
+    source_submission_id: "UUID-002",
+    raw_data_json: JSON.stringify({ "_id": 67890 })
+  }), 67890);
 });
 
 test("le moteur V1 de rapport evite les diagnostics pour fallbacks et champs optionnels", () => {

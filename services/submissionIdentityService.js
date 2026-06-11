@@ -1,6 +1,7 @@
 function displaySubmissionId(record) {
   const rawData = parseRawData(record?.raw_data_json);
-  return valueAtPath(rawData, "_id")
+  return valueAtPath(rawData, "modB/nom_officiel")
+    || valueAtPath(rawData, "_id")
     || valueAtPath(rawData, "meta/_id")
     || record?.source_submission_id
     || "-";
