@@ -7,8 +7,10 @@ node_modules/
 # Variables sensibles
 # =========================
 .env
-
-
+# =========================
+# Documentations techniques
+# =========================
+Kbase-docs/*
 # =========================
 # Bases SQLite runtime
 # =========================

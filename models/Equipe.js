@@ -17,6 +17,7 @@ class Equipe {
       LEFT JOIN users u ON u.id = e.superviseur_id
       LEFT JOIN equipe_regions er ON er.equipe_id = e.id
       LEFT JOIN regions r ON r.id = er.region_id
+      WHERE m.archived = 0
       GROUP BY e.id
       ORDER BY e.nom_equipe
     `).all();
@@ -39,6 +40,7 @@ class Equipe {
       LEFT JOIN equipe_regions er ON er.equipe_id = e.id
       LEFT JOIN regions r ON r.id = er.region_id
       WHERE e.mission_id = ?
+        AND m.archived = 0
       GROUP BY e.id
       ORDER BY e.nom_equipe
     `).all(missionId);
@@ -74,6 +76,7 @@ class Equipe {
     return db.prepare(`
       SELECT id, name, status
       FROM missions
+      WHERE archived = 0
       ORDER BY created_at DESC, name
     `).all();
   }
@@ -96,7 +99,7 @@ class Equipe {
   }
 
   static validMissionId(missionId) {
-    return Boolean(db.prepare("SELECT id FROM missions WHERE id = ?").get(missionId));
+    return Boolean(db.prepare("SELECT id FROM missions WHERE id = ? AND archived = 0").get(missionId));
   }
 
   static validRegionIds(regionIds) {

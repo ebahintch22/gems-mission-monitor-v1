@@ -5,7 +5,12 @@
     <h1><%= t("missions.title") %></h1>
     <p class="muted"><%= t("missions.description") %></p>
   </div>
-  <a class="button button-primary" href="/missions/new"><%= t("missions.actions.new") %></a>
+  <div class="heading-actions">
+    <% if (currentUser?.role === "admin") { %>
+      <a class="button" href="/missions/archives"><%= t("missions.actions.archives") %></a>
+    <% } %>
+    <a class="button button-primary" href="/missions/new"><%= t("missions.actions.new") %></a>
+  </div>
 </section>
 
 <section class="mission-layout">

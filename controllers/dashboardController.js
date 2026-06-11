@@ -10,7 +10,10 @@ exports.index = (req, res) => {
     && Number.isInteger(defaultMissionId)
     && defaultMissionId > 0
   ) {
-    const dashboard = getMissionDashboard(defaultMissionId);
+    const defaultMission = Mission.findById(defaultMissionId);
+    const dashboard = defaultMission?.archived === 1 && req.currentUser.role !== "admin"
+      ? null
+      : getMissionDashboard(defaultMissionId);
     if (dashboard) {
       return res.render("missions/dashboard", {
         title: req.t("missionDashboard.title", { name: dashboard.mission.name }),

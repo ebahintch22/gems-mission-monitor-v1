@@ -1,0 +1,46 @@
+<%- include("../partials/header", { title }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("missions.archives.eyebrow") %></p>
+    <h1><%= t("missions.archives.title") %></h1>
+    <p class="muted"><%= t("missions.archives.description") %></p>
+  </div>
+  <a class="button" href="/missions"><%= t("missions.show.back") %></a>
+</section>
+
+<section class="panel">
+  <h2><%= t("missions.archives.listTitle") %></h2>
+  <% if (!missions.length) { %>
+    <p class="empty"><%= t("missions.archives.empty") %></p>
+  <% } else { %>
+    <table class="simple-table">
+      <thead>
+        <tr>
+          <th><%= t("common.mission") %></th>
+          <th><%= t("common.region") %></th>
+          <th><%= t("common.status") %></th>
+          <th><%= t("missions.archives.archivedAt") %></th>
+          <th><%= t("missions.archives.archivedBy") %></th>
+          <th><%= t("common.actions") %></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% missions.forEach((mission) => { %>
+          <tr>
+            <td><a href="/missions/<%= mission.id %>"><%= mission.name %></a></td>
+            <td><%= mission.region %></td>
+            <td><span class="status status-<%= mission.status %>"><%= t(`status.${mission.status}`) %></span></td>
+            <td><%= mission.archived_at || "-" %></td>
+            <td><%= mission.archived_by_name || "-" %></td>
+            <td>
+              <form action="/missions/<%= mission.id %>/unarchive" method="post">
+                <button class="button" type="submit"><%= t("missions.actions.unarchive") %></button>
+              </form>
+            </td>
+          </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  <% } %>
+</section>
+<%- include("../partials/footer") %>

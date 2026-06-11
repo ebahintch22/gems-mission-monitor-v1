@@ -15,6 +15,8 @@ class AgentCollecte {
       FROM agents_collecte a
       LEFT JOIN users u ON u.id = a.user_id
       LEFT JOIN equipes e ON e.id = a.equipe_id
+      LEFT JOIN missions m ON m.id = e.mission_id
+      WHERE e.id IS NULL OR m.archived = 0
       ORDER BY a.code_agent
     `).all();
   }
@@ -79,6 +81,11 @@ class AgentCollecte {
     return db.prepare(`
       SELECT id, nom_equipe, statut
       FROM equipes
+      WHERE EXISTS (
+        SELECT 1 FROM missions
+        WHERE missions.id = equipes.mission_id
+          AND missions.archived = 0
+      )
       ORDER BY nom_equipe
     `).all();
   }
@@ -94,7 +101,13 @@ class AgentCollecte {
     if (equipeId === null) {
       return true;
     }
-    return Boolean(db.prepare("SELECT id FROM equipes WHERE id = ?").get(equipeId));
+    return Boolean(db.prepare(`
+      SELECT e.id
+      FROM equipes e
+      JOIN missions m ON m.id = e.mission_id
+      WHERE e.id = ?
+        AND m.archived = 0
+    `).get(equipeId));
   }
 
   static create(input) {

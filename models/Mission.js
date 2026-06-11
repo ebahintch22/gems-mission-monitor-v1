@@ -2,15 +2,46 @@ const db = require("../config/database");
 
 class Mission {
   static all() {
-    return db.prepare("SELECT * FROM missions ORDER BY created_at DESC, id DESC").all();
+    return this.allActive();
+  }
+
+  static allActive() {
+    return db.prepare(`
+      SELECT *
+      FROM missions
+      WHERE archived = 0
+      ORDER BY created_at DESC, id DESC
+    `).all();
+  }
+
+  static archived() {
+    return db.prepare(`
+      SELECT
+        m.*,
+        u.prenoms || ' ' || u.nom AS archived_by_name
+      FROM missions m
+      LEFT JOIN users u ON u.id = m.archived_by
+      WHERE m.archived = 1
+      ORDER BY m.archived_at DESC, m.id DESC
+    `).all();
   }
 
   static recent(limit = 5) {
-    return db.prepare("SELECT * FROM missions ORDER BY created_at DESC, id DESC LIMIT ?").all(limit);
+    return db.prepare(`
+      SELECT *
+      FROM missions
+      WHERE archived = 0
+      ORDER BY created_at DESC, id DESC
+      LIMIT ?
+    `).all(limit);
   }
 
   static findById(id) {
     return db.prepare("SELECT * FROM missions WHERE id = ?").get(id);
+  }
+
+  static findActiveById(id) {
+    return db.prepare("SELECT * FROM missions WHERE id = ? AND archived = 0").get(id);
   }
 
   static create(input) {
@@ -53,6 +84,7 @@ class Mission {
         SUM(CASE WHEN status = 'terminee' THEN 1 ELSE 0 END) AS completed,
         COALESCE(SUM(collectors), 0) AS collectors
       FROM missions
+      WHERE archived = 0
     `).get();
 
     return {
@@ -61,6 +93,30 @@ class Mission {
       completed: totals.completed || 0,
       collectors: totals.collectors || 0
     };
+  }
+
+  static archive(id, userId) {
+    db.prepare(`
+      UPDATE missions
+      SET archived = 1,
+          archived_at = CURRENT_TIMESTAMP,
+          archived_by = ?
+      WHERE id = ?
+    `).run(userId, id);
+
+    return this.findById(id);
+  }
+
+  static unarchive(id) {
+    db.prepare(`
+      UPDATE missions
+      SET archived = 0,
+          archived_at = NULL,
+          archived_by = NULL
+      WHERE id = ?
+    `).run(id);
+
+    return this.findById(id);
   }
 }
 

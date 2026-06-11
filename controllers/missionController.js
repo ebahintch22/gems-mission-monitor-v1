@@ -6,7 +6,14 @@ const statuses = ["planifiee", "en_cours", "terminee", "suspendue"];
 exports.index = (req, res) => {
   res.render("missions/index", {
     title: req.t("missions.title"),
-    missions: Mission.all()
+    missions: Mission.allActive()
+  });
+};
+
+exports.archives = (req, res) => {
+  res.render("missions/archives", {
+    title: req.t("missions.archives.title"),
+    missions: Mission.archived()
   });
 };
 
@@ -40,7 +47,7 @@ exports.create = (req, res) => {
 
 exports.edit = (req, res, next) => {
   const mission = Mission.findById(req.params.id);
-  if (!mission) {
+  if (!mission || isArchivedForNonAdmin(req, mission)) {
     return next();
   }
 
@@ -56,7 +63,7 @@ exports.edit = (req, res, next) => {
 
 exports.update = (req, res, next) => {
   const mission = Mission.findById(req.params.id);
-  if (!mission) {
+  if (!mission || isArchivedForNonAdmin(req, mission)) {
     return next();
   }
 
@@ -80,7 +87,7 @@ exports.update = (req, res, next) => {
 
 exports.show = (req, res, next) => {
   const mission = Mission.findById(req.params.id);
-  if (!mission) {
+  if (!mission || isArchivedForNonAdmin(req, mission)) {
     return next();
   }
   return res.render("missions/show", {
@@ -90,6 +97,11 @@ exports.show = (req, res, next) => {
 };
 
 exports.dashboard = (req, res, next) => {
+  const mission = Mission.findById(req.params.id);
+  if (!mission || isArchivedForNonAdmin(req, mission)) {
+    return next();
+  }
+
   const dashboard = getMissionDashboard(req.params.id);
   if (!dashboard) {
     return next();
@@ -100,6 +112,26 @@ exports.dashboard = (req, res, next) => {
     dashboard,
     isHomeDashboard: false
   });
+};
+
+exports.archive = (req, res, next) => {
+  const mission = Mission.findById(req.params.id);
+  if (!mission) {
+    return next();
+  }
+
+  Mission.archive(mission.id, req.currentUser.id);
+  return res.redirect("/missions/archives");
+};
+
+exports.unarchive = (req, res, next) => {
+  const mission = Mission.findById(req.params.id);
+  if (!mission) {
+    return next();
+  }
+
+  Mission.unarchive(mission.id);
+  return res.redirect(`/missions/${mission.id}`);
 };
 
 function renderForm(req, res, options, statusCode = 200) {
@@ -135,4 +167,12 @@ function parseMissionInput(body) {
     values,
     invalid: !values.name || !values.region || !statuses.includes(values.status) || invalidNumbers
   };
+}
+
+function isAdmin(req) {
+  return req.currentUser?.role === "admin";
+}
+
+function isArchivedForNonAdmin(req, mission) {
+  return mission.archived === 1 && !isAdmin(req);
 }

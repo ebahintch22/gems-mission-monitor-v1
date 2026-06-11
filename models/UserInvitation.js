@@ -6,7 +6,7 @@ class UserInvitation {
       SELECT
         ui.*,
         ro.label AS role_label,
-        m.name AS mission_name,
+        CASE WHEN m.archived = 1 THEN NULL ELSE m.name END AS mission_name,
         invited.prenoms || ' ' || invited.nom AS invited_by_name
       FROM user_invitations ui
       LEFT JOIN roles ro ON ro.code_role = ui.role

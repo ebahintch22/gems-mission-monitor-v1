@@ -12,6 +12,7 @@ class AgentMissionAssignment {
       JOIN missions m ON m.id = ama.mission_id
       WHERE ama.agent_id = ?
         AND ama.statut = 'active'
+        AND m.archived = 0
     `).get(agentId);
   }
 
@@ -19,9 +20,11 @@ class AgentMissionAssignment {
     return db.prepare(`
       SELECT *
       FROM agent_mission_assignments
+      JOIN missions m ON m.id = agent_mission_assignments.mission_id
       WHERE agent_id = ?
         AND mission_id = ?
         AND statut = 'active'
+        AND m.archived = 0
     `).get(agentId, missionId);
   }
 
@@ -34,12 +37,14 @@ class AgentMissionAssignment {
         a.prenoms
       FROM agent_mission_assignments ama
       JOIN agents_collecte a ON a.id = ama.agent_id
+      JOIN missions m ON m.id = ama.mission_id
       WHERE (
           a.kobo_code_agent = ?
           OR a.code_agent = ?
         )
         AND ama.mission_id = ?
         AND ama.statut = 'active'
+        AND m.archived = 0
       ORDER BY CASE WHEN a.kobo_code_agent = ? THEN 0 ELSE 1 END
       LIMIT 1
     `).get(codeAgent, codeAgent, missionId, codeAgent);
@@ -50,7 +55,13 @@ class AgentMissionAssignment {
       return this.closeActive(agentId, options);
     }
 
-    const equipe = db.prepare("SELECT id, mission_id FROM equipes WHERE id = ?").get(equipeId);
+    const equipe = db.prepare(`
+      SELECT e.id, e.mission_id
+      FROM equipes e
+      JOIN missions m ON m.id = e.mission_id
+      WHERE e.id = ?
+        AND m.archived = 0
+    `).get(equipeId);
     if (!equipe) {
       throw new Error("invalid_assignment_team");
     }

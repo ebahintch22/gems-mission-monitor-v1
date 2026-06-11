@@ -140,9 +140,6 @@
         <i class="fa-solid fa-chevron-up sig-map-legend-chevron" aria-hidden="true"></i>
       </button>
       <div class="sig-map-legend-items" id="sig-map-legend-items">
-        <span class="legend-valid"><%= t("status.validee") %></span>
-        <span class="legend-check"><%= t("status.a_verifier") %></span>
-        <span class="legend-rejected"><%= t("status.rejetee") %></span>
       </div>
     </div>
     <div id="sig-map" aria-label="<%= t("sig.map.aria") %>"></div>
@@ -151,6 +148,7 @@
 
 <script id="sig-points-data" type="application/json"><%- JSON.stringify(points).replace(/</g, "\\u003c") %></script>
 <script id="sig-regions-data" type="application/json"><%- JSON.stringify(regions).replace(/</g, "\\u003c") %></script>
+<script id="sig-site-category-icons-data" type="application/json"><%- JSON.stringify(siteCategoryIcons).replace(/</g, "\\u003c") %></script>
 <script id="sig-i18n-data" type="application/json"><%- JSON.stringify({
   locale,
   messages: {
@@ -224,6 +222,7 @@
   }
 }).replace(/</g, "\\u003c") %></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-extra-markers@1.2.2/dist/js/leaflet.extra-markers.min.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
 <script src="/js/cartographie.js"></script>

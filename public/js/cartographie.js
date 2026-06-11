@@ -1,6 +1,7 @@
 (function () {
   const points = JSON.parse(document.getElementById("sig-points-data").textContent);
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
+  const siteCategoryIcons = JSON.parse(document.getElementById("sig-site-category-icons-data").textContent);
   const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
   const messages = i18nPayload.messages || {};
   const filterLabels = i18nPayload.filters || {};
@@ -14,6 +15,7 @@
   const toolsClose = document.getElementById("sig-tools-close");
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
+  const mapLegendItems = document.getElementById("sig-map-legend-items");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
@@ -37,6 +39,28 @@
     a_verifier: "#d38b13",
     rejetee: "#b84545"
   };
+  const markerColorHex = {
+    red: "#d63e2a",
+    pink: "#ff89b5",
+    blue: "#2a81cb",
+    cadetblue: "#436978",
+    purple: "#9c2bcb",
+    green: "#3ca642",
+    darkblue: "#1f4e79",
+    orange: "#f69730",
+    darkgreen: "#2f6b3f",
+    gray: "#777777"
+  };
+  const extraMarkerColorMap = {
+    cadetblue: "blue",
+    darkblue: "blue",
+    darkgreen: "green",
+    gray: "black"
+  };
+  const siteCategoryIndex = (siteCategoryIcons.categories || []).reduce(function (index, category) {
+    index[category.name] = category;
+    return index;
+  }, {});
   const baseLayers = {
     [t("layerHumanitarian")]: L.tileLayer("https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png", {
       maxZoom: 20,
@@ -175,6 +199,115 @@
     } catch (error) {
       return {};
     }
+  }
+
+  function rawValue(raw, path) {
+    if (Object.prototype.hasOwnProperty.call(raw, path)) {
+      return raw[path];
+    }
+    return String(path).split(".").reduce(function (current, part) {
+      if (current === null || current === undefined) {
+        return undefined;
+      }
+      return current[part];
+    }, raw);
+  }
+
+  function normalizeCategory(value) {
+    return String(value || "").trim().toLowerCase();
+  }
+
+  function categoryForPoint(point) {
+    const raw = rawData(point);
+    const sousType = normalizeCategory(rawValue(raw, "modB.sous_type") || rawValue(raw, "modB/sous_type"));
+    if (sousType && siteCategoryIndex[sousType]) {
+      return siteCategoryIndex[sousType];
+    }
+
+    const secteur = normalizeCategory(rawValue(raw, "modB.type_infra") || rawValue(raw, "modB/type_infra"));
+    const fallbackName = siteCategoryIcons.sectorFallbacks?.[secteur];
+    if (fallbackName && siteCategoryIndex[fallbackName]) {
+      return siteCategoryIndex[fallbackName];
+    }
+
+    return siteCategoryIcons.fallback;
+  }
+
+  function extraMarkerIcon(category) {
+    if (!L.ExtraMarkers) {
+      return null;
+    }
+
+    return L.ExtraMarkers.icon({
+      icon: category.icon || siteCategoryIcons.fallback.icon,
+      markerColor: extraMarkerColorMap[category.markerColor] || category.markerColor || siteCategoryIcons.fallback.markerColor,
+      prefix: "fa",
+      shape: "circle"
+    });
+  }
+
+  function createSiteMarker(point) {
+    const category = categoryForPoint(point);
+    const markerIcon = extraMarkerIcon(category);
+
+    if (markerIcon) {
+      return L.marker([point.latitude, point.longitude], {
+        icon: markerIcon,
+        pane: "collectionPointsPane",
+        title: category.label
+      });
+    }
+
+    return L.circleMarker([point.latitude, point.longitude], {
+      pane: "collectionPointsPane",
+      color: markerColorHex[category.markerColor] || markerColorHex.gray,
+      fillColor: markerColorHex[category.markerColor] || markerColorHex.gray,
+      fillOpacity: 0.82,
+      radius: 6,
+      weight: 1
+    });
+  }
+
+  function renderCategoryLegend() {
+    const sectors = {};
+    (siteCategoryIcons.categories || []).forEach(function (category) {
+      const secteur = category.secteur || "autres";
+      if (!sectors[secteur]) {
+        sectors[secteur] = [];
+      }
+      sectors[secteur].push(category);
+    });
+
+    mapLegendItems.replaceChildren();
+    Object.keys(sectors).forEach(function (secteur) {
+      const group = document.createElement("section");
+      const heading = document.createElement("h3");
+      const list = document.createElement("div");
+
+      group.className = "sig-map-legend-group";
+      heading.textContent = siteCategoryIcons.sectorLabels?.[secteur] || secteur;
+      list.className = "sig-map-legend-list";
+
+      sectors[secteur].forEach(function (category) {
+        const item = document.createElement("span");
+        const swatch = document.createElement("span");
+        const icon = document.createElement("i");
+        const label = document.createElement("span");
+
+        item.className = "sig-map-legend-item";
+        swatch.className = "sig-map-legend-symbol";
+        swatch.style.backgroundColor = markerColorHex[category.markerColor] || markerColorHex.gray;
+        icon.className = `fa-solid ${category.icon}`;
+        icon.setAttribute("aria-hidden", "true");
+        label.textContent = category.label;
+        swatch.append(icon);
+        item.append(swatch, label);
+        list.append(item);
+      });
+
+      group.append(heading, list);
+      mapLegendItems.append(group);
+    });
   }
 
   function valueOrDash(value) {
@@ -365,18 +498,8 @@
     clusteredMarkersLayer.clearLayers();
     plainMarkersLayer.clearLayers();
     visiblePoints.forEach(function (point) {
-      const markerOptions = {
-        pane: "collectionPointsPane",
-        color: colors[point.statut_validation],
-        fillColor: colors[point.statut_validation],
-        fillOpacity: 0.8,
-        radius: 5,
-        weight: 1
-      };
-      const clusteredMarker = L.circleMarker([point.latitude, point.longitude], markerOptions)
-        .bindPopup(popupContent(point));
-      const plainMarker = L.circleMarker([point.latitude, point.longitude], markerOptions)
-        .bindPopup(popupContent(point));
+      const clusteredMarker = createSiteMarker(point).bindPopup(popupContent(point));
+      const plainMarker = createSiteMarker(point).bindPopup(popupContent(point));
       clusteredMarker.on("click", function () {
         showSiteIdentification(point);
       });
@@ -535,6 +658,7 @@
   if (territoryLayer.getBounds().isValid()) {
     map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
   }
+  renderCategoryLegend();
   setMissionScopedFilters({ equipes: [], agents: [] });
   renderPoints(false);
 }());

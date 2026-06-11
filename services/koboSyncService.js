@@ -86,9 +86,9 @@ async function syncKoboSubmissions({
     throw new Error("La mission G2M est requise pour synchroniser les soumissions.");
   }
 
-  const mission = Mission.findById(normalizedMissionId);
+  const mission = Mission.findActiveById(normalizedMissionId);
   if (!mission) {
-    throw new Error(`Mission G2M introuvable pour l'id ${normalizedMissionId}.`);
+    throw new Error(`Mission G2M active introuvable pour l'id ${normalizedMissionId}.`);
   }
 
   const params = {

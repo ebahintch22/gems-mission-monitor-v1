@@ -38,6 +38,7 @@ class SoumissionCollecte {
         s.submitted_at,
         s.latitude, s.longitude, s.precision_m,
         s.statut_validation, s.anomaly_count, s.raw_data_json,
+        m.archived AS mission_archived,
         a.code_agent, a.nom AS agent_nom, a.prenoms AS agent_prenoms,
         e.nom_equipe, m.name AS mission_name,
         sp.nom_sous_prefecture, d.nom_departement, r.nom_region
@@ -48,6 +49,7 @@ class SoumissionCollecte {
       LEFT JOIN sous_prefectures sp ON sp.id = s.sous_prefecture_id
       LEFT JOIN departements d ON d.id = sp.departement_id
       LEFT JOIN regions r ON r.id = d.region_id
+      WHERE m.archived = 0
       ORDER BY s.submitted_at DESC
     `).all();
   }
@@ -61,6 +63,7 @@ class SoumissionCollecte {
         s.latitude, s.longitude, s.precision_m,
         s.statut_validation, s.anomaly_count,
         s.formulaire_type, s.raw_data_json, s.synced_at, s.created_at,
+        m.archived AS mission_archived,
         a.code_agent, a.nom AS agent_nom, a.prenoms AS agent_prenoms,
         e.nom_equipe, m.name AS mission_name,
         sp.nom_sous_prefecture, d.nom_departement, r.nom_region
@@ -81,18 +84,23 @@ class SoumissionCollecte {
         SELECT DISTINCT m.id, m.name
         FROM missions m
         JOIN soumissions_collecte s ON s.mission_id = m.id
+        WHERE m.archived = 0
         ORDER BY m.name
       `).all(),
       equipes: db.prepare(`
         SELECT DISTINCT e.id, e.nom_equipe
         FROM equipes e
         JOIN soumissions_collecte s ON s.equipe_id = e.id
+        JOIN missions m ON m.id = s.mission_id
+        WHERE m.archived = 0
         ORDER BY e.nom_equipe
       `).all(),
       agents: db.prepare(`
         SELECT DISTINCT a.id, a.code_agent, a.nom, a.prenoms
         FROM agents_collecte a
         JOIN soumissions_collecte s ON s.agent_id = a.id
+        JOIN missions m ON m.id = s.mission_id
+        WHERE m.archived = 0
         ORDER BY a.code_agent
       `).all()
     };
@@ -104,6 +112,11 @@ class SoumissionCollecte {
         SELECT id, nom_equipe
         FROM equipes
         WHERE mission_id = ?
+          AND EXISTS (
+            SELECT 1 FROM missions
+            WHERE missions.id = equipes.mission_id
+              AND missions.archived = 0
+          )
         ORDER BY nom_equipe
       `).all(missionId),
       agents: db.prepare(`
@@ -118,10 +131,17 @@ class SoumissionCollecte {
           FROM agent_mission_assignments
           WHERE mission_id = ?
             AND statut = 'active'
+            AND EXISTS (
+              SELECT 1 FROM missions
+              WHERE missions.id = agent_mission_assignments.mission_id
+                AND missions.archived = 0
+            )
           UNION
           SELECT agent_id
-          FROM soumissions_collecte
-          WHERE mission_id = ?
+          FROM soumissions_collecte s
+          JOIN missions m ON m.id = s.mission_id
+          WHERE s.mission_id = ?
+            AND m.archived = 0
             AND agent_id IS NOT NULL
         )
         ORDER BY a.code_agent

@@ -116,7 +116,7 @@ function normalizeValue(setting, value) {
       throw new Error("invalid_mission");
     }
 
-    const mission = db.prepare("SELECT id FROM missions WHERE id = ?").get(missionId);
+    const mission = db.prepare("SELECT id FROM missions WHERE id = ? AND archived = 0").get(missionId);
     if (!mission) {
       throw new Error("invalid_mission");
     }

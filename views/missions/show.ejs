@@ -12,6 +12,16 @@
     <% if (permissions?.has("missions.manage")) { %>
       <a class="button" href="/missions/<%= mission.id %>/edit"><%= t("common.edit") %></a>
     <% } %>
+    <% if (currentUser?.role === "admin" && mission.archived !== 1) { %>
+      <form action="/missions/<%= mission.id %>/archive" method="post">
+        <button class="button" type="submit"><%= t("missions.actions.archive") %></button>
+      </form>
+    <% } %>
+    <% if (currentUser?.role === "admin" && mission.archived === 1) { %>
+      <form action="/missions/<%= mission.id %>/unarchive" method="post">
+        <button class="button button-primary" type="submit"><%= t("missions.actions.unarchive") %></button>
+      </form>
+    <% } %>
     <a class="button" href="/missions"><%= t("missions.show.back") %></a>
   </div>
 </section>

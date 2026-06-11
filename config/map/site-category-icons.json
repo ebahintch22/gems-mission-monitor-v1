@@ -1,0 +1,53 @@
+{
+  "fallback": {
+    "name": "unknown",
+    "label": "Categorie inconnue",
+    "secteur": "autres",
+    "icon": "fa-location-dot",
+    "markerColor": "gray"
+  },
+  "sectorLabels": {
+    "sante": "Santé",
+    "education": "Éducation",
+    "formation": "Formation",
+    "justice": "Justice",
+    "etat_civil": "État civil / Administration",
+    "centre_social": "Social",
+    "direction_reg": "Direction régionale",
+    "autres": "Autres"
+  },
+  "sectorFallbacks": {
+    "sante": "csu",
+    "education": "ecole",
+    "formation": "centre_fp",
+    "justice": "tpi",
+    "etat_civil": "prefecture",
+    "centre_social": "centre_social_s",
+    "direction_reg": "direction_reg_s",
+    "autres": "autres_s"
+  },
+  "categories": [
+    { "name": "chu", "label": "CHU", "secteur": "sante", "icon": "fa-hospital", "markerColor": "red" },
+    { "name": "chr", "label": "CHR", "secteur": "sante", "icon": "fa-hospital-user", "markerColor": "red" },
+    { "name": "hopital", "label": "Hôpital général", "secteur": "sante", "icon": "fa-briefcase-medical", "markerColor": "red" },
+    { "name": "csu", "label": "Centre de santé urbain/rural", "secteur": "sante", "icon": "fa-house-medical", "markerColor": "red" },
+    { "name": "dispensaire", "label": "Dispensaire", "secteur": "sante", "icon": "fa-kit-medical", "markerColor": "red" },
+    { "name": "pmi", "label": "PMI", "secteur": "sante", "icon": "fa-baby", "markerColor": "pink" },
+    { "name": "ecole", "label": "École primaire", "secteur": "education", "icon": "fa-school", "markerColor": "blue" },
+    { "name": "college", "label": "Collège", "secteur": "education", "icon": "fa-chalkboard-user", "markerColor": "blue" },
+    { "name": "lycee", "label": "Lycée", "secteur": "education", "icon": "fa-graduation-cap", "markerColor": "blue" },
+    { "name": "universite", "label": "Université", "secteur": "education", "icon": "fa-building-columns", "markerColor": "blue" },
+    { "name": "centre_fp", "label": "Centre de formation prof.", "secteur": "formation", "icon": "fa-screwdriver-wrench", "markerColor": "cadetblue" },
+    { "name": "lycee_tech", "label": "Lycée technique", "secteur": "formation", "icon": "fa-gears", "markerColor": "cadetblue" },
+    { "name": "tpi", "label": "Tribunal de 1re instance", "secteur": "justice", "icon": "fa-scale-balanced", "markerColor": "purple" },
+    { "name": "cour_appel", "label": "Cour d'appel", "secteur": "justice", "icon": "fa-gavel", "markerColor": "purple" },
+    { "name": "etat_civil_c", "label": "Centre d'état civil", "secteur": "justice", "icon": "fa-id-card", "markerColor": "purple" },
+    { "name": "prefecture", "label": "Préfecture", "secteur": "etat_civil", "icon": "fa-landmark", "markerColor": "green" },
+    { "name": "sous_prefecture", "label": "Sous-préfecture", "secteur": "etat_civil", "icon": "fa-building-flag", "markerColor": "green" },
+    { "name": "mairie", "label": "Mairie", "secteur": "etat_civil", "icon": "fa-city", "markerColor": "green" },
+    { "name": "commissariat", "label": "Commissariat", "secteur": "etat_civil", "icon": "fa-shield-halved", "markerColor": "darkblue" },
+    { "name": "centre_social_s", "label": "Centre social", "secteur": "centre_social", "icon": "fa-people-group", "markerColor": "orange" },
+    { "name": "direction_reg_s", "label": "Direction régionale", "secteur": "direction_reg", "icon": "fa-sitemap", "markerColor": "darkgreen" },
+    { "name": "autres_s", "label": "Autres", "secteur": "autres", "icon": "fa-location-dot", "markerColor": "gray" }
+  ]
+}

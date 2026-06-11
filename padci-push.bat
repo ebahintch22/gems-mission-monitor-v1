@@ -3,7 +3,7 @@ setlocal
 chcp 65001 >nul
 
 set "COMMIT_MESSAGE=%~1"
-if "%COMMIT_MESSAGE%"=="" set "COMMIT_MESSAGE=Livraison v0.9 du 10 juin 2026 - MVP
+if "%COMMIT_MESSAGE%"=="" set "COMMIT_MESSAGE=Livraison v0.9 du 11/06/2026 - MVP v2
 
 git status
 git add .

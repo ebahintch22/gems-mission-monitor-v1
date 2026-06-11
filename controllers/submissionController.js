@@ -8,6 +8,9 @@ exports.detail = (req, res) => {
   if (!submission) {
     return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
   }
+  if (submission.mission_archived === 1 && req.currentUser?.role !== "admin") {
+    return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
+  }
 
   const detail = buildSubmissionDetail(submission);
 
@@ -21,6 +24,9 @@ exports.report = (req, res) => {
   const submission = SoumissionCollecte.findById(req.params.id);
 
   if (!submission) {
+    return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
+  }
+  if (submission.mission_archived === 1 && req.currentUser?.role !== "admin") {
     return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
   }
 

@@ -550,6 +550,16 @@ db.exec(`
     ON soumissions_collecte(assignment_id);
 `);
 
+const missionColumns = db.prepare("PRAGMA table_info('missions')").all()
+  .map((column) => column.name);
+addColumnIfMissing(missionColumns, "missions", "archived", "INTEGER NOT NULL DEFAULT 0");
+addColumnIfMissing(missionColumns, "missions", "archived_at", "TEXT");
+addColumnIfMissing(missionColumns, "missions", "archived_by", "INTEGER");
+db.exec(`
+  CREATE INDEX IF NOT EXISTS idx_missions_archived
+    ON missions(archived);
+`);
+
 seedCurrentAgentAssignments();
 seedDefaultSettings();
 seedAppMetadata();

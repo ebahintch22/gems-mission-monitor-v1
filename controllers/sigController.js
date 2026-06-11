@@ -1,4 +1,5 @@
 const SoumissionCollecte = require("../models/SoumissionCollecte");
+const siteCategoryIcons = require("../config/map/site-category-icons.json");
 
 exports.index = (req, res) => {
   const points = SoumissionCollecte.mapPoints();
@@ -16,6 +17,7 @@ exports.index = (req, res) => {
     title: req.t("sig.title"),
     points,
     regions,
+    siteCategoryIcons,
     filters: SoumissionCollecte.mapFilters()
   });
 };

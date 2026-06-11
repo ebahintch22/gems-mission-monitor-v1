@@ -1479,6 +1479,68 @@ test("controle d'acces du bloc missions", async () => {
   assert.equal(updateResponse.status, 403);
 });
 
+test("archivage et desarchivage d'une mission", async () => {
+  const adminCookie = await loginAdmin("admin.mission-archive@g2m.test");
+  const readerCookie = await loginTestUser({
+    email: "reader.mission-archive@g2m.test",
+    role: "specialiste_gis"
+  });
+  const missionResult = db.prepare(`
+    INSERT INTO missions (
+      name, region, status, start_date, end_date, collectors,
+      kobo_asset_uid, latitude, longitude
+    ) VALUES (
+      'Mission archive test', 'Region archive', 'en_cours',
+      '2026-06-01', NULL, 3, 'ARCHIVE-ASSET', 7.1, -5.1
+    )
+  `).run();
+  const missionId = missionResult.lastInsertRowid;
+  const submissionResult = db.prepare(`
+    INSERT INTO soumissions_collecte (
+      source, source_submission_id, mission_id, submitted_at,
+      latitude, longitude, statut_validation, anomaly_count,
+      formulaire_type, raw_data_json
+    ) VALUES (
+      'simulation', 'ARCHIVE-SUB-001', ?, '2026-06-10T10:00:00.000Z',
+      7.1, -5.1, 'validee', 0,
+      'padci_survey_terrain_vf_v12',
+      '{"modB":{"nom_officiel":"Site archive","type_infra":"education","sous_type":"ecole"}}'
+    )
+  `).run(missionId);
+
+  const archiveResponse = await request(app)
+    .post(`/missions/${missionId}/archive`)
+    .set("Cookie", adminCookie);
+  const listResponse = await request(app).get("/missions").set("Cookie", readerCookie);
+  const archiveListDenied = await request(app).get("/missions/archives").set("Cookie", readerCookie);
+  const archiveList = await request(app).get("/missions/archives").set("Cookie", adminCookie);
+  const mapResponse = await request(app).get("/cartographie").set("Cookie", readerCookie);
+  const readerSubmissionResponse = await request(app)
+    .get(`/soumissions/${submissionResult.lastInsertRowid}/report`)
+    .set("Cookie", readerCookie);
+  const adminSubmissionResponse = await request(app)
+    .get(`/soumissions/${submissionResult.lastInsertRowid}/report`)
+    .set("Cookie", adminCookie);
+
+  assert.equal(archiveResponse.status, 302);
+  assert.equal(archiveResponse.headers.location, "/missions/archives");
+  assert.doesNotMatch(listResponse.text, /Mission archive test/);
+  assert.equal(archiveListDenied.status, 403);
+  assert.match(archiveList.text, /Mission archive test/);
+  assert.doesNotMatch(mapResponse.text, /ARCHIVE-SUB-001/);
+  assert.equal(readerSubmissionResponse.status, 404);
+  assert.equal(adminSubmissionResponse.status, 200);
+
+  const unarchiveResponse = await request(app)
+    .post(`/missions/${missionId}/unarchive`)
+    .set("Cookie", adminCookie);
+  const restoredListResponse = await request(app).get("/missions").set("Cookie", readerCookie);
+
+  assert.equal(unarchiveResponse.status, 302);
+  assert.equal(unarchiveResponse.headers.location, `/missions/${missionId}`);
+  assert.match(restoredListResponse.text, /Mission archive test/);
+});
+
 test("creation d'un superviseur avec plusieurs regions", async () => {
   const adminCookie = await loginAdmin("admin.users-crud@g2m.test");
   const regions = db.prepare(`
