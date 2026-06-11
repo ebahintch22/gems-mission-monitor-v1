@@ -15,7 +15,7 @@ exports.detail = (req, res) => {
   const detail = buildSubmissionDetail(submission);
 
   return res.render("soumissions/detail", {
-    title: `Soumission ${submission.source_submission_id}`,
+    title: `Soumission ${submission.display_submission_id || submission.source_submission_id}`,
     detail
   });
 };
@@ -33,7 +33,7 @@ exports.report = (req, res) => {
   const report = buildSubmissionReport(submission);
 
   return res.render("soumissions/report", {
-    title: `Rapport ${submission.source_submission_id}`,
+    title: `Rapport ${submission.display_submission_id || submission.source_submission_id}`,
     submission,
     report
   });

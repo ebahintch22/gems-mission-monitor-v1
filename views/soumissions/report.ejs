@@ -3,7 +3,7 @@
   <div>
     <p class="eyebrow"><%= report.header.eyebrow %></p>
     <h1><%= report.header.title %></h1>
-    <p class="muted"><%= report.template.label %> - <%= report.header.subtitle || submission.source_submission_id %></p>
+    <p class="muted"><%= report.template.label %> - <%= report.header.subtitle || submission.display_submission_id || submission.source_submission_id %></p>
   </div>
   <div class="heading-actions">
     <a class="button" href="/soumissions/<%= submission.id %>/detail">Ancienne fiche</a>

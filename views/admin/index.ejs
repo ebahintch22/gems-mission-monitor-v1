@@ -52,6 +52,13 @@
     <h2><%= t("admin.cards.monitoring.title") %></h2>
     <p><%= t("admin.cards.monitoring.description") %></p>
   </a>
+  <% if (currentUser?.role === "admin") { %>
+    <a class="panel admin-card" href="/admin/login-history">
+      <i class="fa-solid fa-clock-rotate-left" aria-hidden="true"></i>
+      <h2><%= t("admin.cards.loginHistory.title") %></h2>
+      <p><%= t("admin.cards.loginHistory.description") %></p>
+    </a>
+  <% } %>
   <% if (permissions && permissions.has("permissions.manage")) { %>
     <a class="panel admin-card" href="/admin/permissions">
       <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>

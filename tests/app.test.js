@@ -246,20 +246,12 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigation, /href="\/login"/);
   assert.match(navigation, /Connexion/);
   assert.match(navigation, /fa-solid fa-right-to-bracket/);
-  assert.match(navigation, /fa-solid fa-sliders/);
-  assert.match(navigation, /title="Personnalisation"/);
-  assert.match(navigation, /Personnalisation/);
-  assert.match(navigation, /class="nav-menu-panel nav-personalization-panel"/);
-  assert.match(navigation, /href="\/\?lang=fr"[\s\S]*Français/);
-  assert.match(navigation, /href="\/\?lang=en"[\s\S]*English/);
-  assert.match(navigation, /href="\/\?lang=es"[\s\S]*Español/);
-  assert.match(navigation, /data-display-size-value="small"[\s\S]*Petit/);
-  assert.match(navigation, /data-display-size-value="medium"[\s\S]*Moyen/);
-  assert.match(navigation, /data-display-size-value="large"[\s\S]*Grand/);
-  assert.match(navigation, /class="nav-button nav-menu-trigger"/);
+  assert.doesNotMatch(navigation, /Personnalisation/);
+  assert.doesNotMatch(navigation, /data-display-size-value="small"/);
+  assert.doesNotMatch(navigation, /class="nav-button nav-menu-trigger"/);
   assert.doesNotMatch(navigation, /fa-solid fa-gear/);
   assert.doesNotMatch(navigation, /Param/);
-  assert.match(navigation, /fa-solid fa-chevron-down nav-menu-chevron/);
+  assert.doesNotMatch(navigation, /fa-solid fa-chevron-down nav-menu-chevron/);
   assert.doesNotMatch(navigation, /Visualisation/);
   assert.doesNotMatch(navigation, /fa-solid fa-eye/);
   assert.doesNotMatch(navigation, /class="nav-button" href="\/cartographie"/);
@@ -285,7 +277,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(styleResponse.text, /--font-body: 13px/);
   assert.match(styleResponse.text, /html\[data-display-size="large"\]/);
   assert.match(styleResponse.text, /--font-body: 18px/);
-  assert.match(styleResponse.text, /\.nav-personalization-panel/);
+  assert.match(styleResponse.text, /\.nav-display-size-row/);
   assert.match(styleResponse.text, /\.nav-menu-section-title/);
   assert.match(styleResponse.text, /\.display-size-option\.is-active/);
   assert.match(styleResponse.text, /input::placeholder,\s*textarea::placeholder/);
@@ -366,10 +358,8 @@ test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => 
   assert.match(response.text, /<html lang="en" data-display-size="medium">/);
   assert.match(response.text, /data-label-open="Show navigation menu"/);
   assert.match(response.text, /data-label-close="Hide navigation menu"/);
-  assert.match(response.text, /title="Personalization"/);
-  assert.match(response.text, /Language/);
-  assert.match(response.text, /Display size/);
-  assert.match(response.text, /class="is-active"[\s\S]*href="\/\?lang=en"[\s\S]*English/);
+  assert.doesNotMatch(response.text, /title="Personalization"/);
+  assert.doesNotMatch(response.text, /data-display-size-value="small"/);
   assert.match(response.text, /Operational monitoring/);
   assert.match(response.text, /Synthetic view of registered collection missions/);
   assert.match(response.text, /Create a mission/);
@@ -388,7 +378,7 @@ test("GET /?lang=es utilise les ressources espagnoles du dashboard", async () =>
   assert.match(response.text, /Vista sint/);
   assert.match(response.text, /Crear una misi/);
   assert.match(response.text, /Misiones recientes/);
-  assert.match(response.text, /class="is-active is-hidden"[\s\S]*href="\/\?lang=es"[\s\S]*Espa/);
+  assert.doesNotMatch(response.text, /data-display-size-value="small"/);
 });
 
 test("GET /infographies expose les pages factices", async () => {

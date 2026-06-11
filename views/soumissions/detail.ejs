@@ -3,7 +3,7 @@
   <div>
     <p class="eyebrow">Visualisation decisionnelle</p>
     <h1><%= detail.title %></h1>
-    <p class="muted"><%= detail.mapping.label %> - <%= detail.subtitle || detail.record.source_submission_id %></p>
+    <p class="muted"><%= detail.mapping.label %> - <%= detail.subtitle || detail.record.display_submission_id || detail.record.source_submission_id %></p>
   </div>
   <div class="heading-actions">
     <a class="button" href="/cartographie">Retour cartographie</a>
@@ -64,7 +64,7 @@
       <h2>Contexte collecte</h2>
       <dl class="submission-field-list submission-field-list-compact">
         <dt>ID soumission</dt>
-        <dd><%= detail.record.source_submission_id %></dd>
+        <dd><%= detail.record.display_submission_id || detail.record.source_submission_id %></dd>
         <dt>Mission</dt>
         <dd><%= detail.record.mission_name || "-" %></dd>
         <dt>Equipe</dt>

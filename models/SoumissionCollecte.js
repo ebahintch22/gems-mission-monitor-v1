@@ -1,4 +1,5 @@
 const db = require("../config/database");
+const { attachDisplaySubmissionId, attachDisplaySubmissionIds } = require("../services/submissionIdentityService");
 
 class SoumissionCollecte {
   static insertKobo(input) {
@@ -31,7 +32,7 @@ class SoumissionCollecte {
   }
 
   static mapPoints() {
-    return db.prepare(`
+    return attachDisplaySubmissionIds(db.prepare(`
       SELECT
         s.id, s.source_submission_id, s.mission_id, s.equipe_id, s.agent_id,
         s.assignment_id,
@@ -51,11 +52,11 @@ class SoumissionCollecte {
       LEFT JOIN regions r ON r.id = d.region_id
       WHERE m.archived = 0
       ORDER BY s.submitted_at DESC
-    `).all();
+    `).all());
   }
 
   static findById(id) {
-    return db.prepare(`
+    return attachDisplaySubmissionId(db.prepare(`
       SELECT
         s.id, s.source, s.source_submission_id, s.kobo_asset_uid,
         s.mission_id, s.equipe_id, s.agent_id, s.assignment_id, s.sous_prefecture_id,
@@ -75,7 +76,7 @@ class SoumissionCollecte {
       LEFT JOIN departements d ON d.id = sp.departement_id
       LEFT JOIN regions r ON r.id = d.region_id
       WHERE s.id = ?
-    `).get(id);
+    `).get(id));
   }
 
   static mapFilters() {

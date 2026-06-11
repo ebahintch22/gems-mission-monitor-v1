@@ -8,6 +8,7 @@ const excludedTables = new Set([
   "settings",
   "app_metadata",
   "audit_logs",
+  "user_logins",
   "activation_tokens",
   "user_invitations"
 ]);

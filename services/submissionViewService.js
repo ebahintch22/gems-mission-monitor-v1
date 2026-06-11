@@ -21,7 +21,7 @@ function buildSubmissionDetail(record) {
     mapping,
     sections,
     summary,
-    title: readPath(rawData, "modB.nom_officiel") || record.source_submission_id,
+    title: readPath(rawData, "modB.nom_officiel") || record.display_submission_id || record.source_submission_id,
     subtitle: [
       readPath(rawData, "modA.id_entite"),
       record.nom_sous_prefecture,

@@ -46,7 +46,7 @@
         { "label": "Équipe", "path": "nom_equipe", "optional": true },
         { "label": "Agent", "path": "code_agent", "fallbackPath": "code_agent_source", "optional": true },
         { "label": "Soumis le", "path": "submitted_at", "format": "date" },
-        { "label": "ID soumission", "path": "source_submission_id" },
+        { "label": "ID soumission", "path": "display_submission_id", "fallbackPath": "source_submission_id" },
         { "label": "Anomalies", "path": "anomaly_count", "format": "number" }
       ]
     },

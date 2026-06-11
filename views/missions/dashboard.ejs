@@ -88,7 +88,7 @@
       <tbody>
         <% dashboard.recentSubmissions.forEach((submission) => { %>
           <tr>
-            <td><a href="/soumissions/<%= submission.id %>/report"><%= submission.source_submission_id %></a></td>
+            <td><a href="/soumissions/<%= submission.id %>/report"><%= submission.display_submission_id || submission.source_submission_id %></a></td>
             <td><%= submission.code_agent || "-" %></td>
             <td><%= submission.nom_equipe || "-" %></td>
             <td><span class="status status-<%= submission.statut_validation %>"><%= t(`status.${submission.statut_validation}`) %></span></td>

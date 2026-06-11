@@ -177,7 +177,7 @@
     const date = document.createElement("div");
     const status = document.createElement("div");
 
-    heading.textContent = point.source_submission_id;
+    heading.textContent = point.display_submission_id || point.source_submission_id;
     agent.textContent = `${point.code_agent || t("unlinkedAgent")} - ${point.nom_equipe || t("noTeam")}`;
     locality.textContent = [
       point.nom_sous_prefecture,
@@ -352,7 +352,8 @@
     const modD = raw.modD || {};
     const modE = raw.modE || {};
     const modN = raw.modN || {};
-    const siteName = modB.nom_officiel || point.source_submission_id;
+    const submissionDisplayId = point.display_submission_id || point.source_submission_id;
+    const siteName = modB.nom_officiel || submissionDisplayId;
     const latitude = Number(point.latitude).toFixed(6);
     const longitude = Number(point.longitude).toFixed(6);
 
@@ -368,7 +369,7 @@
     addDetailAction(point.id);
 
     addSection(t("identification"), [
-      [t("sheetId"), modA.fiche_id || point.source_submission_id],
+      [t("sheetId"), modA.fiche_id || submissionDisplayId],
       [t("entityId"), modA.id_entite],
       [t("officialName"), modB.nom_officiel],
       [t("ministry"), modB.ministere],

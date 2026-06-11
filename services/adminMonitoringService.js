@@ -1,4 +1,5 @@
 const db = require("../config/database");
+const { attachDisplaySubmissionIds } = require("./submissionIdentityService");
 
 function getMonitoringSnapshot() {
   return {
@@ -18,13 +19,13 @@ function submissionsBySource() {
 }
 
 function latestKoboSubmissions() {
-  return db.prepare(`
-    SELECT id, source_submission_id, kobo_asset_uid, submitted_at, synced_at, statut_validation
+  return attachDisplaySubmissionIds(db.prepare(`
+    SELECT id, source_submission_id, raw_data_json, kobo_asset_uid, submitted_at, synced_at, statut_validation
     FROM soumissions_collecte
     WHERE source = 'kobo'
     ORDER BY synced_at DESC
     LIMIT 10
-  `).all();
+  `).all());
 }
 
 function latestAuditLogs() {

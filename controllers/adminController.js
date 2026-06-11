@@ -3,6 +3,7 @@ const AppMetadata = require("../models/AppMetadata");
 const Mission = require("../models/Mission");
 const Permission = require("../models/Permission");
 const Setting = require("../models/Setting");
+const UserLogin = require("../models/UserLogin");
 const { getMonitoringSnapshot } = require("../services/adminMonitoringService");
 const { getDatabaseStats, getTablePreview } = require("../services/databaseStatsService");
 const { hasSmtpConfig, resolveMailEnv, sendMail } = require("../services/mailService");
@@ -164,6 +165,13 @@ exports.monitoring = (req, res) => {
   res.render("admin/monitoring", {
     title: req.t("admin.monitoring.title"),
     monitoring: getMonitoringSnapshot()
+  });
+};
+
+exports.loginHistory = (req, res) => {
+  res.render("admin/login-history", {
+    title: req.t("admin.loginHistory.title"),
+    loginAttempts: UserLogin.recent(200)
   });
 };
 

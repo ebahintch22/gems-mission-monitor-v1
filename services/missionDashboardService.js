@@ -1,4 +1,5 @@
 const db = require("../config/database");
+const { attachDisplaySubmissionIds } = require("./submissionIdentityService");
 
 function getMissionDashboard(missionId) {
   const mission = db.prepare("SELECT * FROM missions WHERE id = ?").get(missionId);
@@ -47,10 +48,11 @@ function getMetrics(missionId) {
 }
 
 function getRecentSubmissions(missionId, limit = 8) {
-  return db.prepare(`
+  return attachDisplaySubmissionIds(db.prepare(`
     SELECT
       s.id,
       s.source_submission_id,
+      s.raw_data_json,
       s.submitted_at,
       s.statut_validation,
       s.anomaly_count,
@@ -64,7 +66,7 @@ function getRecentSubmissions(missionId, limit = 8) {
     WHERE s.mission_id = ?
     ORDER BY s.submitted_at DESC
     LIMIT ?
-  `).all(missionId, limit);
+  `).all(missionId, limit));
 }
 
 function getSubmissionsByStatus(missionId) {

@@ -463,6 +463,26 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at
     ON audit_logs(created_at);
 
+  CREATE TABLE IF NOT EXISTS user_logins (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    email TEXT,
+    success INTEGER NOT NULL CHECK (success IN (0, 1)),
+    failure_reason TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_user_logins_created_at
+    ON user_logins(created_at);
+
+  CREATE INDEX IF NOT EXISTS idx_user_logins_user_id
+    ON user_logins(user_id);
+
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT,

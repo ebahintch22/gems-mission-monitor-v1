@@ -1,6 +1,6 @@
 const express = require("express");
 const adminController = require("../controllers/adminController");
-const { requireAuth } = require("../middlewares/authMiddleware");
+const { requireAuth, requireRole } = require("../middlewares/authMiddleware");
 const { requirePermission } = require("../middlewares/permissionMiddleware");
 
 const router = express.Router();
@@ -18,6 +18,7 @@ router.post("/seeds/import", requirePermission("seed.manage"), adminController.i
 router.get("/email-test", requirePermission("email.test"), adminController.emailTest);
 router.post("/email-test", requirePermission("email.test"), adminController.sendEmailTest);
 router.get("/monitoring", requirePermission("monitoring.read"), adminController.monitoring);
+router.get("/login-history", requireRole("admin"), adminController.loginHistory);
 router.get("/permissions", requirePermission("permissions.manage"), adminController.permissions);
 router.post("/permissions", requirePermission("permissions.manage"), adminController.updatePermissions);
 

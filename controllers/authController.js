@@ -1,6 +1,7 @@
 const AuditLog = require("../models/AuditLog");
 const User = require("../models/User");
 const UserInvitation = require("../models/UserInvitation");
+const UserLogin = require("../models/UserLogin");
 const { sendActivationLink } = require("../services/activationMailService");
 const { verifyPassword } = require("../services/passwordService");
 const { clearAuthCookie, signAuthCookie } = require("../middlewares/authMiddleware");
@@ -22,6 +23,7 @@ exports.login = async (req, res) => {
   const invalidError = req.t("auth.login.error");
 
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email || "")) {
+    recordLoginAttempt(req, { email, success: false, failureReason: "invalid_email" });
     return renderLogin(req, res, values, invalidError, null, 400);
   }
 
@@ -29,29 +31,34 @@ exports.login = async (req, res) => {
   if (!user) {
     await sendInvitationIfPending(email, req);
     AuditLog.create(logContext(req, "auth.login_unknown_or_invited", null, { email }));
+    recordLoginAttempt(req, { email, success: false, failureReason: "unknown_user_or_invited" });
     return renderLogin(req, res, values, null, genericNotice);
   }
 
   if (user.statut === "invite" || !user.email_verified) {
     await sendInvitationIfPending(email, req);
     AuditLog.create(logContext(req, "activation.email_requested", user.id, { email }));
+    recordLoginAttempt(req, { userId: user.id, email, success: false, failureReason: "not_activated" });
     return renderLogin(req, res, values, null, genericNotice);
   }
 
   if (user.statut !== "actif") {
     AuditLog.create(logContext(req, "auth.login_blocked_status", user.id, { statut: user.statut }));
+    recordLoginAttempt(req, { userId: user.id, email, success: false, failureReason: "blocked_status" });
     return renderLogin(req, res, values, invalidError, null, 403);
   }
 
   const validPassword = await verifyPassword(password, user.password_hash);
   if (!validPassword) {
     AuditLog.create(logContext(req, "auth.login_failed", user.id));
+    recordLoginAttempt(req, { userId: user.id, email, success: false, failureReason: "invalid_password" });
     return renderLogin(req, res, values, invalidError, null, 401);
   }
 
   User.updateLastLogin(user.id);
   signAuthCookie(res, user);
   AuditLog.create(logContext(req, "auth.login_success", user.id));
+  recordLoginAttempt(req, { userId: user.id, email, success: true });
   return res.redirect(req.body.next || "/");
 };
 
@@ -85,4 +92,15 @@ function logContext(req, action, targetUserId = null, details = null) {
     user_agent: req.get("user-agent"),
     details
   };
+}
+
+function recordLoginAttempt(req, { userId = null, email = null, success, failureReason = null }) {
+  UserLogin.create({
+    userId,
+    email,
+    success,
+    failureReason,
+    ipAddress: req.ip,
+    userAgent: req.get("user-agent")
+  });
 }

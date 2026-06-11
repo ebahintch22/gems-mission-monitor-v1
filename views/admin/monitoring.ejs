@@ -59,7 +59,7 @@
         <% monitoring.latestKoboSubmissions.forEach((row) => { %>
           <tr>
             <td><%= row.id %></td>
-            <td><code><%= row.source_submission_id %></code></td>
+            <td><code><%= row.display_submission_id || row.source_submission_id %></code></td>
             <td><%= row.submitted_at %></td>
             <td><%= row.synced_at %></td>
             <td><%= row.statut_validation %></td>
