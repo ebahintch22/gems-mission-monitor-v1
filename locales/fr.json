@@ -67,6 +67,7 @@
   "common.notAssigned": "Non affecté",
   "common.noAccount": "Sans compte",
   "common.noAppAccount": "Sans compte applicatif",
+  "common.loading": "Chargement...",
   "common.errors": "Erreurs",
   "status.planifiee": "planifiée",
   "status.en_cours": "en cours",

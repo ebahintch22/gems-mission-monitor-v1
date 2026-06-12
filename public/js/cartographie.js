@@ -16,6 +16,7 @@
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const mapLegendItems = document.getElementById("sig-map-legend-items");
+  const loadingOverlay = document.getElementById("sig-loading-overlay");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
@@ -96,6 +97,26 @@
 
   baseLayers[t("layerRoad")].addTo(map);
 
+  function showLoading(message) {
+    if (!loadingOverlay) {
+      return;
+    }
+    const label = loadingOverlay.querySelector("span");
+    if (label && message) {
+      label.textContent = message;
+    }
+    loadingOverlay.classList.add("is-active");
+    loadingOverlay.setAttribute("aria-busy", "true");
+  }
+
+  function hideLoading() {
+    if (!loadingOverlay) {
+      return;
+    }
+    loadingOverlay.classList.remove("is-active");
+    loadingOverlay.setAttribute("aria-busy", "false");
+  }
+
   const territoryLayer = L.geoJSON(regions, {
     pane: "territoryPane",
     style: {
@@ -163,11 +184,27 @@
       { title: t("tableTeam"), field: "nom_equipe", minWidth: 115 },
       { title: t("tableSubpref"), field: "nom_sous_prefecture", minWidth: 115 },
       { title: t("status"), field: "statut_validation", minWidth: 95 }
-    ],
-    rowClick: function (event, row) {
-      showSiteIdentification(row.getData());
-    }
+    ]
   });
+
+  table.on("rowClick", function (event, row) {
+    const point = row.getData();
+    flyToSubmission(point);
+    showSiteIdentification(point);
+  });
+
+  function flyToSubmission(point) {
+    const latitude = Number(point.latitude);
+    const longitude = Number(point.longitude);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return;
+    }
+    map.flyTo([latitude, longitude], Math.max(map.getZoom(), 15), {
+      animate: true,
+      duration: 0.9
+    });
+    map.invalidateSize();
+  }
 
   function popupContent(point) {
     const content = document.createElement("div");
@@ -408,6 +445,7 @@
     ]);
 
     siteIdentification.classList.add("is-open");
+    workspace.classList.add("is-site-identification-open");
     siteIdentification.setAttribute("aria-hidden", "false");
   }
 
@@ -425,6 +463,7 @@
 
   function hideSiteIdentification() {
     siteIdentification.classList.remove("is-open");
+    workspace.classList.remove("is-site-identification-open");
     siteIdentification.setAttribute("aria-hidden", "true");
   }
 
@@ -545,17 +584,23 @@
   }
 
   async function loadMissionScopedFilters(missionId) {
+    showLoading();
     if (!missionId) {
       setMissionScopedFilters({ equipes: [], agents: [] });
       renderPoints(true);
+      hideLoading();
       return;
     }
 
-    const response = await fetch(`/cartographie/options?mission_id=${encodeURIComponent(missionId)}`, {
-      headers: { Accept: "application/json" }
-    });
-    setMissionScopedFilters(response.ok ? await response.json() : { equipes: [], agents: [] });
-    renderPoints(true);
+    try {
+      const response = await fetch(`/cartographie/options?mission_id=${encodeURIComponent(missionId)}`, {
+        headers: { Accept: "application/json" }
+      });
+      setMissionScopedFilters(response.ok ? await response.json() : { equipes: [], agents: [] });
+      renderPoints(true);
+    } finally {
+      hideLoading();
+    }
   }
 
   function setClustering(enabled) {
@@ -656,10 +701,17 @@
     }
   });
 
-  if (territoryLayer.getBounds().isValid()) {
-    map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
-  }
-  renderCategoryLegend();
-  setMissionScopedFilters({ equipes: [], agents: [] });
-  renderPoints(false);
+  showLoading();
+  window.requestAnimationFrame(function () {
+    try {
+      if (territoryLayer.getBounds().isValid()) {
+        map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
+      }
+      renderCategoryLegend();
+      setMissionScopedFilters({ equipes: [], agents: [] });
+      renderPoints(false);
+    } finally {
+      hideLoading();
+    }
+  });
 }());

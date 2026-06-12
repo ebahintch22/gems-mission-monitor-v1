@@ -101,8 +101,10 @@
           aria-label="<%= t("sig.site.close") %>"
         >x</button>
       </div>
-      <div class="site-identification-status" id="site-identification-status"></div>
-      <div class="site-identification-body" id="site-identification-body"></div>
+      <div class="site-identification-frame">
+        <div class="site-identification-status" id="site-identification-status"></div>
+        <div class="site-identification-body" id="site-identification-body"></div>
+      </div>
     </section>
   </aside>
 
@@ -143,6 +145,10 @@
       </div>
     </div>
     <div id="sig-map" aria-label="<%= t("sig.map.aria") %>"></div>
+    <div class="g2m-loading-overlay is-active" id="sig-loading-overlay" role="status" aria-live="polite">
+      <div class="g2m-loading-spinner" aria-hidden="true"></div>
+      <span><%= t("common.loading") || "Chargement..." %></span>
+    </div>
   </section>
 </section>
 

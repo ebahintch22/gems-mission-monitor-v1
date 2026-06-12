@@ -2226,6 +2226,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-tools-close"/);
   assert.match(response.text, /id="sig-resizer"/);
   assert.match(response.text, /id="sig-map"/);
+  assert.match(response.text, /id="sig-loading-overlay"/);
   assert.match(response.text, /class="sig-map-toolbar"/);
   assert.match(response.text, /id="sig-cluster-toggle"/);
   assert.match(response.text, /aria-pressed="true"/);
@@ -2254,9 +2255,13 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
   assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
   assert.match(scriptResponse.text, /function showSiteIdentification\(point\)/);
+  assert.match(scriptResponse.text, /function showLoading\(message\)/);
+  assert.match(scriptResponse.text, /function hideLoading\(\)/);
+  assert.match(scriptResponse.text, /function flyToSubmission\(point\)/);
+  assert.match(scriptResponse.text, /map\.flyTo\(\[latitude, longitude\]/);
   assert.match(scriptResponse.text, /function addDetailAction\(submissionId\)/);
   assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/report/);
-  assert.match(scriptResponse.text, /rowClick: function \(event, row\)/);
+  assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\)/);
   assert.match(scriptResponse.text, /siteIdentificationClose\.addEventListener\("click", hideSiteIdentification\)/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
   assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
@@ -2291,6 +2296,11 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transform: translateX\(-104%\)/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transition: transform 0\.3s ease/);
   assert.match(styleResponse.text, /\.sig-workspace\.is-tools-open \.sig-tools\s*\{[\s\S]*transform: translateX\(0\)/);
+  assert.match(styleResponse.text, /\.sig-workspace\.is-site-identification-open \.sig-tools\s*\{[\s\S]*overflow: hidden/);
+  assert.match(styleResponse.text, /\.site-identification-frame\s*\{[\s\S]*flex: 1 1 auto/);
+  assert.match(styleResponse.text, /\.site-identification-body\s*\{[\s\S]*overflow-y: auto/);
+  assert.match(styleResponse.text, /\.g2m-loading-overlay\s*\{[\s\S]*position: absolute/);
+  assert.match(styleResponse.text, /\.g2m-loading-spinner\s*\{[\s\S]*animation: g2m-spin/);
   assert.match(styleResponse.text, /\.site-identification-actions/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*bottom: var\(--mobile-map-control-bottom\)/);

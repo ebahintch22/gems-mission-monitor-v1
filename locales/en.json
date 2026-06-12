@@ -67,6 +67,7 @@
   "common.notAssigned": "Not assigned",
   "common.noAccount": "No account",
   "common.noAppAccount": "No application account",
+  "common.loading": "Loading...",
   "common.errors": "Errors",
   "status.planifiee": "planned",
   "status.en_cours": "ongoing",
