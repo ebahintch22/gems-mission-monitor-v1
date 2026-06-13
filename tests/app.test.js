@@ -2208,6 +2208,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
     .get(`/cartographie/options?mission_id=${missionId}`)
     .set("Cookie", gisCookie);
   const scriptResponse = await request(app).get("/js/cartographie.js");
+  const layerScriptResponse = await request(app).get("/js/layer-box-manager.js");
   const styleResponse = await request(app).get("/css/app.css");
 
   assert.equal(response.status, 200);
@@ -2215,6 +2216,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.equal(optionsResponse.body.equipes.some((equipe) => equipe.nom_equipe === "Equipe Centre Revisee"), true);
   assert.equal(optionsResponse.body.agents.some((agent) => agent.code_agent === "AG-I01"), true);
   assert.equal(scriptResponse.status, 200);
+  assert.equal(layerScriptResponse.status, 200);
   assert.equal(styleResponse.status, 200);
   assert.match(response.text, /Cartographie SIG/);
   assert.doesNotMatch(response.text, /page-heading sig-heading/);
@@ -2224,6 +2226,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-tools-toggle"/);
   assert.match(response.text, /aria-controls="sig-tools"/);
   assert.match(response.text, /id="sig-tools-close"/);
+  assert.match(response.text, /id="sig-pal-root-content"/);
   assert.match(response.text, /id="sig-resizer"/);
   assert.match(response.text, /id="sig-map"/);
   assert.match(response.text, /id="sig-loading-overlay"/);
@@ -2238,13 +2241,19 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /Couche Routière/);
   assert.match(response.text, /Déplier la légende/);
   assert.match(response.text, /Réinitialiser/);
-  assert.match(response.text, /id="site-identification"/);
-  assert.match(response.text, /id="site-identification-body"/);
+  assert.doesNotMatch(response.text, /id="site-identification"/);
+  assert.doesNotMatch(response.text, /id="site-identification-body"/);
   assert.match(response.text, /SIM-AG-I01-001/);
   assert.match(response.text, /raw_data_json/);
   assert.match(response.text, /Voir le d.tail d.cisionnel/);
   assert.match(response.text, /leaflet\.markercluster@1\.5\.3/);
+  assert.match(response.text, /\/js\/layer-box-manager\.js/);
   assert.match(response.text, /\/js\/cartographie\.js/);
+  assert.match(layerScriptResponse.text, /class LayerBoxManager/);
+  assert.match(layerScriptResponse.text, /renderToLayer\(id, content, options = \{\}\)/);
+  assert.match(layerScriptResponse.text, /activateLayer\(id\)/);
+  assert.match(layerScriptResponse.text, /destroyLayer\(id\)/);
+  assert.match(layerScriptResponse.text, /this\.rootId/);
   assert.match(scriptResponse.text, /sig-i18n-data/);
   assert.match(scriptResponse.text, /t\("layerHumanitarian"\)/);
   assert.match(scriptResponse.text, /t\("layerRoad"\)/);
@@ -2259,10 +2268,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function hideLoading\(\)/);
   assert.match(scriptResponse.text, /function flyToSubmission\(point\)/);
   assert.match(scriptResponse.text, /map\.flyTo\(\[latitude, longitude\]/);
-  assert.match(scriptResponse.text, /function addDetailAction\(submissionId\)/);
+  assert.match(scriptResponse.text, /function addDetailAction\(container, submissionId\)/);
   assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/report/);
   assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\)/);
-  assert.match(scriptResponse.text, /siteIdentificationClose\.addEventListener\("click", hideSiteIdentification\)/);
+  assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("site-detail"/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
   assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
   assert.match(scriptResponse.text, /mapControlToggle\.setAttribute\("aria-expanded", "false"\)/);
@@ -2296,8 +2305,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transform: translateX\(-104%\)/);
   assert.match(styleResponse.text, /\.sig-tools\s*\{[\s\S]*transition: transform 0\.3s ease/);
   assert.match(styleResponse.text, /\.sig-workspace\.is-tools-open \.sig-tools\s*\{[\s\S]*transform: translateX\(0\)/);
-  assert.match(styleResponse.text, /\.sig-workspace\.is-site-identification-open \.sig-tools\s*\{[\s\S]*overflow: hidden/);
-  assert.match(styleResponse.text, /\.site-identification-frame\s*\{[\s\S]*flex: 1 1 auto/);
+  assert.match(styleResponse.text, /\.layer-box\s*\{[\s\S]*overflow: hidden/);
+  assert.match(styleResponse.text, /\.layer-box-header\s*\{[\s\S]*flex: 0 0 var\(--header-height\)/);
+  assert.match(styleResponse.text, /\.layer-box-content\s*\{[\s\S]*overflow-y: auto/);
   assert.match(styleResponse.text, /\.site-identification-body\s*\{[\s\S]*overflow-y: auto/);
   assert.match(styleResponse.text, /\.g2m-loading-overlay\s*\{[\s\S]*position: absolute/);
   assert.match(styleResponse.text, /\.g2m-loading-spinner\s*\{[\s\S]*animation: g2m-spin/);
@@ -2548,7 +2558,7 @@ test("GET /cartographie?lang=en utilise les ressources anglaises SIG", async () 
   assert.match(response.text, /All missions/);
   assert.match(response.text, /Summary/);
   assert.match(response.text, /Displayed submissions/);
-  assert.match(response.text, /Identification sheet/);
+  assert.match(response.text, /Site identification sheet/);
   assert.match(response.text, /Humanitarian layer/);
   assert.match(response.text, /Road layer/);
   assert.match(response.text, /Expand legend/);

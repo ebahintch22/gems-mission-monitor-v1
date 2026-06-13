@@ -757,17 +757,84 @@ h2 {
 .sig-tools {
   display: flex;
   flex: 0 0 var(--sig-tools-width);
-  flex-direction: column;
-  gap: 16px;
   max-width: calc(66.667% - 12px);
   min-width: 285px;
-  overflow: auto;
+  overflow: hidden;
   padding-right: 14px;
   position: relative;
 }
 
-.sig-workspace.is-site-identification-open .sig-tools {
+.sig-pal-root-content {
+  display: grid;
+  gap: 16px;
+}
+
+.layer-box-host {
+  --header-height: 48px;
+}
+
+.layer-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  bottom: 0;
+  display: none;
+  flex-direction: column;
+  left: 0;
+  min-height: 0;
   overflow: hidden;
+  position: absolute;
+  right: 14px;
+  top: 0;
+}
+
+.layer-box-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex: 0 0 var(--header-height);
+  gap: 12px;
+  justify-content: space-between;
+  min-height: var(--header-height);
+  padding: 0 var(--sig-panel-padding);
+}
+
+.layer-box-title {
+  font-size: var(--font-h2);
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layer-box-close {
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 32px;
+  font: 700 var(--font-brand-mobile)/1 Arial, sans-serif;
+  height: 32px;
+  justify-content: center;
+  padding: 0;
+  width: 32px;
+}
+
+.layer-box-close:hover,
+.layer-box-close:focus {
+  border-color: var(--primary);
+  outline: none;
+}
+
+.layer-box-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--sig-panel-padding);
 }
 
 .sig-panel {
@@ -826,21 +893,8 @@ h2 {
 }
 
 .site-identification {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 9px;
-  bottom: 0;
-  box-shadow: 0 8px 22px rgba(24, 43, 55, 0.18);
-  display: none;
   flex-direction: column;
-  left: 0;
   min-height: 0;
-  overflow: hidden;
-  padding: var(--panel-padding);
-  position: absolute;
-  right: 14px;
-  top: 0;
-  z-index: 20;
 }
 
 .site-identification.is-open {
@@ -2132,7 +2186,7 @@ textarea::placeholder {
     max-height: none;
     max-width: none;
     min-width: 0;
-    overflow: auto;
+    overflow: hidden;
     padding: 44px 10px 10px;
     position: absolute;
     top: 0;
@@ -2164,6 +2218,7 @@ textarea::placeholder {
     position: absolute;
     right: 10px;
     top: 8px;
+    z-index: 1400;
     width: 30px;
   }
 

@@ -20,92 +20,69 @@
     >
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </button>
-    <div class="panel sig-panel">
-      <h2><%= t("sig.tools.filters") %></h2>
-      <form class="sig-filters" id="sig-filters">
-        <label>
-          <%= t("sig.filters.mission") %>
-          <select id="sig-mission-filter">
-            <option value=""><%= t("sig.filters.allMissions") %></option>
-            <% filters.missions.forEach((mission) => { %>
-              <option value="<%= mission.id %>"><%= mission.name %></option>
-            <% }) %>
-          </select>
-        </label>
-        <label>
-          <%= t("sig.filters.team") %>
-          <select id="sig-equipe-filter" disabled>
-            <option value=""><%= t("sig.filters.allTeams") %></option>
-          </select>
-        </label>
-        <label>
-          <%= t("sig.filters.agent") %>
-          <select id="sig-agent-filter" disabled>
-            <option value=""><%= t("sig.filters.allAgents") %></option>
-          </select>
-        </label>
-        <label>
-          <%= t("sig.filters.validation") %>
-          <select id="sig-validation-filter">
-            <option value=""><%= t("sig.filters.allStatuses") %></option>
-            <option value="validee"><%= t("status.validee") %></option>
-            <option value="a_verifier"><%= t("status.a_verifier") %></option>
-            <option value="rejetee"><%= t("status.rejetee") %></option>
-          </select>
-        </label>
-        <label>
-          <%= t("sig.filters.from") %>
-          <input id="sig-date-from" type="date">
-        </label>
-        <label>
-          <%= t("sig.filters.to") %>
-          <input id="sig-date-to" type="date">
-        </label>
-        <button class="button" id="sig-reset-filters" type="button"><%= t("sig.filters.reset") %></button>
-      </form>
-    </div>
-
-    <div class="panel sig-panel">
-      <div class="panel-header">
-        <h2><%= t("sig.summary.title") %></h2>
-        <span class="sig-count" id="sig-visible-total">0</span>
+    <div class="sig-pal-root-content" id="sig-pal-root-content">
+      <div class="panel sig-panel">
+        <h2><%= t("sig.tools.filters") %></h2>
+        <form class="sig-filters" id="sig-filters">
+          <label>
+            <%= t("sig.filters.mission") %>
+            <select id="sig-mission-filter">
+              <option value=""><%= t("sig.filters.allMissions") %></option>
+              <% filters.missions.forEach((mission) => { %>
+                <option value="<%= mission.id %>"><%= mission.name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>
+            <%= t("sig.filters.team") %>
+            <select id="sig-equipe-filter" disabled>
+              <option value=""><%= t("sig.filters.allTeams") %></option>
+            </select>
+          </label>
+          <label>
+            <%= t("sig.filters.agent") %>
+            <select id="sig-agent-filter" disabled>
+              <option value=""><%= t("sig.filters.allAgents") %></option>
+            </select>
+          </label>
+          <label>
+            <%= t("sig.filters.validation") %>
+            <select id="sig-validation-filter">
+              <option value=""><%= t("sig.filters.allStatuses") %></option>
+              <option value="validee"><%= t("status.validee") %></option>
+              <option value="a_verifier"><%= t("status.a_verifier") %></option>
+              <option value="rejetee"><%= t("status.rejetee") %></option>
+            </select>
+          </label>
+          <label>
+            <%= t("sig.filters.from") %>
+            <input id="sig-date-from" type="date">
+          </label>
+          <label>
+            <%= t("sig.filters.to") %>
+            <input id="sig-date-to" type="date">
+          </label>
+          <button class="button" id="sig-reset-filters" type="button"><%= t("sig.filters.reset") %></button>
+        </form>
       </div>
-      <div class="sig-metrics">
-        <div><span><%= t("sig.summary.valid") %></span><strong id="sig-count-valid">0</strong></div>
-        <div><span><%= t("sig.summary.check") %></span><strong id="sig-count-check">0</strong></div>
-        <div><span><%= t("sig.summary.rejected") %></span><strong id="sig-count-rejected">0</strong></div>
-      </div>
-    </div>
 
-    <div class="panel sig-panel sig-table-panel">
-      <h2><%= t("sig.table.title") %></h2>
-      <div id="sig-table"></div>
-    </div>
-
-    <section
-      class="site-identification"
-      id="site-identification"
-      aria-label="<%= t("sig.site.aria") %>"
-      aria-hidden="true"
-    >
-      <div class="site-identification-header">
-        <div>
-          <p class="eyebrow"><%= t("sig.site.eyebrow") %></p>
-          <h2 id="site-identification-title"><%= t("sig.site.title") %></h2>
-          <p class="muted" id="site-identification-subtitle"></p>
+      <div class="panel sig-panel">
+        <div class="panel-header">
+          <h2><%= t("sig.summary.title") %></h2>
+          <span class="sig-count" id="sig-visible-total">0</span>
         </div>
-        <button
-          class="site-identification-close"
-          id="site-identification-close"
-          type="button"
-          aria-label="<%= t("sig.site.close") %>"
-        >x</button>
+        <div class="sig-metrics">
+          <div><span><%= t("sig.summary.valid") %></span><strong id="sig-count-valid">0</strong></div>
+          <div><span><%= t("sig.summary.check") %></span><strong id="sig-count-check">0</strong></div>
+          <div><span><%= t("sig.summary.rejected") %></span><strong id="sig-count-rejected">0</strong></div>
+        </div>
       </div>
-      <div class="site-identification-frame">
-        <div class="site-identification-status" id="site-identification-status"></div>
-        <div class="site-identification-body" id="site-identification-body"></div>
+
+      <div class="panel sig-panel sig-table-panel">
+        <h2><%= t("sig.table.title") %></h2>
+        <div id="sig-table"></div>
       </div>
-    </section>
+    </div>
   </aside>
 
   <div
@@ -220,7 +197,9 @@
     orangeQuality: t("sig.site.fields.orangeQuality"),
     mobileSpeed: t("sig.site.fields.mobileSpeed"),
     observations: t("sig.site.fields.observations"),
-    detailLink: t("sig.site.detailLink")
+    detailLink: t("sig.site.detailLink"),
+    palRootTitle: t("sig.table.title"),
+    siteAria: t("sig.site.aria")
   },
   filters: {
     allTeams: t("sig.filters.allTeams"),
@@ -231,5 +210,6 @@
 <script src="https://unpkg.com/leaflet-extra-markers@1.2.2/dist/js/leaflet.extra-markers.min.js"></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+<script src="/js/layer-box-manager.js"></script>
 <script src="/js/cartographie.js"></script>
 <%- include("../partials/footer") %>

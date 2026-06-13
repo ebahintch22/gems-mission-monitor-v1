@@ -13,6 +13,8 @@
   const resizer = document.getElementById("sig-resizer");
   const toolsToggle = document.getElementById("sig-tools-toggle");
   const toolsClose = document.getElementById("sig-tools-close");
+  const toolsPanel = document.getElementById("sig-tools");
+  const rootContent = document.getElementById("sig-pal-root-content");
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const mapLegendItems = document.getElementById("sig-map-legend-items");
@@ -167,12 +169,17 @@
       : "fa-solid fa-chevron-up";
   });
 
-  const siteIdentification = document.getElementById("site-identification");
-  const siteIdentificationTitle = document.getElementById("site-identification-title");
-  const siteIdentificationSubtitle = document.getElementById("site-identification-subtitle");
-  const siteIdentificationStatus = document.getElementById("site-identification-status");
-  const siteIdentificationBody = document.getElementById("site-identification-body");
-  const siteIdentificationClose = document.getElementById("site-identification-close");
+  const layerBoxManager = new LayerBoxManager(toolsPanel, {
+    rootId: "root",
+    rootTitle: t("palRootTitle"),
+    rootRender: function (container) {
+      container.append(rootContent);
+    }
+  });
+
+  layerBoxManager.on("activate", function (event) {
+    workspace.classList.toggle("is-pal-detail-open", event.id !== "root");
+  });
 
   const table = new Tabulator("#sig-table", {
     data: [],
@@ -362,7 +369,7 @@
     }[status] || valueOrDash(status);
   }
 
-  function addSection(title, rows) {
+  function addSection(container, title, rows) {
     const section = document.createElement("section");
     const heading = document.createElement("h3");
     const list = document.createElement("dl");
@@ -378,7 +385,7 @@
       list.append(term, description);
     });
     section.append(heading, list);
-    siteIdentificationBody.append(section);
+    container.append(section);
   }
 
   function showSiteIdentification(point) {
@@ -394,62 +401,76 @@
     const latitude = Number(point.latitude).toFixed(6);
     const longitude = Number(point.longitude).toFixed(6);
 
-    siteIdentificationTitle.textContent = siteName;
-    siteIdentificationSubtitle.textContent = [
-      modA.id_entite,
-      point.nom_sous_prefecture,
-      point.nom_region
-    ].filter(Boolean).join(" - ");
-    siteIdentificationStatus.className = `site-identification-status status-${point.statut_validation}`;
-    siteIdentificationStatus.textContent = statusLabel(point.statut_validation);
-    siteIdentificationBody.replaceChildren();
-    addDetailAction(point.id);
+    layerBoxManager.renderToLayer("site-detail", function (container) {
+      const wrapper = document.createElement("section");
+      const subtitle = document.createElement("p");
+      const status = document.createElement("div");
+      const body = document.createElement("div");
 
-    addSection(t("identification"), [
-      [t("sheetId"), modA.fiche_id || submissionDisplayId],
-      [t("entityId"), modA.id_entite],
-      [t("officialName"), modB.nom_officiel],
-      [t("ministry"), modB.ministere],
-      [t("type"), modB.type_infra],
-      [t("status"), modB.statut_fonct],
-      [t("condition"), modA.conditions]
-    ]);
-    addSection(t("location"), [
-      [t("region"), modB.region || point.nom_region],
-      [t("department"), modB.departement || point.nom_departement],
-      [t("subpref"), modB.sous_prefecture || point.nom_sous_prefecture],
-      [t("commune"), modB.commune],
-      [t("environment"), modB.milieu],
-      [t("latitude"), latitude],
-      [t("longitude"), longitude],
-      [t("precision"), `${valueOrDash(point.precision_m)} m`]
-    ]);
-    addSection(t("collection"), [
-      [t("mission"), point.mission_name],
-      [t("team"), point.nom_equipe],
-      [t("agent"), point.code_agent],
-      [t("submittedAt"), new Date(point.submitted_at).toLocaleString(locale)],
-      [t("anomalies"), point.anomaly_count]
-    ]);
-    addSection(t("characteristics"), [
-      [t("buildings"), modC.nb_batiments],
-      [t("staff"), modC.personnel],
-      [t("targetPublic"), modC.utilisateurs_cible],
-      [t("electricity"), modD.electricite],
-      [t("powerSource"), modD.source_elec],
-      [t("availability"), modD.dispo_jour],
-      [t("operators"), modE.operateurs],
-      [t("orangeQuality"), modE.orange_qual],
-      [t("mobileSpeed"), modE.debit_mob_desc],
-      [t("observations"), modN.observations]
-    ]);
+      wrapper.className = "site-identification is-open";
+      wrapper.id = "site-identification";
+      wrapper.setAttribute("aria-label", t("siteAria"));
+      subtitle.className = "muted";
+      subtitle.id = "site-identification-subtitle";
+      subtitle.textContent = [
+        modA.id_entite,
+        point.nom_sous_prefecture,
+        point.nom_region
+      ].filter(Boolean).join(" - ");
+      status.className = `site-identification-status status-${point.statut_validation}`;
+      status.id = "site-identification-status";
+      status.textContent = statusLabel(point.statut_validation);
+      body.className = "site-identification-body";
+      body.id = "site-identification-body";
 
-    siteIdentification.classList.add("is-open");
-    workspace.classList.add("is-site-identification-open");
-    siteIdentification.setAttribute("aria-hidden", "false");
+      wrapper.append(subtitle, status, body);
+      addDetailAction(body, point.id);
+      addSection(body, t("identification"), [
+        [t("sheetId"), modA.fiche_id || submissionDisplayId],
+        [t("entityId"), modA.id_entite],
+        [t("officialName"), modB.nom_officiel],
+        [t("ministry"), modB.ministere],
+        [t("type"), modB.type_infra],
+        [t("status"), modB.statut_fonct],
+        [t("condition"), modA.conditions]
+      ]);
+      addSection(body, t("location"), [
+        [t("region"), modB.region || point.nom_region],
+        [t("department"), modB.departement || point.nom_departement],
+        [t("subpref"), modB.sous_prefecture || point.nom_sous_prefecture],
+        [t("commune"), modB.commune],
+        [t("environment"), modB.milieu],
+        [t("latitude"), latitude],
+        [t("longitude"), longitude],
+        [t("precision"), `${valueOrDash(point.precision_m)} m`]
+      ]);
+      addSection(body, t("collection"), [
+        [t("mission"), point.mission_name],
+        [t("team"), point.nom_equipe],
+        [t("agent"), point.code_agent],
+        [t("submittedAt"), new Date(point.submitted_at).toLocaleString(locale)],
+        [t("anomalies"), point.anomaly_count]
+      ]);
+      addSection(body, t("characteristics"), [
+        [t("buildings"), modC.nb_batiments],
+        [t("staff"), modC.personnel],
+        [t("targetPublic"), modC.utilisateurs_cible],
+        [t("electricity"), modD.electricite],
+        [t("powerSource"), modD.source_elec],
+        [t("availability"), modD.dispo_jour],
+        [t("operators"), modE.operateurs],
+        [t("orangeQuality"), modE.orange_qual],
+        [t("mobileSpeed"), modE.debit_mob_desc],
+        [t("observations"), modN.observations]
+      ]);
+      container.append(wrapper);
+    }, {
+      activate: true,
+      title: siteName
+    });
   }
 
-  function addDetailAction(submissionId) {
+  function addDetailAction(container, submissionId) {
     const actions = document.createElement("div");
     const link = document.createElement("a");
 
@@ -458,13 +479,7 @@
     link.href = `/soumissions/${submissionId}/report`;
     link.textContent = t("detailLink");
     actions.append(link);
-    siteIdentificationBody.append(actions);
-  }
-
-  function hideSiteIdentification() {
-    siteIdentification.classList.remove("is-open");
-    workspace.classList.remove("is-site-identification-open");
-    siteIdentification.setAttribute("aria-hidden", "true");
+    container.append(actions);
   }
 
   function setToolsOpen(open) {
@@ -630,7 +645,6 @@
   clusterToggle.addEventListener("click", function () {
     setClustering(!clusteringEnabled);
   });
-  siteIdentificationClose.addEventListener("click", hideSiteIdentification);
   toolsToggle.addEventListener("click", function () {
     setToolsOpen(!workspace.classList.contains("is-tools-open"));
   });
