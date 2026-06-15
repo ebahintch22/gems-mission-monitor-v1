@@ -53,6 +53,7 @@
   let activeBaseLayerName = t("layerRoad");
   let activeLayerContext = { id: "root", submissionId: null };
   let userDefinedToolsWidth = normalizeToolsWidth(savedContext?.layout?.toolsWidth);
+  let contextPersistenceFrozenUntil = 0;
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
@@ -237,6 +238,21 @@
     const point = row.getData();
     flyToSubmission(point);
   });
+
+  let palLayoutFrame = null;
+
+  function refreshPalLayout() {
+    if (palLayoutFrame) {
+      return;
+    }
+    palLayoutFrame = window.requestAnimationFrame(function () {
+      palLayoutFrame = null;
+      if (table && typeof table.redraw === "function") {
+        table.redraw(true);
+      }
+      map.invalidateSize();
+    });
+  }
 
   function flyToSubmission(point) {
     const latitude = Number(point.latitude);
@@ -893,9 +909,13 @@
   }
 
   function saveCurrentCartographyContext() {
-    if (isRestoringContext) {
+    if (isRestoringContext || Date.now() < contextPersistenceFrozenUntil) {
       return;
     }
+    saveCartographyContextNow();
+  }
+
+  function saveCartographyContextNow() {
     CartographieSessionState.save({
       filters: filters(),
       map: currentMapState(),
@@ -1020,13 +1040,17 @@
     saveCurrentCartographyContext();
   });
   document.getElementById("sig-reset-filters").addEventListener("click", function () {
+    contextPersistenceFrozenUntil = Date.now() + 1000;
     CartographieSessionState.clear();
     userDefinedToolsWidth = null;
     workspace.style.removeProperty("--sig-tools-width");
     document.getElementById("sig-filters").reset();
     setMissionScopedFilters({ equipes: [], agents: [] });
     renderPoints(true);
-    saveCurrentCartographyContext();
+    window.setTimeout(function () {
+      contextPersistenceFrozenUntil = 0;
+      saveCartographyContextNow();
+    }, 1000);
   });
   clusterToggle.addEventListener("click", function () {
     setClustering(!clusteringEnabled);
@@ -1068,7 +1092,7 @@
     const width = Math.max(minimumToolsWidth, Math.min(pointerX - rect.left, maximumToolsWidth));
     userDefinedToolsWidth = width;
     workspace.style.setProperty("--sig-tools-width", `${width}px`);
-    map.invalidateSize();
+    refreshPalLayout();
   }
 
   resizer.addEventListener("pointerdown", function (event) {

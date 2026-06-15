@@ -785,6 +785,10 @@ h2 {
 .sig-pal-root-content {
   display: grid;
   gap: 16px;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .layer-box-host {
@@ -800,6 +804,7 @@ h2 {
   flex-direction: column;
   left: 0;
   min-height: 0;
+  min-width: 0;
   overflow: hidden;
   position: absolute;
   right: 14px;
@@ -850,13 +855,21 @@ h2 {
 
 .layer-box-content {
   flex: 1 1 auto;
+  max-width: 100%;
   min-height: 0;
+  min-width: 0;
+  overflow-x: hidden;
   overflow-y: auto;
   padding: var(--sig-panel-padding);
+  width: 100%;
 }
 
 .sig-panel {
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
   padding: var(--sig-panel-padding);
+  width: 100%;
 }
 
 .sig-panel h2 {
@@ -904,6 +917,7 @@ h2 {
 
 .sig-table-panel {
   flex: 1 0 270px;
+  overflow: hidden;
 }
 
 #sig-table {
@@ -1128,6 +1142,13 @@ h2 {
   border-radius: 9px;
   height: 100%;
   min-height: 0;
+}
+
+#sig-map .leaflet-interactive:focus {
+  outline: none;
+  stroke: #7f7f7f;
+  stroke-dasharray: 4px 4px;
+  stroke-width: 0.5px;
 }
 
 .g2m-loading-overlay {
