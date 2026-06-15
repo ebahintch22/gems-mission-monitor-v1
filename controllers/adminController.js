@@ -35,6 +35,10 @@ exports.updateSettings = (req, res) => {
         ? req.t("admin.settings.errors.invalidNumber")
         : error.message === "invalid_mission"
           ? req.t("admin.settings.errors.invalidMission")
+        : error.message === "invalid_search_fields"
+          ? req.t("admin.settings.errors.invalidSearchFields")
+        : error.message === "invalid_search_limit"
+          ? req.t("admin.settings.errors.invalidSearchLimit")
         : sanitizeError(error)
     }, 400);
   }
@@ -242,6 +246,7 @@ function settingGroupLabels(req) {
   return {
     general: req.t("admin.settings.groups.general"),
     alerts: req.t("admin.settings.groups.alerts"),
+    search: req.t("admin.settings.groups.search"),
     sync: req.t("admin.settings.groups.sync"),
     mail: req.t("admin.settings.groups.mail")
   };
@@ -279,6 +284,11 @@ function parseSettingsInput(body) {
   }
 
   return Object.entries(body || {}).reduce((settings, [key, value]) => {
+    const arrayMatch = key.match(/^settings\[(.+)]\[\]$/);
+    if (arrayMatch) {
+      settings[arrayMatch[1]] = Array.isArray(value) ? value : [value];
+      return settings;
+    }
     const match = key.match(/^settings\[(.+)]$/);
     if (match) {
       settings[match[1]] = value;

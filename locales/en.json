@@ -620,5 +620,18 @@
   "kobo.debug.close": "Close window",
   "kobo.debug.actions.testConnection": "Connection test",
   "kobo.debug.actions.loadForms": "Form loading",
-  "kobo.debug.actions.sync": "Submission synchronization"
+  "kobo.debug.actions.sync": "Submission synchronization",
+  "siteSearch.open": "Search for a site",
+  "siteSearch.title": "Search for a site",
+  "siteSearch.close": "Close search",
+  "siteSearch.label": "Search text",
+  "siteSearch.placeholder": "Type the name, city, region...",
+  "siteSearch.hint": "Search starts after 2 characters.",
+  "admin.settings.groups.search": "Search",
+  "admin.settings.errors.invalidSearchFields": "The searchable fields list is invalid.",
+  "admin.settings.errors.invalidSearchLimit": "The search result limit must be an integer between 1 and 50.",
+  "siteSearch.message.minLength": "Type at least 2 characters.",
+  "siteSearch.message.loading": "Searching...",
+  "siteSearch.message.empty": "No site found.",
+  "siteSearch.message.error": "Search is temporarily unavailable."
 }

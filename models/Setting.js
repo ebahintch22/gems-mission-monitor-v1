@@ -4,6 +4,8 @@ const editableKeys = [
   "app.name",
   "app.default_mission_id",
   "alerts.anomaly_threshold",
+  "search.site_fields",
+  "search.site_limit",
   "sync.kobo_interval_minutes",
   "mail.from",
   "smtp.auth_method",
@@ -105,6 +107,35 @@ class Setting {
 }
 
 function normalizeValue(setting, value) {
+  if (setting.key === "search.site_fields") {
+    const allowedFields = new Set([
+      "nom_officiel",
+      "sous_prefecture",
+      "ville",
+      "region",
+      "type_infrastructure"
+    ]);
+    const parsed = typeof value === "string" ? JSON.parse(value || "[]") : value;
+    if (!Array.isArray(parsed)) {
+      throw new Error("invalid_search_fields");
+    }
+    const fields = parsed
+      .map((field) => String(field || "").trim())
+      .filter((field, index, list) => allowedFields.has(field) && list.indexOf(field) === index);
+    if (!fields.length) {
+      throw new Error("invalid_search_fields");
+    }
+    return JSON.stringify(fields);
+  }
+
+  if (setting.key === "search.site_limit") {
+    const limit = Number(String(value ?? "").trim());
+    if (!Number.isInteger(limit) || limit <= 0 || limit > 50) {
+      throw new Error("invalid_search_limit");
+    }
+    return String(limit);
+  }
+
   if (setting.key === "app.default_mission_id") {
     const trimmed = String(value ?? "").trim();
     if (!trimmed) {

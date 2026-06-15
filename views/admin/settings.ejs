@@ -37,6 +37,35 @@
                   </option>
                 <% }) %>
               </select>
+            <% } else if (setting.key === "search.site_fields") { %>
+              <div class="checkbox-grid">
+                <%
+                  let selectedSearchFields = [];
+                  try {
+                    selectedSearchFields = JSON.parse(setting.value || "[]");
+                  } catch (error) {
+                    selectedSearchFields = [];
+                  }
+                  const searchFieldOptions = [
+                    ["nom_officiel", "Nom officiel"],
+                    ["sous_prefecture", "Sous-préfecture"],
+                    ["ville", "Ville / commune"],
+                    ["region", "Région"],
+                    ["type_infrastructure", "Type d'infrastructure"]
+                  ];
+                %>
+                <% searchFieldOptions.forEach(([value, label]) => { %>
+                  <span class="checkbox-label">
+                    <input
+                      type="checkbox"
+                      name="settings[<%= setting.key %>][]"
+                      value="<%= value %>"
+                      <%= selectedSearchFields.includes(value) ? "checked" : "" %>
+                    >
+                    <%= label %>
+                  </span>
+                <% }) %>
+              </div>
             <% } else if (setting.type === "secret") { %>
               <input
                 type="password"

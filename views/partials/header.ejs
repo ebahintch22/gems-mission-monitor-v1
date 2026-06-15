@@ -34,6 +34,7 @@
       const permissionSet = typeof permissions !== "undefined" && permissions ? permissions : new Set();
       const can = (permission) => permissionSet.has(permission);
       const showInfographicsNav = can("infographics.read");
+      const showSiteSearch = currentUser && can("infographics.read");
       const showVisualizationNav = can("sig.read") || showInfographicsNav;
       const showSettingsNav = can("missions.read")
         || can("teams.read")
@@ -78,6 +79,17 @@
         <i class="fa-solid fa-bars" aria-hidden="true"></i>
       </button>
       <nav id="site-nav" aria-label="<%= t("nav.ariaLabel") %>">
+        <% if (showSiteSearch) { %>
+          <button
+            class="nav-button nav-icon-button site-search-open"
+            id="site-search-open"
+            type="button"
+            title="<%= t("siteSearch.open") %>"
+            aria-label="<%= t("siteSearch.open") %>"
+          >
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+          </button>
+        <% } %>
         <a class="nav-button" href="/">
           <i class="fa-solid fa-chart-line" aria-hidden="true"></i>
           <span><%= t("nav.dashboard") %></span>
@@ -201,5 +213,43 @@
           </a>
         <% } %>
       </nav>
+      <% if (showSiteSearch) { %>
+        <div
+          class="site-search-modal"
+          id="site-search-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="site-search-title"
+          aria-hidden="true"
+          data-result-limit="<%= siteSearchConfig?.limit || 10 %>"
+          data-message-min-length="<%= t("siteSearch.message.minLength") %>"
+          data-message-loading="<%= t("siteSearch.message.loading") %>"
+          data-message-empty="<%= t("siteSearch.message.empty") %>"
+          data-message-error="<%= t("siteSearch.message.error") %>"
+        >
+          <div class="site-search-backdrop" data-site-search-close></div>
+          <section class="site-search-dialog">
+            <div class="site-search-header">
+              <h2 id="site-search-title"><%= t("siteSearch.title") %></h2>
+              <button class="site-search-close" type="button" aria-label="<%= t("siteSearch.close") %>" data-site-search-close>
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </div>
+            <label class="site-search-field">
+              <span><%= t("siteSearch.label") %></span>
+              <input
+                id="site-search-input"
+                type="text"
+                placeholder="<%= t("siteSearch.placeholder") %>"
+                autocomplete="off"
+                aria-controls="site-search-results"
+                aria-describedby="site-search-hint"
+              >
+            </label>
+            <p class="form-hint" id="site-search-hint"><%= t("siteSearch.hint") %></p>
+            <div class="site-search-results" id="site-search-results" role="listbox" aria-live="polite"></div>
+          </section>
+        </div>
+      <% } %>
     </header>
     <main class="container <%= typeof wideLayout !== "undefined" && wideLayout ? "container-wide" : "" %>">

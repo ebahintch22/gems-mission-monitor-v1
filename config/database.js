@@ -719,6 +719,22 @@ function seedDefaultSettings() {
       description: "Nombre d'anomalies a partir duquel une soumission est prioritaire."
     },
     {
+      key: "search.site_fields",
+      value: JSON.stringify(["nom_officiel", "sous_prefecture", "ville", "region", "type_infrastructure"]),
+      type: "json",
+      group_name: "search",
+      label: "Champs de recherche des sites",
+      description: "Liste JSON des champs interroges par la recherche texte libre."
+    },
+    {
+      key: "search.site_limit",
+      value: "10",
+      type: "number",
+      group_name: "search",
+      label: "Limite de resultats de recherche",
+      description: "Nombre maximal de sites proposes dans l'autocomplete."
+    },
+    {
       key: "sync.kobo_interval_minutes",
       value: "60",
       type: "number",

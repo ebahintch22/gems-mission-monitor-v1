@@ -620,5 +620,18 @@
   "kobo.debug.close": "Fermer la fenêtre",
   "kobo.debug.actions.testConnection": "Test de connexion",
   "kobo.debug.actions.loadForms": "Chargement des formulaires",
-  "kobo.debug.actions.sync": "Synchronisation des soumissions"
+  "kobo.debug.actions.sync": "Synchronisation des soumissions",
+  "siteSearch.open": "Rechercher un site",
+  "siteSearch.title": "Rechercher un site",
+  "siteSearch.close": "Fermer la recherche",
+  "siteSearch.label": "Texte de recherche",
+  "siteSearch.placeholder": "Tapez le nom, la ville, la région...",
+  "siteSearch.hint": "La recherche commence après 2 caractères.",
+  "admin.settings.groups.search": "Recherche",
+  "admin.settings.errors.invalidSearchFields": "La liste des champs de recherche est invalide.",
+  "admin.settings.errors.invalidSearchLimit": "La limite de résultats de recherche doit être un entier entre 1 et 50.",
+  "siteSearch.message.minLength": "Saisissez au moins 2 caractères.",
+  "siteSearch.message.loading": "Recherche...",
+  "siteSearch.message.empty": "Aucun site trouvé.",
+  "siteSearch.message.error": "La recherche est momentanément indisponible."
 }

@@ -14,9 +14,11 @@ const sigRoutes = require("./routes/sigRoutes");
 const infographieRoutes = require("./routes/infographieRoutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 const koboAdminRoutes = require("./routes/koboAdminRoutes");
+const siteSearchRoutes = require("./routes/siteSearchRoutes");
 const { currentUser } = require("./middlewares/authMiddleware");
 const { i18nMiddleware } = require("./services/i18nService");
 const Mission = require("./models/Mission");
+const SiteSearch = require("./models/SiteSearch");
 const { getKoboConfigStatus } = require("./services/koboSyncService");
 require("./config/database");
 
@@ -36,6 +38,7 @@ app.use((req, res, next) => {
   res.locals.faviconPath = `/assets/favicons/g2m-favicon-${faviconVariant}.ico`;
   res.locals.faviconPngPath = `/assets/favicons/g2m-favicon-${faviconVariant}.png`;
   res.locals.koboQuickSync = buildKoboQuickSyncState(req.currentUser);
+  res.locals.siteSearchConfig = SiteSearch.config();
   next();
 });
 
@@ -50,6 +53,7 @@ app.use("/cartographie", sigRoutes);
 app.use("/infographies", infographieRoutes);
 app.use("/soumissions", submissionRoutes);
 app.use("/parametrages/kobo", koboAdminRoutes);
+app.use("/api", siteSearchRoutes);
 
 app.use((req, res) => {
   res.status(404).render("errors/404", { title: req.t("errors.404.title") });

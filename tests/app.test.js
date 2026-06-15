@@ -292,6 +292,10 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /g2m_display_size/);
   assert.match(navigationScriptResponse.text, /applyDisplaySize/);
   assert.match(navigationScriptResponse.text, /localStorage\.setItem\(displaySizeStorageKey, displaySize\)/);
+  assert.match(navigationScriptResponse.text, /function scheduleSiteSearch\(\)/);
+  assert.match(navigationScriptResponse.text, /\/api\/sites\/search\?q=/);
+  assert.match(navigationScriptResponse.text, /window\.setTimeout\(function \(\) \{[\s\S]*\}, 600\)/);
+  assert.match(navigationScriptResponse.text, /AbortController/);
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
@@ -316,6 +320,8 @@ test("la navigation affiche seulement les liens autorises", async () => {
   const partnerNavigation = partnerResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
 
   assert.match(adminNavigation, /Visualisation/);
+  assert.match(adminNavigation, /id="site-search-open"/);
+  assert.match(adminNavigation, /fa-solid fa-magnifying-glass/);
   assert.match(adminNavigation, /fa-solid fa-eye/);
   assert.match(adminNavigation, /href="\/cartographie" role="menuitem">Cartographie/);
   assert.match(adminNavigation, /class="nav-menu-panel-title">Infographie/);
@@ -341,12 +347,14 @@ test("la navigation affiche seulement les liens autorises", async () => {
   assert.match(agentNavigation, /Enqueteur/);
   assert.match(agentNavigation, /action="\/logout" method="post"/);
   assert.doesNotMatch(agentNavigation, /href="\/login"/);
+  assert.doesNotMatch(agentNavigation, /id="site-search-open"/);
   assert.doesNotMatch(agentNavigation, /href="\/cartographie"/);
   assert.doesNotMatch(agentNavigation, /href="\/infographies\/mission-globale"/);
   assert.doesNotMatch(agentNavigation, /href="\/missions" role="menuitem">Missions/);
   assert.doesNotMatch(agentNavigation, /href="\/admin" role="menuitem">Administration/);
 
   assert.match(partnerNavigation, /Visualisation/);
+  assert.match(partnerNavigation, /id="site-search-open"/);
   assert.match(partnerNavigation, /class="nav-menu-panel-title">Infographie/);
   assert.match(partnerNavigation, /href="\/infographies\/mission-globale"/);
   assert.doesNotMatch(partnerNavigation, /href="\/cartographie" role="menuitem">Cartographie/);
@@ -1008,6 +1016,8 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
         "app.name": "G2M Test",
         "app.default_mission_id": "",
         "alerts.anomaly_threshold": "5",
+        "search.site_fields": ["nom_officiel", "region"],
+        "search.site_limit": "7",
         "sync.kobo_interval_minutes": "30",
         "mail.from": "tests@g2m.local",
         "smtp.auth_method": "password",
@@ -1024,8 +1034,12 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
 
   const persistedName = db.prepare("SELECT value FROM settings WHERE key = ?").get("app.name");
   const persistedSecret = db.prepare("SELECT value FROM settings WHERE key = ?").get("smtp.password");
+  const persistedSearchFields = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_fields");
+  const persistedSearchLimit = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_limit");
   assert.equal(persistedName.value, "G2M Test");
   assert.equal(persistedSecret.value, "secret-smtp-test");
+  assert.deepEqual(JSON.parse(persistedSearchFields.value), ["nom_officiel", "region"]);
+  assert.equal(persistedSearchLimit.value, "7");
 
   const formResponse = await request(app)
     .get("/admin/settings")
@@ -1033,6 +1047,11 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   assert.equal(formResponse.status, 200);
   assert.match(formResponse.text, /Mission d&#39;accueil/);
   assert.match(formResponse.text, /Aucune mission d&#39;accueil/);
+  assert.match(formResponse.text, /Champs de recherche des sites/);
+  assert.match(formResponse.text, /name="settings\[search\.site_fields\]\[\]"/);
+  assert.match(formResponse.text, /value="nom_officiel"[\s\S]*checked/);
+  assert.match(formResponse.text, /value="region"[\s\S]*checked/);
+  assert.match(formResponse.text, /value="7"/);
   assert.match(formResponse.text, /Secret deja renseigne/);
   assert.doesNotMatch(formResponse.text, /secret-smtp-test/);
 });
@@ -2197,6 +2216,49 @@ test("le seed des soumissions produit des points et un raw_data_json conforme au
   assert.equal(raw.modA.equipe, String(records[0].equipe_id));
   assert.equal(raw.modB.sous_prefecture.length > 0, true);
   assert.match(raw.modA.gps_site, /^-?\d+\.\d{6} -?\d+\.\d{6} 0 \d+$/);
+});
+
+test("GET /api/sites/search recherche les sites avec debounce cote client", async () => {
+  const partnerCookie = await loginTestUser({
+    email: "partenaire.site-search@g2m.test",
+    role: "partenaire"
+  });
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?")
+    .run(JSON.stringify(["nom_officiel", "region", "ville"]), "search.site_fields");
+  db.prepare("UPDATE settings SET value = ? WHERE key = ?")
+    .run("5", "search.site_limit");
+
+  const homeResponse = await request(app).get("/").set("Cookie", partnerCookie);
+  const apiResponse = await request(app)
+    .get("/api/sites/search")
+    .query({ q: "centre", limit: 3 })
+    .set("Cookie", partnerCookie);
+  const shortQueryResponse = await request(app)
+    .get("/api/sites/search")
+    .query({ q: "c" })
+    .set("Cookie", partnerCookie);
+  const deniedCookie = await loginTestUser({
+    email: "agent.site-search-denied@g2m.test",
+    role: "agent"
+  });
+  const deniedResponse = await request(app)
+    .get("/api/sites/search")
+    .query({ q: "centre" })
+    .set("Cookie", deniedCookie);
+
+  assert.equal(homeResponse.status, 200);
+  assert.match(homeResponse.text, /id="site-search-open"/);
+  assert.match(homeResponse.text, /id="site-search-modal"/);
+  assert.match(homeResponse.text, /data-result-limit="5"/);
+  assert.equal(apiResponse.status, 200);
+  assert.equal(Array.isArray(apiResponse.body.results), true);
+  assert.equal(apiResponse.body.results.length <= 3, true);
+  assert.equal(apiResponse.body.results.length > 0, true);
+  assert.match(apiResponse.body.results[0].nom_officiel, /Centre|centre/i);
+  assert.match(apiResponse.body.results[0].url, /^\/soumissions\/\d+\/report$/);
+  assert.equal(shortQueryResponse.status, 200);
+  assert.deepEqual(shortQueryResponse.body.results, []);
+  assert.equal(deniedResponse.status, 403);
 });
 
 test("GET /cartographie expose l'espace SIG et ses points cartographiques", async () => {
