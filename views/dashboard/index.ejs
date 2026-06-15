@@ -5,7 +5,9 @@
     <h1><%= t("dashboard.title") %></h1>
     <p class="muted"><%= t("dashboard.description") %></p>
   </div>
-  <a class="button button-primary" href="/missions/new"><%= t("dashboard.actions.createMission") %></a>
+  <% if (currentUser && permissions && permissions.has("missions.manage")) { %>
+    <a class="button button-primary" href="/missions/new"><%= t("dashboard.actions.createMission") %></a>
+  <% } %>
 </section>
 
 <section class="stats" aria-label="<%= t("dashboard.stats.ariaLabel") %>">

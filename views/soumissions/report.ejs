@@ -1,5 +1,21 @@
+<% const isPalEmbed = typeof embedMode !== "undefined" && embedMode === "pal"; %>
+<% if (isPalEmbed) { %>
+<!doctype html>
+<html lang="<%= locale || "fr" %>" data-display-size="medium">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/app.css">
+    <% if (report.map) { %>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <% } %>
+  </head>
+  <body class="report-embed report-embed-pal">
+    <main class="report-embed-container">
+<% } else { %>
 <%- include("../partials/header", { title, mapAssets: Boolean(report.map) }) %>
-<section class="page-heading">
+<section class="page-heading report-page-heading">
   <div>
     <p class="eyebrow"><%= report.header.eyebrow %></p>
     <h1><%= report.header.title %></h1>
@@ -10,6 +26,7 @@
     <a class="button" href="/cartographie">Retour cartographie</a>
   </div>
 </section>
+<% } %>
 
 <section class="submission-summary-grid" aria-label="Synthese de la soumission">
   <div class="stat">
@@ -118,4 +135,10 @@
     }());
   </script>
 <% } %>
+<% if (isPalEmbed) { %>
+    </main>
+  </body>
+</html>
+<% } else { %>
 <%- include("../partials/footer") %>
+<% } %>

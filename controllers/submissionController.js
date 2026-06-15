@@ -31,10 +31,12 @@ exports.report = (req, res) => {
   }
 
   const report = buildSubmissionReport(submission);
+  const embedMode = req.query.embed === "pal" ? "pal" : null;
 
   return res.render("soumissions/report", {
     title: `Rapport ${submission.display_submission_id || submission.source_submission_id}`,
     submission,
-    report
+    report,
+    embedMode
   });
 };

@@ -15,11 +15,44 @@
   const toolsClose = document.getElementById("sig-tools-close");
   const toolsPanel = document.getElementById("sig-tools");
   const rootContent = document.getElementById("sig-pal-root-content");
+  const koboLightTriggers = document.querySelectorAll("[data-kobo-light-open]");
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const mapLegendItems = document.getElementById("sig-map-legend-items");
   const loadingOverlay = document.getElementById("sig-loading-overlay");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
+  const CartographieSessionState = {
+    key: "g2m.cartographie.session.v1",
+    load() {
+      try {
+        return JSON.parse(sessionStorage.getItem(this.key));
+      } catch (error) {
+        return null;
+      }
+    },
+    save(state) {
+      try {
+        sessionStorage.setItem(this.key, JSON.stringify({
+          ...state,
+          savedAt: Date.now()
+        }));
+      } catch (error) {
+        // Session storage can be unavailable in hardened browser modes.
+      }
+    },
+    clear() {
+      try {
+        sessionStorage.removeItem(this.key);
+      } catch (error) {
+        // Ignore storage errors; the cartography view must remain usable.
+      }
+    }
+  };
+  const savedContext = CartographieSessionState.load();
+  let isRestoringContext = false;
+  let activeBaseLayerName = t("layerRoad");
+  let activeLayerContext = { id: "root", submissionId: null };
+  let userDefinedToolsWidth = normalizeToolsWidth(savedContext?.layout?.toolsWidth);
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
@@ -97,7 +130,7 @@
     })
   };
 
-  baseLayers[t("layerRoad")].addTo(map);
+  baseLayers[activeBaseLayerName].addTo(map);
 
   function showLoading(message) {
     if (!loadingOverlay) {
@@ -167,6 +200,7 @@
     mapControlToggleIcon.className = isCollapsed
       ? "fa-solid fa-chevron-down"
       : "fa-solid fa-chevron-up";
+    saveCurrentCartographyContext();
   });
 
   const layerBoxManager = new LayerBoxManager(toolsPanel, {
@@ -179,6 +213,11 @@
 
   layerBoxManager.on("activate", function (event) {
     workspace.classList.toggle("is-pal-detail-open", event.id !== "root");
+    activeLayerContext.id = event.id;
+    if (event.id === "root") {
+      activeLayerContext.submissionId = null;
+    }
+    saveCurrentCartographyContext();
   });
 
   const table = new Tabulator("#sig-table", {
@@ -197,7 +236,6 @@
   table.on("rowClick", function (event, row) {
     const point = row.getData();
     flyToSubmission(point);
-    showSiteIdentification(point);
   });
 
   function flyToSubmission(point) {
@@ -220,6 +258,7 @@
     const locality = document.createElement("div");
     const date = document.createElement("div");
     const status = document.createElement("div");
+    const moreLink = document.createElement("a");
 
     heading.textContent = point.display_submission_id || point.source_submission_id;
     agent.textContent = `${point.code_agent || t("unlinkedAgent")} - ${point.nom_equipe || t("noTeam")}`;
@@ -230,7 +269,14 @@
     ].filter(Boolean).join(", ");
     date.textContent = new Date(point.submitted_at).toLocaleString(locale);
     status.textContent = t("validationPrefix").replace("{{status}}", statusLabel(point.statut_validation));
-    content.append(heading, agent, locality, date, status);
+    moreLink.href = `/soumissions/${point.id}/report`;
+    moreLink.textContent = t("popupMore");
+    moreLink.className = "sig-popup-more";
+    moreLink.addEventListener("click", function (event) {
+      event.preventDefault();
+      showDecisionDetail(point);
+    });
+    content.append(heading, agent, locality, date, status, moreLink);
     return content;
   }
 
@@ -388,7 +434,7 @@
     container.append(section);
   }
 
-  function showSiteIdentification(point) {
+  function showSiteIdentification(point, options = {}) {
     const raw = rawData(point);
     const modA = raw.modA || {};
     const modB = raw.modB || {};
@@ -401,6 +447,7 @@
     const latitude = Number(point.latitude).toFixed(6);
     const longitude = Number(point.longitude).toFixed(6);
 
+    activeLayerContext = { id: "site-detail", submissionId: point.id };
     layerBoxManager.renderToLayer("site-detail", function (container) {
       const wrapper = document.createElement("section");
       const subtitle = document.createElement("p");
@@ -468,6 +515,184 @@
       activate: true,
       title: siteName
     });
+    if (options.saveState !== false) {
+      setToolsOpen(true);
+      saveCurrentCartographyContext();
+    }
+  }
+
+  function showDecisionDetail(point, options = {}) {
+    const title = point.display_submission_id || point.source_submission_id || t("decisionDetailTitle");
+    activeLayerContext = { id: "decision-detail", submissionId: point.id };
+    layerBoxManager.renderToLayer("decision-detail", function (container) {
+      const wrapper = document.createElement("section");
+      const iframe = document.createElement("iframe");
+
+      wrapper.className = "decision-detail-layer";
+      iframe.className = "decision-detail-frame";
+      iframe.src = `/soumissions/${point.id}/report?embed=pal`;
+      iframe.title = title;
+      wrapper.append(iframe);
+      container.append(wrapper);
+    }, {
+      activate: true,
+      title
+    });
+    if (options.saveState !== false) {
+      setToolsOpen(true);
+      saveCurrentCartographyContext();
+    }
+  }
+
+  async function openKoboLightLayer(options = {}) {
+    activeLayerContext = { id: "kobo-import", submissionId: null };
+    layerBoxManager.renderToLayer("kobo-import", function (container) {
+      const shell = document.createElement("section");
+      shell.className = "kobo-light";
+      shell.innerHTML = `<p class="muted">${t("koboLightLoading")}</p>`;
+      container.append(shell);
+      loadKoboLightContent(shell);
+    }, {
+      activate: true,
+      title: t("koboLightTitle")
+    });
+    setToolsOpen(true, { saveState: options.saveState });
+    if (options.saveState !== false) {
+      saveCurrentCartographyContext();
+    }
+  }
+
+  async function loadKoboLightContent(shell) {
+    try {
+      const response = await fetch("/cartographie/kobo-light/status", {
+        headers: { Accept: "application/json" }
+      });
+      const payload = await response.json();
+      renderKoboLightForm(shell, payload);
+    } catch (error) {
+      shell.innerHTML = `<p class="form-error">${t("koboLightLoadError")}</p>`;
+    }
+  }
+
+  function renderKoboLightForm(shell, payload) {
+    const missions = payload.missions || [];
+    const config = payload.config || {};
+    const defaultMissionId = String(config.defaultMissionId || missions[0]?.id || "");
+    const defaultMission = missions.find((mission) => String(mission.id) === defaultMissionId) || missions[0] || {};
+
+    shell.replaceChildren();
+    const description = document.createElement("p");
+    const form = document.createElement("form");
+    const feedback = document.createElement("div");
+
+    description.className = "muted";
+    description.textContent = t("koboLightDescription");
+    form.className = "kobo-light-form";
+    feedback.className = "kobo-light-feedback";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+
+    form.innerHTML = `
+      <label>${t("koboSyncMission")}
+        <select name="mission_id" required>
+          <option value="">${t("koboSyncSelectMission")}</option>
+          ${missions.map((mission) => `<option value="${escapeHtml(mission.id)}" data-asset-uid="${escapeHtml(mission.kobo_asset_uid || "")}" ${String(mission.id) === defaultMissionId ? "selected" : ""}>${escapeHtml(mission.name)}</option>`).join("")}
+        </select>
+      </label>
+      <label>${t("koboSyncAssetUid")}
+        <input name="asset_uid" required value="${escapeHtml(config.defaultAssetUid || defaultMission.kobo_asset_uid || "")}">
+      </label>
+      <label>${t("koboSyncLimit")}
+        <input name="limit" type="number" min="1" max="1000" value="100">
+      </label>
+      <label>${t("koboSyncSince")}
+        <input name="since" type="datetime-local">
+      </label>
+      <label>${t("koboSyncGpsField")}
+        <input name="gps_field" value="${escapeHtml(config.gpsField || "")}">
+      </label>
+      <label>${t("koboSyncAgentCodeField")}
+        <input name="agent_code_field" value="${escapeHtml(config.agentCodeField || "")}">
+      </label>
+      <label>${t("koboSyncFormType")}
+        <input name="form_type" value="${escapeHtml(config.formType || "site")}">
+      </label>
+      <label class="checkbox-label">
+        <input name="dry_run" type="checkbox">
+        ${t("koboSyncDryRun")}
+      </label>
+      <button class="button button-primary" type="submit" ${payload.ready ? "" : "disabled"}>${t("koboSyncAction")}</button>
+    `;
+
+    form.querySelector("[name='mission_id']").addEventListener("change", function (event) {
+      const selected = event.target.selectedOptions[0];
+      const assetUid = selected?.dataset.assetUid;
+      if (assetUid) {
+        form.elements.asset_uid.value = assetUid;
+      }
+    });
+
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      await submitKoboLightSync(form, feedback);
+    });
+
+    if (!payload.ready) {
+      const warning = document.createElement("p");
+      warning.className = "form-error";
+      warning.textContent = t("koboLightNotReady");
+      shell.append(warning);
+    }
+
+    shell.append(description, form, feedback);
+  }
+
+  async function submitKoboLightSync(form, feedback) {
+    const submitButton = form.querySelector("button[type='submit']");
+    const payload = Object.fromEntries(new FormData(form).entries());
+    payload.dry_run = form.elements.dry_run.checked;
+    submitButton.disabled = true;
+    feedback.className = "kobo-light-feedback";
+    feedback.textContent = t("koboLightSyncRunning");
+
+    try {
+      const response = await fetch("/cartographie/kobo-light/sync", {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || t("koboLightSyncError"));
+      }
+      const summary = result.summary;
+      feedback.classList.add("is-success");
+      feedback.innerHTML = `
+        <strong>${t("koboLightSyncDone")}</strong>
+        <dl class="kobo-light-summary">
+          <dt>${t("koboSummaryRead")}</dt><dd>${summary.read}</dd>
+          <dt>${t("koboSummaryValid")}</dt><dd>${summary.valid}</dd>
+          <dt>${t("koboSummaryInserted")}</dt><dd>${summary.inserted}</dd>
+          <dt>${t("koboSummarySkipped")}</dt><dd>${summary.skipped}</dd>
+        </dl>
+      `;
+    } catch (error) {
+      feedback.classList.add("is-error");
+      feedback.textContent = error.message;
+    } finally {
+      submitButton.disabled = false;
+    }
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function addDetailAction(container, submissionId) {
@@ -482,7 +707,7 @@
     container.append(actions);
   }
 
-  function setToolsOpen(open) {
+  function setToolsOpen(open, options = {}) {
     workspace.classList.toggle("is-tools-open", open);
     toolsToggle.setAttribute("aria-expanded", String(open));
     toolsToggle.setAttribute(
@@ -492,6 +717,9 @@
     window.setTimeout(function () {
       map.invalidateSize();
     }, 320);
+    if (options.saveState !== false) {
+      saveCurrentCartographyContext();
+    }
   }
 
   function filters() {
@@ -555,12 +783,6 @@
     visiblePoints.forEach(function (point) {
       const clusteredMarker = createSiteMarker(point).bindPopup(popupContent(point));
       const plainMarker = createSiteMarker(point).bindPopup(popupContent(point));
-      clusteredMarker.on("click", function () {
-        showSiteIdentification(point);
-      });
-      plainMarker.on("click", function () {
-        showSiteIdentification(point);
-      });
       clusteredMarker.addTo(clusteredMarkersLayer);
       plainMarker.addTo(plainMarkersLayer);
     });
@@ -577,7 +799,7 @@
     select.value = "";
   }
 
-  function setMissionScopedFilters(options) {
+  function setMissionScopedFilters(options, selected = {}) {
     const equipeSelect = document.getElementById("sig-equipe-filter");
     const agentSelect = document.getElementById("sig-agent-filter");
     resetSelect(equipeSelect, filterLabels.allTeams || t("team"));
@@ -596,13 +818,20 @@
     const enabled = Boolean(document.getElementById("sig-mission-filter").value);
     equipeSelect.disabled = !enabled;
     agentSelect.disabled = !enabled;
+    if (selected.equipe && Array.from(equipeSelect.options).some((option) => option.value === selected.equipe)) {
+      equipeSelect.value = selected.equipe;
+    }
+    if (selected.agent && Array.from(agentSelect.options).some((option) => option.value === selected.agent)) {
+      agentSelect.value = selected.agent;
+    }
   }
 
-  async function loadMissionScopedFilters(missionId) {
+  async function loadMissionScopedFilters(missionId, options = {}) {
+    const reframeMap = options.reframeMap !== false;
     showLoading();
     if (!missionId) {
       setMissionScopedFilters({ equipes: [], agents: [] });
-      renderPoints(true);
+      renderPoints(reframeMap);
       hideLoading();
       return;
     }
@@ -611,8 +840,11 @@
       const response = await fetch(`/cartographie/options?mission_id=${encodeURIComponent(missionId)}`, {
         headers: { Accept: "application/json" }
       });
-      setMissionScopedFilters(response.ok ? await response.json() : { equipes: [], agents: [] });
-      renderPoints(true);
+      setMissionScopedFilters(response.ok ? await response.json() : { equipes: [], agents: [] }, {
+        equipe: options.equipe,
+        agent: options.agent
+      });
+      renderPoints(reframeMap);
     } finally {
       hideLoading();
     }
@@ -628,19 +860,173 @@
     clusterToggle.title = clusteringEnabled
       ? t("clusterDisable")
       : t("clusterEnable");
+    saveCurrentCartographyContext();
+  }
+
+  function currentMapState() {
+    const center = map.getCenter();
+    return {
+      center: {
+        lat: center.lat,
+        lng: center.lng
+      },
+      zoom: map.getZoom(),
+      baseLayer: activeBaseLayerName
+    };
+  }
+
+  function currentLayoutState() {
+    return {
+      toolsOpen: workspace.classList.contains("is-tools-open"),
+      toolsWidth: userDefinedToolsWidth,
+      clusterEnabled: clusteringEnabled,
+      legendCollapsed: mapLegend.classList.contains("is-collapsed"),
+      layerControlCollapsed: mapControlContainer.classList.contains("is-collapsed"),
+      activeLayerId: activeLayerContext.id || "root",
+      selectedSubmissionId: activeLayerContext.submissionId || null
+    };
+  }
+
+  function normalizeToolsWidth(value) {
+    const width = Number(value);
+    return Number.isFinite(width) && width > 0 ? width : null;
+  }
+
+  function saveCurrentCartographyContext() {
+    if (isRestoringContext) {
+      return;
+    }
+    CartographieSessionState.save({
+      filters: filters(),
+      map: currentMapState(),
+      layout: currentLayoutState()
+    });
+  }
+
+  function restoreFilterValues(criteria) {
+    if (!criteria) {
+      return;
+    }
+    document.getElementById("sig-mission-filter").value = criteria.mission || "";
+    document.getElementById("sig-validation-filter").value = criteria.validation || "";
+    document.getElementById("sig-date-from").value = criteria.from || "";
+    document.getElementById("sig-date-to").value = criteria.to || "";
+  }
+
+  function restoreBaseLayer(name) {
+    if (!name || !baseLayers[name]) {
+      return;
+    }
+    Object.values(baseLayers).forEach(function (layer) {
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+    activeBaseLayerName = name;
+    baseLayers[name].addTo(map);
+  }
+
+  function restoreMapView(mapState) {
+    if (!mapState?.center) {
+      return false;
+    }
+    const latitude = Number(mapState.center.lat);
+    const longitude = Number(mapState.center.lng);
+    const zoom = Number(mapState.zoom);
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || !Number.isFinite(zoom)) {
+      return false;
+    }
+    map.setView([latitude, longitude], zoom, { animate: false });
+    return true;
+  }
+
+  function restoreLayout(layout) {
+    if (!layout) {
+      return;
+    }
+    const restoredToolsWidth = normalizeToolsWidth(layout.toolsWidth);
+    userDefinedToolsWidth = restoredToolsWidth;
+    if (restoredToolsWidth) {
+      workspace.style.setProperty("--sig-tools-width", `${restoredToolsWidth}px`);
+    } else {
+      workspace.style.removeProperty("--sig-tools-width");
+    }
+    setToolsOpen(Boolean(layout.toolsOpen), { saveState: false });
+    setClustering(layout.clusterEnabled !== false);
+    const legendCollapsed = layout.legendCollapsed !== false;
+    const layerControlCollapsed = layout.layerControlCollapsed !== false;
+    mapLegend.classList.toggle("is-collapsed", legendCollapsed);
+    mapLegendToggle.setAttribute("aria-expanded", String(!legendCollapsed));
+    mapLegendToggle.setAttribute("aria-label", legendCollapsed ? t("legendExpand") : t("legendCollapse"));
+    mapControlContainer.classList.toggle("is-collapsed", layerControlCollapsed);
+    mapControlToggle.setAttribute("aria-expanded", String(!layerControlCollapsed));
+    mapControlToggle.setAttribute("aria-label", layerControlCollapsed ? t("layersExpand") : t("layersCollapse"));
+    mapControlToggleIcon.className = layerControlCollapsed
+      ? "fa-solid fa-chevron-down"
+      : "fa-solid fa-chevron-up";
+  }
+
+  function restoreActiveLayer(layout) {
+    if (!layout?.activeLayerId || layout.activeLayerId === "root") {
+      return;
+    }
+    if (layout.activeLayerId === "kobo-import") {
+      openKoboLightLayer({ saveState: false });
+      return;
+    }
+    const point = points.find(function (candidate) {
+      return String(candidate.id) === String(layout.selectedSubmissionId);
+    });
+    if (!point) {
+      return;
+    }
+    if (layout.activeLayerId === "decision-detail") {
+      showDecisionDetail(point, { saveState: false });
+    } else if (layout.activeLayerId === "site-detail") {
+      showSiteIdentification(point, { saveState: false });
+    }
+  }
+
+  async function restoreCartographyContext(context) {
+    if (!context) {
+      return false;
+    }
+    isRestoringContext = true;
+    try {
+      restoreFilterValues(context.filters);
+      restoreBaseLayer(context.map?.baseLayer);
+      await loadMissionScopedFilters(context.filters?.mission || "", {
+        reframeMap: false,
+        equipe: context.filters?.equipe,
+        agent: context.filters?.agent
+      });
+      renderPoints(false);
+      restoreLayout(context.layout);
+      restoreMapView(context.map);
+      restoreActiveLayer(context.layout);
+      return true;
+    } finally {
+      isRestoringContext = false;
+      saveCurrentCartographyContext();
+    }
   }
 
   document.getElementById("sig-filters").addEventListener("change", function (event) {
     if (event.target.id === "sig-mission-filter") {
-      loadMissionScopedFilters(event.target.value);
+      loadMissionScopedFilters(event.target.value).then(saveCurrentCartographyContext);
       return;
     }
     renderPoints(true);
+    saveCurrentCartographyContext();
   });
   document.getElementById("sig-reset-filters").addEventListener("click", function () {
+    CartographieSessionState.clear();
+    userDefinedToolsWidth = null;
+    workspace.style.removeProperty("--sig-tools-width");
     document.getElementById("sig-filters").reset();
     setMissionScopedFilters({ equipes: [], agents: [] });
     renderPoints(true);
+    saveCurrentCartographyContext();
   });
   clusterToggle.addEventListener("click", function () {
     setClustering(!clusteringEnabled);
@@ -651,6 +1037,12 @@
   toolsClose.addEventListener("click", function () {
     setToolsOpen(false);
   });
+  koboLightTriggers.forEach(function (trigger) {
+    trigger.addEventListener("click", function (event) {
+      event.preventDefault();
+      openKoboLightLayer();
+    });
+  });
   mapLegendToggle.addEventListener("click", function () {
     const isCollapsed = mapLegend.classList.toggle("is-collapsed");
     mapLegendToggle.setAttribute("aria-expanded", String(!isCollapsed));
@@ -658,6 +1050,12 @@
       "aria-label",
       isCollapsed ? t("legendExpand") : t("legendCollapse")
     );
+    saveCurrentCartographyContext();
+  });
+  map.on("moveend zoomend", saveCurrentCartographyContext);
+  map.on("baselayerchange", function (event) {
+    activeBaseLayerName = event.name;
+    saveCurrentCartographyContext();
   });
 
   let resizing = false;
@@ -668,6 +1066,7 @@
     const minimumToolsWidth = Math.min(285, rect.width / 2);
     const maximumToolsWidth = (rect.width * (2 / 3)) - separatorWidth;
     const width = Math.max(minimumToolsWidth, Math.min(pointerX - rect.left, maximumToolsWidth));
+    userDefinedToolsWidth = width;
     workspace.style.setProperty("--sig-tools-width", `${width}px`);
     map.invalidateSize();
   }
@@ -692,6 +1091,7 @@
     resizing = false;
     workspace.classList.remove("is-resizing");
     resizer.releasePointerCapture(event.pointerId);
+    saveCurrentCartographyContext();
   });
 
   resizer.addEventListener("pointercancel", function () {
@@ -706,6 +1106,7 @@
     const currentWidth = document.getElementById("sig-tools").getBoundingClientRect().width;
     const increment = event.key === "ArrowRight" ? 20 : -20;
     setToolWidth(workspace.getBoundingClientRect().left + currentWidth + increment);
+    saveCurrentCartographyContext();
     event.preventDefault();
   });
 
@@ -716,16 +1117,23 @@
   });
 
   showLoading();
-  window.requestAnimationFrame(function () {
+  window.requestAnimationFrame(async function () {
     try {
-      if (territoryLayer.getBounds().isValid()) {
+      renderCategoryLegend();
+      const restored = await restoreCartographyContext(savedContext);
+      if (!restored && territoryLayer.getBounds().isValid()) {
         map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
       }
-      renderCategoryLegend();
-      setMissionScopedFilters({ equipes: [], agents: [] });
-      renderPoints(false);
+      if (!restored) {
+        setMissionScopedFilters({ equipes: [], agents: [] });
+        renderPoints(false);
+        saveCurrentCartographyContext();
+      }
     } finally {
       hideLoading();
+      if (new URLSearchParams(window.location.search).get("kobo") === "1") {
+        openKoboLightLayer();
+      }
     }
   });
 }());

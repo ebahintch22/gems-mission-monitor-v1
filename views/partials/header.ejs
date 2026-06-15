@@ -143,6 +143,18 @@
             </div>
           </div>
         <% } %>
+        <% if (typeof koboQuickSync !== "undefined" && koboQuickSync.visible) { %>
+          <a
+            class="nav-button nav-icon-button nav-kobo-sync <%= koboQuickSync.enabled ? "" : "is-disabled" %>"
+            href="<%= koboQuickSync.enabled ? koboQuickSync.href : "#" %>"
+            title="<%= t("kobo.light.open") %>"
+            aria-label="<%= t("kobo.light.open") %>"
+            aria-disabled="<%= koboQuickSync.enabled ? "false" : "true" %>"
+            <%= koboQuickSync.enabled ? "data-kobo-light-open" : "tabindex=\"-1\"" %>
+          >
+            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+          </a>
+        <% } %>
         <% if (currentUser) { %>
           <div class="nav-menu nav-session">
             <button

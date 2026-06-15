@@ -16,6 +16,8 @@ const submissionRoutes = require("./routes/submissionRoutes");
 const koboAdminRoutes = require("./routes/koboAdminRoutes");
 const { currentUser } = require("./middlewares/authMiddleware");
 const { i18nMiddleware } = require("./services/i18nService");
+const Mission = require("./models/Mission");
+const { getKoboConfigStatus } = require("./services/koboSyncService");
 require("./config/database");
 
 const app = express();
@@ -33,6 +35,7 @@ app.use(currentUser);
 app.use((req, res, next) => {
   res.locals.faviconPath = `/assets/favicons/g2m-favicon-${faviconVariant}.ico`;
   res.locals.faviconPngPath = `/assets/favicons/g2m-favicon-${faviconVariant}.png`;
+  res.locals.koboQuickSync = buildKoboQuickSyncState(req.currentUser);
   next();
 });
 
@@ -75,4 +78,19 @@ function resolveFaviconVariant() {
   return process.env.RENDER || process.env.NODE_ENV === "production"
     ? "online"
     : "local";
+}
+
+function buildKoboQuickSyncState(user) {
+  const visible = user && ["admin", "superviseur"].includes(user.role);
+  if (!visible) {
+    return { visible: false, enabled: false };
+  }
+
+  const config = getKoboConfigStatus();
+  const hasConfiguredMission = Mission.allActive().some((mission) => Boolean(mission.kobo_asset_uid));
+  return {
+    visible: true,
+    enabled: Boolean(config.ready && (config.defaultAssetUid || hasConfiguredMission)),
+    href: "/cartographie?kobo=1"
+  };
 }

@@ -222,11 +222,11 @@ test("GET / affiche le tableau de bord", async () => {
   assert.equal(response.status, 200);
   assert.equal(styleResponse.status, 200);
   assert.equal(navigationScriptResponse.status, 200);
-  assert.match(response.text, /Tableau de bord/);
+  assert.match(response.text, /Tableau de Bord Global des Missions/);
   assert.match(response.text, /Total missions/);
   assert.match(response.text, /Suivi opérationnel/);
   assert.match(response.text, /Vue synthétique des missions de collecte enregistrées/);
-  assert.match(response.text, /Créer une mission/);
+  assert.doesNotMatch(response.text, /href="\/missions\/new"/);
   assert.match(response.text, /Missions récentes/);
   assert.match(response.text, /Logo%20Rakall\.png/);
   assert.match(response.text, /GEMS Mission Monitor/);
@@ -363,7 +363,8 @@ test("GET /?lang=en utilise les ressources anglaises du dashboard", async () => 
   assert.doesNotMatch(response.text, /data-display-size-value="small"/);
   assert.match(response.text, /Operational monitoring/);
   assert.match(response.text, /Synthetic view of registered collection missions/);
-  assert.match(response.text, /Create a mission/);
+  assert.doesNotMatch(response.text, /Create a mission/);
+  assert.doesNotMatch(response.text, /href="\/missions\/new"/);
   assert.match(response.text, /Ongoing/);
   assert.match(response.text, /Completed/);
   assert.match(response.text, /Recent missions/);
@@ -377,7 +378,8 @@ test("GET /?lang=es utilise les ressources espagnoles du dashboard", async () =>
   assert.match(response.text, /Entrega v0\.5 del 09 de junio de 2026/);
   assert.match(response.text, /Seguimiento operativo/);
   assert.match(response.text, /Vista sint/);
-  assert.match(response.text, /Crear una misi/);
+  assert.doesNotMatch(response.text, /Crear una misi/);
+  assert.doesNotMatch(response.text, /href="\/missions\/new"/);
   assert.match(response.text, /Misiones recientes/);
   assert.doesNotMatch(response.text, /data-display-size-value="small"/);
 });
@@ -2207,12 +2209,21 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   const optionsResponse = await request(app)
     .get(`/cartographie/options?mission_id=${missionId}`)
     .set("Cookie", gisCookie);
+  const supervisorCookie = await loginTestUser({
+    email: "superviseur.kobo-light@g2m.test",
+    role: "superviseur"
+  });
+  const koboLightStatusResponse = await request(app)
+    .get("/cartographie/kobo-light/status")
+    .set("Cookie", supervisorCookie);
   const scriptResponse = await request(app).get("/js/cartographie.js");
   const layerScriptResponse = await request(app).get("/js/layer-box-manager.js");
   const styleResponse = await request(app).get("/css/app.css");
 
   assert.equal(response.status, 200);
   assert.equal(optionsResponse.status, 200);
+  assert.equal(koboLightStatusResponse.status, 200);
+  assert.equal(Array.isArray(koboLightStatusResponse.body.missions), true);
   assert.equal(optionsResponse.body.equipes.some((equipe) => equipe.nom_equipe === "Equipe Centre Revisee"), true);
   assert.equal(optionsResponse.body.agents.some((agent) => agent.code_agent === "AG-I01"), true);
   assert.equal(scriptResponse.status, 200);
@@ -2237,6 +2248,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-map-legend-toggle"/);
   assert.match(response.text, /aria-expanded="false"/);
   assert.match(response.text, /id="sig-i18n-data"/);
+  assert.match(response.text, /Voir plus/);
+  assert.match(response.text, /Synchronisation Kobo/);
   assert.match(response.text, /Couche Humanitaire/);
   assert.match(response.text, /Couche Routière/);
   assert.match(response.text, /Déplier la légende/);
@@ -2263,7 +2276,12 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /disableClusteringAtZoom: 14/);
   assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
   assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
-  assert.match(scriptResponse.text, /function showSiteIdentification\(point\)/);
+  assert.match(scriptResponse.text, /function showSiteIdentification\(point, options = \{\}\)/);
+  assert.match(scriptResponse.text, /function showDecisionDetail\(point, options = \{\}\)/);
+  assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("decision-detail"/);
+  assert.match(scriptResponse.text, /\/soumissions\/\$\{point\.id\}\/report\?embed=pal/);
+  assert.match(scriptResponse.text, /function openKoboLightLayer\(options = \{\}\)/);
+  assert.match(scriptResponse.text, /\/cartographie\/kobo-light\/sync/);
   assert.match(scriptResponse.text, /function showLoading\(message\)/);
   assert.match(scriptResponse.text, /function hideLoading\(\)/);
   assert.match(scriptResponse.text, /function flyToSubmission\(point\)/);
@@ -2271,6 +2289,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function addDetailAction\(container, submissionId\)/);
   assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/report/);
   assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\)/);
+  assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\) \{[\s\S]*flyToSubmission\(point\);[\s\S]*\}\);/);
+  assert.doesNotMatch(scriptResponse.text, /table\.on\("rowClick", function \(event, row\) \{[\s\S]*showSiteIdentification\(point\);[\s\S]*\}\);/);
   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("site-detail"/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
   assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
@@ -2279,7 +2299,21 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /aria-expanded/);
   assert.match(scriptResponse.text, /mapLegend\.classList\.toggle\("is-collapsed"\)/);
   assert.match(scriptResponse.text, /t\("legendExpand"\)/);
-  assert.match(scriptResponse.text, /function setToolsOpen\(open\)/);
+  assert.match(scriptResponse.text, /function setToolsOpen\(open, options = \{\}\)/);
+  assert.match(scriptResponse.text, /g2m\.cartographie\.session\.v1/);
+  assert.match(scriptResponse.text, /sessionStorage\.getItem\(this\.key\)/);
+  assert.match(scriptResponse.text, /sessionStorage\.setItem\(this\.key/);
+  assert.match(scriptResponse.text, /function saveCurrentCartographyContext\(\)/);
+  assert.match(scriptResponse.text, /function restoreCartographyContext\(context\)/);
+  assert.match(scriptResponse.text, /function restoreFilterValues\(criteria\)/);
+  assert.match(scriptResponse.text, /function restoreMapView\(mapState\)/);
+  assert.match(scriptResponse.text, /let userDefinedToolsWidth = normalizeToolsWidth/);
+  assert.match(scriptResponse.text, /toolsWidth: userDefinedToolsWidth/);
+  assert.match(scriptResponse.text, /workspace\.style\.removeProperty\("--sig-tools-width"\)/);
+  assert.doesNotMatch(scriptResponse.text, /toolsWidth: toolsPanel\.getBoundingClientRect\(\)\.width/);
+  assert.match(scriptResponse.text, /map\.on\("moveend zoomend", saveCurrentCartographyContext\)/);
+  assert.match(scriptResponse.text, /map\.on\("baselayerchange"/);
+  assert.match(scriptResponse.text, /loadMissionScopedFilters\(event\.target\.value\)\.then\(saveCurrentCartographyContext\)/);
   assert.match(scriptResponse.text, /workspace\.classList\.toggle\("is-tools-open", open\)/);
   assert.match(scriptResponse.text, /toolsToggle\.addEventListener\("click"/);
   assert.match(scriptResponse.text, /toolsClose\.addEventListener\("click"/);
@@ -2292,6 +2326,19 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.map-control-container\.is-collapsed \.leaflet-control-layers-list/);
   assert.match(styleResponse.text, /\.sig-map-legend-items\s*\{[\s\S]*transition:[\s\S]*0\.3s ease/);
   assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed \.sig-map-legend-items/);
+  assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed\s*\{[\s\S]*bottom: 5px/);
+  assert.match(styleResponse.text, /\.sig-map-legend\.is-collapsed\s*\{[\s\S]*left: 5px/);
+  assert.match(styleResponse.text, /\.nav-kobo-sync\.is-disabled/);
+  assert.match(styleResponse.text, /\.decision-detail-frame\s*\{[\s\S]*width: 100%/);
+  assert.match(styleResponse.text, /\.report-embed-pal \.submission-detail-layout\s*\{[\s\S]*grid-template-columns: 1fr/);
+  assert.match(styleResponse.text, /\.submission-kpi-list,[\s\S]*\.submission-field-list\s*\{[\s\S]*clamp\(120px, 28%, 190px\)/);
+  assert.match(styleResponse.text, /\.submission-kpi-list dt,[\s\S]*\.submission-field-list dt\s*\{[\s\S]*color: rgba\(24, 43, 55, 0\.75\)/);
+  assert.match(styleResponse.text, /\.submission-kpi-list dt,[\s\S]*\.submission-field-list dt\s*\{[\s\S]*font-size: 0\.8em/);
+  assert.match(styleResponse.text, /\.submission-kpi-list dt,[\s\S]*\.submission-field-list dt\s*\{[\s\S]*font-weight: 400/);
+  assert.match(styleResponse.text, /\.submission-kpi-list dd,[\s\S]*\.submission-field-list dd\s*\{[\s\S]*color: #1f4e79/);
+  assert.match(styleResponse.text, /\.submission-kpi-list dd,[\s\S]*\.submission-field-list dd\s*\{[\s\S]*font-weight: 700/);
+  assert.match(styleResponse.text, /@media \(max-width: 800px\)[\s\S]*\.submission-field-list-compact\s*\{[\s\S]*grid-template-columns: 1fr/);
+  assert.match(styleResponse.text, /\.kobo-light-form\s*\{[\s\S]*display: grid/);
   assert.match(styleResponse.text, /\.site-nav-toggle\s*\{[\s\S]*display: none/);
   assert.match(styleResponse.text, /\.site-header\.is-nav-open nav\s*\{[\s\S]*display: grid/);
   assert.match(styleResponse.text, /\.brand-logo\s*\{[\s\S]*height: var\(--brand-logo-mobile-height\)/);
@@ -2517,6 +2564,9 @@ test("GET /soumissions/:id/report affiche la fiche decisionnelle V1 en parallele
   const response = await request(app)
     .get(`/soumissions/${submission.id}/report`)
     .set("Cookie", readerCookie);
+  const embeddedResponse = await request(app)
+    .get(`/soumissions/${submission.id}/report?embed=pal`)
+    .set("Cookie", readerCookie);
 
   assert.equal(anonymousResponse.status, 302);
   assert.equal(anonymousResponse.headers.location, `/login?next=%2Fsoumissions%2F${submission.id}%2Freport`);
@@ -2528,6 +2578,11 @@ test("GET /soumissions/:id/report affiche la fiche decisionnelle V1 en parallele
   assert.match(response.text, /Contexte de collecte/);
   assert.match(response.text, /Diagnostic rendu/);
   assert.match(response.text, /Ancienne fiche/);
+  assert.match(embeddedResponse.text, /class="report-embed report-embed-pal"/);
+  assert.match(embeddedResponse.text, /Synthese decisionnelle/);
+  assert.doesNotMatch(embeddedResponse.text, /class="site-header"/);
+  assert.doesNotMatch(embeddedResponse.text, /class="page-heading report-page-heading"/);
+  assert.doesNotMatch(embeddedResponse.text, /Ancienne fiche/);
 });
 
 test("GET /cartographie exige sig.read", async () => {
