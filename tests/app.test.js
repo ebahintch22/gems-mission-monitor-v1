@@ -278,7 +278,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(styleResponse.text, /--font-body: 13px/);
   assert.match(styleResponse.text, /html\[data-display-size="large"\]/);
   assert.match(styleResponse.text, /--font-body: 18px/);
-  assert.match(styleResponse.text, /\.nav-display-size-row/);
+  assert.match(styleResponse.text, /\.personalization-modal/);
   assert.match(styleResponse.text, /\.nav-menu-section-title/);
   assert.match(styleResponse.text, /\.display-size-option\.is-active/);
   assert.match(styleResponse.text, /input::placeholder,\s*textarea::placeholder/);
@@ -291,6 +291,8 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /dataset\.labelClose/);
   assert.match(navigationScriptResponse.text, /g2m_display_size/);
   assert.match(navigationScriptResponse.text, /applyDisplaySize/);
+  assert.match(navigationScriptResponse.text, /openPersonalization/);
+  assert.match(navigationScriptResponse.text, /data-personalization-open/);
   assert.match(navigationScriptResponse.text, /localStorage\.setItem\(displaySizeStorageKey, displaySize\)/);
   assert.match(navigationScriptResponse.text, /function scheduleSiteSearch\(\)/);
   assert.match(navigationScriptResponse.text, /\/api\/sites\/search\?q=/);
@@ -323,24 +325,35 @@ test("la navigation affiche seulement les liens autorises", async () => {
   assert.match(adminNavigation, /id="site-search-open"/);
   assert.match(adminNavigation, /fa-solid fa-magnifying-glass/);
   assert.match(adminNavigation, /fa-solid fa-eye/);
-  assert.match(adminNavigation, /href="\/cartographie" role="menuitem">Cartographie/);
+  assert.match(adminNavigation, /href="\/cartographie" role="menuitem"[\s\S]*fa-map-location-dot[\s\S]*Cartographie/);
   assert.match(adminNavigation, /class="nav-menu-panel-title">Infographie/);
-  assert.match(adminNavigation, /href="\/infographies\/mission-globale"/);
-  assert.match(adminNavigation, /href="\/missions" role="menuitem">Missions/);
-  assert.match(adminNavigation, /href="\/equipes" role="menuitem">/);
-  assert.match(adminNavigation, /href="\/agents" role="menuitem">Agents/);
-  assert.match(adminNavigation, /href="\/users" role="menuitem">Utilisateurs/);
-  assert.match(adminNavigation, /href="\/parametrages\/kobo" role="menuitem">KoboToolbox/);
-  assert.match(adminNavigation, /href="\/admin" role="menuitem">Administration/);
+  assert.match(adminNavigation, /href="\/infographies\/mission-globale"[\s\S]*fa-chart-pie[\s\S]*Mission globale/);
+  assert.match(adminNavigation, /href="\/infographies\/par-superviseur"[\s\S]*fa-user-tie[\s\S]*Par superviseur/);
+  assert.match(adminNavigation, /href="\/infographies\/par-region"[\s\S]*fa-location-crosshairs[\s\S]*Par r.gion/);
+  assert.match(adminNavigation, /href="\/missions" role="menuitem"[\s\S]*fa-briefcase[\s\S]*Missions/);
+  assert.match(adminNavigation, /href="\/equipes" role="menuitem"[\s\S]*fa-people-group/);
+  assert.match(adminNavigation, /href="\/agents" role="menuitem"[\s\S]*fa-user-check[\s\S]*Agents/);
+  assert.doesNotMatch(adminNavigation, /href="\/users" role="menuitem"[\s\S]*Utilisateurs/);
+  assert.match(adminNavigation, /href="\/parametrages\/kobo" role="menuitem"[\s\S]*fa-cloud-arrow-down[\s\S]*KoboToolbox/);
+  assert.match(adminNavigation, /href="\/admin" role="menuitem"[\s\S]*fa-screwdriver-wrench[\s\S]*Administration/);
+  assert.match(adminNavigation, /nav-menu-separator/);
   assert.match(adminNavigation, /class="nav-session-initials">AT</);
   assert.match(adminNavigation, /admin Test/);
   assert.match(adminNavigation, /admin\.navigation@g2m\.test/);
   assert.match(adminNavigation, /Administrateur systeme/);
+  assert.match(adminNavigation, /data-personalization-open/);
+  assert.doesNotMatch(adminNavigation, /data-display-size-value="small"/);
+  assert.doesNotMatch(adminNavigation, /nav-menu-language-row/);
   assert.match(adminNavigation, /action="\/logout" method="post"/);
+  assert.match(adminResponse.text, /id="personalization-modal"/);
+  assert.match(adminResponse.text, /data-display-size-value="small"/);
+  assert.match(adminResponse.text, /personalization-language-options/);
   assert.match(adminNavigation, /Déconnexion/);
 
   assert.match(agentNavigation, /class="nav-button" href="\/"/);
   assert.match(agentNavigation, /Personnalisation/);
+  assert.match(agentNavigation, /data-personalization-open/);
+  assert.doesNotMatch(agentNavigation, /data-display-size-value="small"/);
   assert.match(agentNavigation, /class="nav-session-initials">AT</);
   assert.match(agentNavigation, /agent Test/);
   assert.match(agentNavigation, /agent\.navigation@g2m\.test/);
@@ -350,7 +363,7 @@ test("la navigation affiche seulement les liens autorises", async () => {
   assert.doesNotMatch(agentNavigation, /id="site-search-open"/);
   assert.doesNotMatch(agentNavigation, /href="\/cartographie"/);
   assert.doesNotMatch(agentNavigation, /href="\/infographies\/mission-globale"/);
-  assert.doesNotMatch(agentNavigation, /href="\/missions" role="menuitem">Missions/);
+  assert.doesNotMatch(agentNavigation, /href="\/missions" role="menuitem"[\s\S]*Missions/);
   assert.doesNotMatch(agentNavigation, /href="\/admin" role="menuitem">Administration/);
 
   assert.match(partnerNavigation, /Visualisation/);
@@ -688,7 +701,7 @@ test("GET /admin affiche le hub admin pour un administrateur", async () => {
   assert.match(response.text, /href="\/admin\/system-status"/);
   assert.match(response.text, /href="\/users\/invitations"/);
   assert.match(response.text, /href="\/admin\/email-test"/);
-  assert.match(response.text, /href="\/admin" role="menuitem">Administration/);
+  assert.match(response.text, /href="\/admin" role="menuitem"[\s\S]*fa-screwdriver-wrench[\s\S]*Administration/);
 });
 
 test("les permissions systeme sont initialisees et verrouillees pour admin", () => {
@@ -707,7 +720,8 @@ test("les permissions systeme sont initialisees et verrouillees pour admin", () 
       'seed.manage',
       'kobo.manage',
       'email.test',
-      'exports.manage'
+      'exports.manage',
+      'buildings.manage'
     )
     ORDER BY code_permission
   `).all();
@@ -732,13 +746,14 @@ test("les permissions systeme sont initialisees et verrouillees pour admin", () 
       )
   `).get().total;
 
-  assert.equal(permissionRows.length, 12);
+  assert.equal(permissionRows.length, 13);
   assert.equal(permissionRows.find((row) => row.code_permission === "dashboard.mission.read").is_system, 0);
   assert.equal(permissionRows.find((row) => row.code_permission === "system.status.read").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "seed.manage").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "kobo.manage").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "email.test").is_system, 1);
   assert.equal(permissionRows.find((row) => row.code_permission === "exports.manage").is_system, 0);
+  assert.equal(permissionRows.find((row) => row.code_permission === "buildings.manage").is_system, 0);
   assert.equal(adminLockedCount, 10);
 });
 
@@ -770,10 +785,14 @@ test("la matrice fonctionnelle par defaut est initialisee sans verrouillage syst
   assert.equal(byRole.coordinateur.has("missions.manage"), true);
   assert.equal(byRole.coordinateur.has("dashboard.mission.read"), true);
   assert.equal(byRole.coordinateur.has("agents.manage"), true);
+  assert.equal(byRole.coordinateur.has("buildings.manage"), true);
   assert.equal(byRole.directeur_mission.has("exports.manage"), true);
+  assert.equal(byRole.directeur_mission.has("buildings.manage"), true);
   assert.equal(byRole.superviseur.has("teams.manage"), true);
+  assert.equal(byRole.superviseur.has("buildings.manage"), true);
   assert.equal(byRole.controleur.has("quality.manage"), true);
   assert.equal(byRole.specialiste_gis.has("sig.manage"), true);
+  assert.equal(byRole.specialiste_gis.has("buildings.manage"), true);
   assert.equal(byRole.specialiste_analyste_donnees.has("monitoring.read"), true);
   assert.equal(byRole.partenaire.has("infographics.read"), true);
   assert.equal(byRole.partenaire.has("dashboard.mission.read"), true);
@@ -1015,6 +1034,7 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
       settings: {
         "app.name": "G2M Test",
         "app.default_mission_id": "",
+        "map.geometry_import_results_target": "layerbox",
         "alerts.anomaly_threshold": "5",
         "search.site_fields": ["nom_officiel", "region"],
         "search.site_limit": "7",
@@ -1036,10 +1056,12 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   const persistedSecret = db.prepare("SELECT value FROM settings WHERE key = ?").get("smtp.password");
   const persistedSearchFields = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_fields");
   const persistedSearchLimit = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_limit");
+  const persistedGeometryTarget = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.geometry_import_results_target");
   assert.equal(persistedName.value, "G2M Test");
   assert.equal(persistedSecret.value, "secret-smtp-test");
   assert.deepEqual(JSON.parse(persistedSearchFields.value), ["nom_officiel", "region"]);
   assert.equal(persistedSearchLimit.value, "7");
+  assert.equal(persistedGeometryTarget.value, "layerbox");
 
   const formResponse = await request(app)
     .get("/admin/settings")
@@ -1048,7 +1070,11 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   assert.match(formResponse.text, /Mission d&#39;accueil/);
   assert.match(formResponse.text, /Aucune mission d&#39;accueil/);
   assert.match(formResponse.text, /Champs de recherche des sites/);
+  assert.match(formResponse.text, /class="admin-close-button"/);
+  assert.match(formResponse.text, /fa-xmark/);
   assert.match(formResponse.text, /name="settings\[search\.site_fields\]\[\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.geometry_import_results_target\]"/);
+  assert.match(formResponse.text, /LayerBox - Resultat de l'importation/);
   assert.match(formResponse.text, /value="nom_officiel"[\s\S]*checked/);
   assert.match(formResponse.text, /value="region"[\s\S]*checked/);
   assert.match(formResponse.text, /value="7"/);
@@ -1073,6 +1099,7 @@ test("GET /admin/db-stats genere le rapport dynamique SQLite", async () => {
   assert.match(response.text, /soumissions_collecte/);
   assert.match(response.text, /Donnees d&#39;une table/);
   assert.match(response.text, /Voir les donnees/);
+  assert.match(response.text, /class="admin-close-button"/);
 });
 
 test("GET /admin/db-stats permet de visualiser les donnees d'une table avec masquage", async () => {
@@ -2324,6 +2351,17 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /leaflet\.markercluster@1\.5\.3/);
   assert.match(response.text, /\/js\/layer-box-manager\.js/);
   assert.match(response.text, /\/js\/cartographie\.js/);
+  assert.match(response.text, /id="sig-geometry-import-open"/);
+  assert.match(response.text, /id="sig-buildings-open"/);
+  assert.match(response.text, /data-can-import-buildings="true"/);
+  assert.match(response.text, /id="sig-geometry-import-input"/);
+  assert.match(response.text, /id="sig-region-filter"/);
+  assert.match(response.text, /sig-filter-wide/);
+  assert.match(response.text, /Toutes les r.gions/);
+  assert.match(response.text, /accept="\.gems,\.gpx,application\/gpx\+xml,text\/xml,text\/plain"/);
+  assert.match(response.text, /id="sig-geometry-overlay"/);
+  assert.match(response.text, /id="sig-geometry-results-body"/);
+  assert.match(response.text, /id="sig-geometry-import-config-data"/);
   assert.match(layerScriptResponse.text, /class LayerBoxManager/);
   assert.match(layerScriptResponse.text, /renderToLayer\(id, content, options = \{\}\)/);
   assert.match(layerScriptResponse.text, /activateLayer\(id\)/);
@@ -2338,10 +2376,44 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /disableClusteringAtZoom: 14/);
   assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
   assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
+  assert.match(scriptResponse.text, /region: document\.getElementById\("sig-region-filter"\)\.value/);
+  assert.match(scriptResponse.text, /point\.nom_region === criteria\.region/);
+  assert.match(scriptResponse.text, /document\.getElementById\("sig-region-filter"\)\.value = criteria\.region/);
+  assert.match(scriptResponse.text, /function parseImportedGeometry\(encodedGeometry\)/);
+  assert.match(scriptResponse.text, /Types autorisés : POINT, LINE, POLYGON/);
+  assert.match(scriptResponse.text, /POLYGON doit être fermé/);
+  assert.match(scriptResponse.text, /function parseTabSeparatedCsv\(text\)/);
+  assert.match(scriptResponse.text, /function importGeometryFile\(text, fileName = ""\)/);
+  assert.match(scriptResponse.text, /function parseGpxFeatures\(text, fileName = ""\)/);
+  assert.match(scriptResponse.text, /new DOMParser\(\)/);
+  assert.match(scriptResponse.text, /getElementsByTagName\("wpt"\)/);
+  assert.match(scriptResponse.text, /getElementsByTagName\("trk"\)/);
+  assert.match(scriptResponse.text, /getElementsByTagName\("rte"\)/);
+  assert.match(scriptResponse.text, /preparedBuildingsLayer/);
+  assert.match(scriptResponse.text, /function openPreparedBuildingsLayer\(options = \{\}\)/);
+  assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("prepared-buildings"/);
+  assert.match(scriptResponse.text, /\/cartographie\/buildings\/import/);
+  assert.match(scriptResponse.text, /\/cartographie\/buildings\?\$\{params\.toString\(\)\}/);
+  assert.match(scriptResponse.text, /new Tabulator\(host/);
+  assert.match(scriptResponse.text, /focusPreparedBuilding\(row\.getData\(\)\.id\)/);
+  assert.match(scriptResponse.text, /L\.geoJSON\(null/);
+  assert.match(scriptResponse.text, /loadImportedGeometryStylePrefs\(\)/);
+  assert.match(scriptResponse.text, /localStorage\.setItem\(importedGeometryStyleKey/);
+  assert.match(scriptResponse.text, /importedGeometryStylePrefs\.strokeColor/);
+  assert.match(scriptResponse.text, /importedGeometryStylePrefs\.highlightColor/);
+  assert.match(scriptResponse.text, /geometryImportConfig\.resultsTarget === "layerbox"/);
+  assert.match(scriptResponse.text, /geometry-import-results/);
+  assert.match(scriptResponse.text, /new FileReader\(\)/);
+  assert.match(scriptResponse.text, /new Tabulator\(tableHost/);
+  assert.match(scriptResponse.text, /highlightImportedGeometry\(row\.getData\(\)\.id\)/);
+  assert.match(scriptResponse.text, /window\.setTimeout\(\(\) => \{[\s\S]*3000\)/);
   assert.match(scriptResponse.text, /function showSiteIdentification\(point, options = \{\}\)/);
   assert.match(scriptResponse.text, /function showDecisionDetail\(point, options = \{\}\)/);
   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("decision-detail"/);
   assert.match(scriptResponse.text, /\/soumissions\/\$\{point\.id\}\/report\?embed=pal/);
+  assert.match(scriptResponse.text, /function showSubmissionDiagnostic\(submissionId, axis, title\)/);
+  assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("submission-diagnostic"/);
+  assert.match(scriptResponse.text, /g2m:open-submission-diagnostic/);
   assert.match(scriptResponse.text, /function openKoboLightLayer\(options = \{\}\)/);
   assert.match(scriptResponse.text, /\/cartographie\/kobo-light\/sync/);
   assert.match(scriptResponse.text, /function showLoading\(message\)/);
@@ -2426,6 +2498,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.layer-box-header\s*\{[\s\S]*flex: 0 0 var\(--header-height\)/);
   assert.match(styleResponse.text, /\.sig-pal-root-content\s*\{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styleResponse.text, /\.sig-pal-root-content\s*\{[\s\S]*min-width: 0/);
+  assert.match(styleResponse.text, /\.sig-filter-wide\s*\{[\s\S]*grid-column: 1 \/ -1/);
   assert.match(styleResponse.text, /\.layer-box\s*\{[\s\S]*min-width: 0/);
   assert.match(styleResponse.text, /\.layer-box-content\s*\{[\s\S]*overflow-x: hidden/);
   assert.match(styleResponse.text, /\.layer-box-content\s*\{[\s\S]*overflow-y: auto/);
@@ -2436,20 +2509,108 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.g2m-loading-spinner\s*\{[\s\S]*animation: g2m-spin/);
   assert.match(styleResponse.text, /\.site-identification-actions/);
   assert.match(styleResponse.text, /\.sig-map-pane\s*\{[\s\S]*flex: 1 1 auto/);
+  assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*width: 250px/);
+  assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*height: 300px/);
+  assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*max-width: 500px/);
+  assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*max-height: 600px/);
+  assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*resize: both/);
+  assert.match(styleResponse.text, /\.prepared-buildings-form\s*\{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styleResponse.text, /\.prepared-buildings-table\s*\{[\s\S]*min-height: 220px/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*outline: none/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke: #7f7f7f/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke-dasharray: 4px 4px/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke-width: 0\.5px/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*bottom: var\(--mobile-map-control-bottom\)/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*top: auto/);
+  assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*left: calc\(10px \+ min\(360px, calc\(100vw - 24px\)\)\)/);
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
   assert.match(scriptResponse.text, /createPane\("collectionPointsPane"\)/);
   assert.match(scriptResponse.text, /"collectionPointsPane"\)\.style\.zIndex = 450/);
   assert.match(scriptResponse.text, /function fitToVisiblePoints\(visiblePoints\)/);
+  assert.match(scriptResponse.text, /new ResizeObserver\(function \(\)/);
+  assert.match(scriptResponse.text, /clampGeometryOverlayToMapPane\(\)/);
   assert.match(scriptResponse.text, /map\.fitBounds\(bounds/);
   assert.match(scriptResponse.text, /renderPoints\(true\)/);
   assert.doesNotMatch(scriptResponse.text, /http:\/\/\{s\}\.tile\.openstreetmap\.org/);
+});
+
+test("POST /cartographie/buildings/import alimente le referentiel batimentaire preparatoire", async () => {
+  const gisCookie = await loginTestUser({
+    email: "gis.buildings-import@g2m.test",
+    role: "specialiste_gis"
+  });
+  const partnerCookie = await loginTestUser({
+    email: "partner.buildings-import@g2m.test",
+    role: "partenaire"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+  const geojson = {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: {
+        site_code: "SITE-TEST",
+        site_name: "Site test",
+        building_code: "BAT-ADMIN",
+        source: "osm",
+        source_reference: "OSM extract"
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[
+          [-4.00652, 5.35012],
+          [-4.00714, 5.35005],
+          [-4.00708, 5.34941],
+          [-4.00652, 5.35012]
+        ]]
+      }
+    }]
+  };
+
+  const deniedResponse = await request(app)
+    .post("/cartographie/buildings/import")
+    .set("Cookie", partnerCookie)
+    .send({ mission_id: mission.id, geojson });
+
+  assert.equal(deniedResponse.status, 403);
+
+  const importResponse = await request(app)
+    .post("/cartographie/buildings/import")
+    .set("Cookie", gisCookie)
+    .send({ mission_id: mission.id, geojson });
+
+  assert.equal(importResponse.status, 201);
+  assert.equal(importResponse.body.ok, true);
+  assert.equal(importResponse.body.result.imported, 1);
+
+  const secondImportResponse = await request(app)
+    .post("/cartographie/buildings/import")
+    .set("Cookie", gisCookie)
+    .send({ mission_id: mission.id, geojson });
+
+  assert.equal(secondImportResponse.status, 201);
+
+  const persisted = db.prepare(`
+    SELECT COUNT(*) AS total
+    FROM building_features
+    WHERE mission_id = ?
+      AND site_code = 'SITE-TEST'
+      AND building_code = 'BAT-ADMIN'
+  `).get(mission.id);
+  assert.equal(persisted.total, 1);
+
+  const listResponse = await request(app)
+    .get(`/cartographie/buildings?mission_id=${mission.id}`)
+    .set("Cookie", gisCookie);
+
+  assert.equal(listResponse.status, 200);
+  assert.equal(listResponse.body.type, "FeatureCollection");
+  assert.equal(listResponse.body.features.some((feature) => (
+    feature.properties.building_code === "BAT-ADMIN"
+    && feature.properties.site_code === "SITE-TEST"
+    && feature.geometry.type === "Polygon"
+  )), true);
 });
 
 test("GET /soumissions/:id/detail affiche la fiche decisionnelle et exige infographics.read", async () => {
@@ -2657,12 +2818,42 @@ test("GET /soumissions/:id/report affiche la fiche decisionnelle V1 en parallele
   assert.match(response.text, /Synthese decisionnelle/);
   assert.match(response.text, /Contexte de collecte/);
   assert.match(response.text, /Diagnostic rendu/);
-  assert.match(response.text, /Ancienne fiche/);
+  assert.match(response.text, /data-report-diagnostic-toggle/);
+  assert.match(response.text, /\/soumissions\/\d+\/diagnostics\/geometric/);
+  assert.doesNotMatch(response.text, /Ancienne fiche/);
   assert.match(embeddedResponse.text, /class="report-embed report-embed-pal"/);
   assert.match(embeddedResponse.text, /Synthese decisionnelle/);
+  assert.match(embeddedResponse.text, /g2m:open-submission-diagnostic/);
+  assert.match(embeddedResponse.text, /diagnostics\/geometric\?embed=pal/);
   assert.doesNotMatch(embeddedResponse.text, /class="site-header"/);
   assert.doesNotMatch(embeddedResponse.text, /class="page-heading report-page-heading"/);
   assert.doesNotMatch(embeddedResponse.text, /Ancienne fiche/);
+});
+
+test("GET /soumissions/:id/diagnostics/geometric affiche le diagnostic geometrique HTML", async () => {
+  const readerCookie = await loginTestUser({
+    email: "partenaire.submission-diagnostic@g2m.test",
+    role: "partenaire"
+  });
+  const submission = db.prepare(`
+    SELECT id FROM soumissions_collecte WHERE source_submission_id = ?
+  `).get("SIM-AG-I01-001");
+
+  const response = await request(app)
+    .get(`/soumissions/${submission.id}/diagnostics/geometric?embed=pal`)
+    .set("Cookie", readerCookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /class="report-embed report-embed-pal"/);
+  assert.match(response.text, /Diagnostic de conformit/);
+  assert.match(response.text, /Carte de situation/);
+  assert.match(response.text, /id="diagnostic-situation-map"/);
+  assert.match(response.text, /id="diagnostic-map-data"/);
+  assert.match(response.text, /FeatureCollection/);
+  assert.match(response.text, /leaflet@1\.9\.4/);
+  assert.match(response.text, /Champs GPS d/);
+  assert.match(response.text, /Anomalies et recommandations/);
+  assert.doesNotMatch(response.text, /site-header/);
 });
 
 test("GET /cartographie exige sig.read", async () => {

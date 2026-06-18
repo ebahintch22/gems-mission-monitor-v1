@@ -24,12 +24,21 @@
       <div class="panel sig-panel">
         <h2><%= t("sig.tools.filters") %></h2>
         <form class="sig-filters" id="sig-filters">
-          <label>
+          <label class="sig-filter-wide">
             <%= t("sig.filters.mission") %>
             <select id="sig-mission-filter">
               <option value=""><%= t("sig.filters.allMissions") %></option>
               <% filters.missions.forEach((mission) => { %>
                 <option value="<%= mission.id %>"><%= mission.name %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>
+            <%= t("common.region") %>
+            <select id="sig-region-filter">
+              <option value=""><%= t("sig.filters.allRegions") %></option>
+              <% filters.regions.forEach((region) => { %>
+                <option value="<%= region.nom_region %>"><%= region.nom_region %></option>
               <% }) %>
             </select>
           </label>
@@ -104,6 +113,40 @@
         aria-pressed="true"
         title="<%= t("sig.cluster.disable") %>"
       >C</button>
+      <button
+        class="sig-map-tool"
+        id="sig-buildings-open"
+        type="button"
+        title="Bâtiments préparés"
+        aria-label="Bâtiments préparés"
+        data-can-import-buildings="<%= permissions && permissions.has("buildings.manage") ? "true" : "false" %>"
+      >
+        <i class="fa-solid fa-building" aria-hidden="true"></i>
+      </button>
+      <button
+        class="sig-map-tool"
+        id="sig-geometry-import-open"
+        type="button"
+        title="Importer des géométries"
+        aria-label="Importer des géométries"
+      >
+        <i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>
+      </button>
+      <input
+        id="sig-geometry-import-input"
+        class="is-hidden"
+        type="file"
+        accept=".gems,.gpx,application/gpx+xml,text/xml,text/plain"
+      >
+    </div>
+    <div class="sig-geometry-overlay" id="sig-geometry-overlay" aria-label="Géométries importées">
+      <div class="sig-geometry-overlay-header" id="sig-geometry-overlay-handle">
+        <strong>Formes</strong>
+        <button id="sig-geometry-clear" type="button" aria-label="Supprimer les formes importées">
+          <i class="fa-solid fa-trash" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div id="sig-geometry-results-body" class="sig-geometry-results-body"></div>
     </div>
     <div class="sig-map-legend is-collapsed" id="sig-map-legend">
       <button
@@ -132,6 +175,7 @@
 <script id="sig-points-data" type="application/json"><%- JSON.stringify(points).replace(/</g, "\\u003c") %></script>
 <script id="sig-regions-data" type="application/json"><%- JSON.stringify(regions).replace(/</g, "\\u003c") %></script>
 <script id="sig-site-category-icons-data" type="application/json"><%- JSON.stringify(siteCategoryIcons).replace(/</g, "\\u003c") %></script>
+<script id="sig-geometry-import-config-data" type="application/json"><%- JSON.stringify(geometryImportConfig || {}).replace(/</g, "\\u003c") %></script>
 <script id="sig-i18n-data" type="application/json"><%- JSON.stringify({
   locale,
   messages: {

@@ -568,6 +568,46 @@ addColumnIfMissing(submissionColumns, "soumissions_collecte", "assignment_id", "
 db.exec(`
   CREATE INDEX IF NOT EXISTS idx_soumissions_assignment_id
     ON soumissions_collecte(assignment_id);
+
+  CREATE TABLE IF NOT EXISTS building_features (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mission_id INTEGER NOT NULL,
+    site_code TEXT NOT NULL DEFAULT '',
+    site_name TEXT,
+    building_code TEXT NOT NULL,
+    source TEXT NOT NULL DEFAULT 'import'
+      CHECK (source IN ('osm', 'topoexport', 'satellite', 'terrain', 'manual', 'import')),
+    source_reference TEXT,
+    geometry_geojson TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'prepare'
+      CHECK (status IN ('prepare', 'transmis_terrain', 'verifie_terrain', 'a_corriger', 'valide', 'archive')),
+    properties_json TEXT,
+    prepared_by INTEGER,
+    prepared_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    validated_by INTEGER,
+    validated_at TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (mission_id, site_code, building_code),
+    FOREIGN KEY (mission_id) REFERENCES missions(id)
+      ON UPDATE CASCADE
+      ON DELETE RESTRICT,
+    FOREIGN KEY (prepared_by) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL,
+    FOREIGN KEY (validated_by) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_mission_id
+    ON building_features(mission_id);
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_status
+    ON building_features(status);
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_site_code
+    ON building_features(site_code);
 `);
 
 const missionColumns = db.prepare("PRAGMA table_info('missions')").all()
@@ -709,6 +749,14 @@ function seedDefaultSettings() {
       group_name: "general",
       label: "Mission d'accueil",
       description: "Mission dont le dashboard sera charge comme page d'accueil apres connexion."
+    },
+    {
+      key: "map.geometry_import_results_target",
+      value: "floating",
+      type: "string",
+      group_name: "map",
+      label: "Resultats d'import cartographique",
+      description: "Mode d'affichage des resultats apres import de geometries."
     },
     {
       key: "alerts.anomaly_threshold",
@@ -867,6 +915,7 @@ function seedDefaultPermissions() {
     ["kobo.manage", "Administration Kobo", "Gestion de la connexion et des synchronisations KoboToolbox.", "kobo", 1],
     ["sig.read", "Consultation SIG", "Acces a la cartographie.", "sig", 0],
     ["sig.manage", "Gestion SIG", "Parametrage ou fonctions avancees SIG.", "sig", 0],
+    ["buildings.manage", "Gestion des batiments prepares", "Import et gestion du referentiel batimentaire preparatoire.", "sig", 0],
     ["infographics.read", "Infographies", "Consultation des infographies.", "infographics", 0],
     ["quality.read", "Consultation qualite", "Lecture des controles qualite.", "quality", 0],
     ["quality.manage", "Gestion qualite", "Actions de controle et validation.", "quality", 0],
@@ -956,6 +1005,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "users.invite.read",
       "monitoring.read",
       "sig.read",
+      "buildings.manage",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -973,6 +1023,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "users.invite.read",
       "monitoring.read",
       "sig.read",
+      "buildings.manage",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -986,6 +1037,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "agents.read",
       "agents.manage",
       "sig.read",
+      "buildings.manage",
       "infographics.read",
       "quality.read"
     ],
@@ -1009,6 +1061,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "agents.read",
       "sig.read",
       "sig.manage",
+      "buildings.manage",
       "infographics.read",
       "exports.manage"
     ],

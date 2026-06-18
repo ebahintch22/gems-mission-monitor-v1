@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title><%= title %></title>
     <link rel="stylesheet" href="/css/app.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <% if (report.map) { %>
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <% } %>
@@ -22,10 +23,52 @@
     <p class="muted"><%= report.template.label %> - <%= report.header.subtitle || submission.display_submission_id || submission.source_submission_id %></p>
   </div>
   <div class="heading-actions">
-    <a class="button" href="/soumissions/<%= submission.id %>/detail">Ancienne fiche</a>
+    <div class="report-command-menu">
+      <button class="button" type="button" data-report-diagnostic-toggle>
+        <i class="fa-solid fa-stethoscope" aria-hidden="true"></i>
+        <span>Diagnostic</span>
+      </button>
+      <div class="report-command-panel" role="menu">
+        <a href="/soumissions/<%= submission.id %>/diagnostics/geometric" role="menuitem" data-diagnostic-axis="geometric">
+          <i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>
+          <span>Conformité géométrique / spatiale</span>
+        </a>
+        <button type="button" role="menuitem" disabled>
+          <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+          <span>Cohérence logique</span>
+        </button>
+      </div>
+    </div>
     <a class="button" href="/cartographie">Retour cartographie</a>
   </div>
 </section>
+<% } %>
+
+<% if (isPalEmbed) { %>
+  <section class="report-embed-toolbar">
+    <div>
+      <p class="eyebrow"><%= report.header.eyebrow %></p>
+      <h1><%= report.header.title %></h1>
+    </div>
+    <div class="heading-actions">
+      <div class="report-command-menu">
+        <button class="button" type="button" data-report-diagnostic-toggle>
+          <i class="fa-solid fa-stethoscope" aria-hidden="true"></i>
+          <span>Diagnostic</span>
+        </button>
+        <div class="report-command-panel" role="menu">
+          <a href="/soumissions/<%= submission.id %>/diagnostics/geometric?embed=pal" role="menuitem" data-diagnostic-axis="geometric">
+            <i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>
+            <span>Conformité géométrique / spatiale</span>
+          </a>
+          <button type="button" role="menuitem" disabled>
+            <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
+            <span>Cohérence logique</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
 <% } %>
 
 <section class="submission-summary-grid" aria-label="Synthese de la soumission">
@@ -135,6 +178,37 @@
     }());
   </script>
 <% } %>
+<script>
+  (function () {
+    var menu = document.querySelector(".report-command-menu");
+    if (!menu) return;
+    var toggle = menu.querySelector("[data-report-diagnostic-toggle]");
+    var links = menu.querySelectorAll("[data-diagnostic-axis]");
+    if (toggle) {
+      toggle.addEventListener("click", function () {
+        menu.classList.toggle("is-open");
+      });
+    }
+    document.addEventListener("click", function (event) {
+      if (!menu.contains(event.target)) {
+        menu.classList.remove("is-open");
+      }
+    });
+    links.forEach(function (link) {
+      link.addEventListener("click", function (event) {
+        if (document.body.classList.contains("report-embed-pal") && window.parent && window.parent !== window) {
+          event.preventDefault();
+          window.parent.postMessage({
+            type: "g2m:open-submission-diagnostic",
+            submissionId: "<%= submission.id %>",
+            axis: link.dataset.diagnosticAxis,
+            title: link.textContent.trim()
+          }, window.location.origin);
+        }
+      });
+    });
+  }());
+</script>
 <% if (isPalEmbed) { %>
     </main>
   </body>

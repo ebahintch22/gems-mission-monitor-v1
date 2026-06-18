@@ -5,7 +5,10 @@
     <h1><%= t("admin.loginHistory.title") %></h1>
     <p class="muted"><%= t("admin.loginHistory.description") %></p>
   </div>
-  <a class="button" href="/admin"><%= t("common.back") %></a>
+  <div class="heading-actions">
+    <%- include("../partials/admin-close-button") %>
+    <a class="button" href="/admin"><%= t("common.back") %></a>
+  </div>
 </section>
 
 <section class="panel">

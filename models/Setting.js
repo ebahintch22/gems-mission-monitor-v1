@@ -3,6 +3,7 @@ const db = require("../config/database");
 const editableKeys = [
   "app.name",
   "app.default_mission_id",
+  "map.geometry_import_results_target",
   "alerts.anomaly_threshold",
   "search.site_fields",
   "search.site_limit",
@@ -134,6 +135,14 @@ function normalizeValue(setting, value) {
       throw new Error("invalid_search_limit");
     }
     return String(limit);
+  }
+
+  if (setting.key === "map.geometry_import_results_target") {
+    const target = String(value ?? "").trim();
+    if (!["floating", "layerbox"].includes(target)) {
+      throw new Error("invalid_geometry_import_results_target");
+    }
+    return target;
   }
 
   if (setting.key === "app.default_mission_id") {

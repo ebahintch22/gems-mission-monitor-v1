@@ -103,6 +103,16 @@ class SoumissionCollecte {
         JOIN missions m ON m.id = s.mission_id
         WHERE m.archived = 0
         ORDER BY a.code_agent
+      `).all(),
+      regions: db.prepare(`
+        SELECT DISTINCT r.nom_region
+        FROM regions r
+        JOIN departements d ON d.region_id = r.id
+        JOIN sous_prefectures sp ON sp.departement_id = d.id
+        JOIN soumissions_collecte s ON s.sous_prefecture_id = sp.id
+        JOIN missions m ON m.id = s.mission_id
+        WHERE m.archived = 0
+        ORDER BY r.nom_region
       `).all()
     };
   }

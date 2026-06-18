@@ -39,6 +39,8 @@ exports.updateSettings = (req, res) => {
           ? req.t("admin.settings.errors.invalidSearchFields")
         : error.message === "invalid_search_limit"
           ? req.t("admin.settings.errors.invalidSearchLimit")
+        : error.message === "invalid_geometry_import_results_target"
+          ? "Mode d'affichage des resultats d'import invalide."
         : sanitizeError(error)
     }, 400);
   }
@@ -245,6 +247,7 @@ function renderPermissions(req, res, options = {}, statusCode = 200) {
 function settingGroupLabels(req) {
   return {
     general: req.t("admin.settings.groups.general"),
+    map: "Cartographie",
     alerts: req.t("admin.settings.groups.alerts"),
     search: req.t("admin.settings.groups.search"),
     sync: req.t("admin.settings.groups.sync"),

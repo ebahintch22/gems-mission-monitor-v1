@@ -1,5 +1,6 @@
 const SoumissionCollecte = require("../models/SoumissionCollecte");
 const Mission = require("../models/Mission");
+const Setting = require("../models/Setting");
 const siteCategoryIcons = require("../config/map/site-category-icons.json");
 const { getKoboConfigStatus, syncKoboSubmissions } = require("../services/koboSyncService");
 
@@ -20,6 +21,9 @@ exports.index = (req, res) => {
     points,
     regions,
     siteCategoryIcons,
+    geometryImportConfig: {
+      resultsTarget: Setting.rawValue("map.geometry_import_results_target") || "floating"
+    },
     filters: SoumissionCollecte.mapFilters()
   });
 };

@@ -9,5 +9,6 @@ router.use(requireAuth);
 
 router.get("/:id/detail", requirePermission("infographics.read"), submissionController.detail);
 router.get("/:id/report", requirePermission("infographics.read"), submissionController.report);
+router.get("/:id/diagnostics/:axis", requirePermission("infographics.read"), submissionController.diagnostic);
 
 module.exports = router;

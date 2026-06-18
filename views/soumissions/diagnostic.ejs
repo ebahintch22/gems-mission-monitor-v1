@@ -1,0 +1,192 @@
+<% const isPalEmbed = typeof embedMode !== "undefined" && embedMode === "pal"; %>
+<% if (isPalEmbed) { %>
+<!doctype html>
+<html lang="<%= locale || "fr" %>" data-display-size="medium">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title><%= title %></title>
+    <link rel="stylesheet" href="/css/app.css">
+    <% if (diagnostic.map) { %>
+      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <% } %>
+  </head>
+  <body class="report-embed report-embed-pal">
+    <main class="report-embed-container">
+<% } else { %>
+<%- include("../partials/header", { title, mapAssets: Boolean(diagnostic.map) }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow">Diagnostic des données</p>
+    <h1><%= diagnostic.title %></h1>
+    <p class="muted"><%= diagnostic.subtitle %></p>
+  </div>
+  <div class="heading-actions">
+    <a class="button" href="/soumissions/<%= submission.id %>/report">Retour fiche décisionnelle</a>
+  </div>
+</section>
+<% } %>
+
+<section class="diagnostic-report">
+  <% if (isPalEmbed) { %>
+    <header class="diagnostic-embed-heading">
+      <p class="eyebrow">Diagnostic des données</p>
+      <h1><%= diagnostic.title %></h1>
+      <p class="muted"><%= diagnostic.subtitle %></p>
+    </header>
+  <% } %>
+
+  <section class="submission-summary-grid diagnostic-summary" aria-label="Synthèse du diagnostic">
+    <% diagnostic.summary.forEach((item) => { %>
+      <div class="stat">
+        <span><%= item.label %></span>
+        <strong><%= item.value %></strong>
+      </div>
+    <% }) %>
+    <div class="stat">
+      <span>Qualité globale</span>
+      <strong class="diagnostic-quality diagnostic-quality-<%= diagnostic.quality.toLowerCase().replace(/\s+/g, "-") %>"><%= diagnostic.quality %></strong>
+    </div>
+  </section>
+
+  <% if (diagnostic.map) { %>
+    <section class="panel diagnostic-section diagnostic-map-section">
+      <div class="panel-header">
+        <h2>Carte de situation</h2>
+        <span class="status"><%= diagnostic.map.featureCollection.features.length %> géométrie(s)</span>
+      </div>
+      <p class="muted">Localisation des points, lignes et polygones extraits de la soumission. Le fond OpenStreetMap est affiché en estompé pour faciliter le repérage.</p>
+      <div id="diagnostic-situation-map" class="diagnostic-situation-map"></div>
+      <div class="diagnostic-map-legend" aria-label="Légende cartographique">
+        <span class="diagnostic-map-legend-point">Point</span>
+        <span class="diagnostic-map-legend-line">Ligne</span>
+        <span class="diagnostic-map-legend-polygon">Polygone</span>
+      </div>
+    </section>
+  <% } %>
+
+  <% diagnostic.sections.forEach((section) => { %>
+    <section class="panel diagnostic-section">
+      <div class="panel-header">
+        <h2><%= section.title %></h2>
+      </div>
+      <% if (section.description) { %>
+        <p class="muted"><%= section.description %></p>
+      <% } %>
+      <% if (!section.items.length) { %>
+        <p class="empty">Aucune donnée disponible.</p>
+      <% } else { %>
+        <div class="diagnostic-table-scroll">
+          <table class="simple-table diagnostic-table">
+            <thead>
+              <tr>
+                <% Object.keys(section.items[0]).forEach((key) => { %>
+                  <th><%= key %></th>
+                <% }) %>
+              </tr>
+            </thead>
+            <tbody>
+              <% section.items.forEach((item) => { %>
+                <tr>
+                  <% Object.values(item).forEach((value) => { %>
+                    <td><%= value %></td>
+                  <% }) %>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      <% } %>
+    </section>
+  <% }) %>
+
+  <section class="panel diagnostic-section">
+    <div class="panel-header">
+      <h2>Anomalies et recommandations</h2>
+      <span class="status"><%= diagnostic.errors.length %></span>
+    </div>
+    <% if (!diagnostic.errors.length) { %>
+      <p class="empty">Aucune anomalie géométrique détectée.</p>
+    <% } else { %>
+      <div class="diagnostic-issue-list">
+        <% diagnostic.errors.forEach((entry) => { %>
+          <article class="diagnostic-issue diagnostic-issue-<%= entry.severity %>">
+            <header>
+              <span class="status"><%= entry.severity === "error" ? "Erreur" : "Alerte" %></span>
+              <strong><%= entry.rule %></strong>
+            </header>
+            <dl>
+              <dt>Champ</dt>
+              <dd><%= entry.field %></dd>
+              <dt>Constat</dt>
+              <dd><%= entry.message %></dd>
+              <dt>Correction suggérée</dt>
+              <dd><%= entry.suggestion %></dd>
+            </dl>
+          </article>
+        <% }) %>
+      </div>
+    <% } %>
+  </section>
+</section>
+
+<% if (diagnostic.map) { %>
+  <script id="diagnostic-map-data" type="application/json"><%- JSON.stringify(diagnostic.map).replace(/</g, "\\u003c") %></script>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    (function () {
+      var payload = JSON.parse(document.getElementById("diagnostic-map-data").textContent);
+      var map = L.map("diagnostic-situation-map", { maxZoom: 20 }).setView(
+        [payload.center.latitude, payload.center.longitude],
+        17
+      );
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 20,
+        opacity: 0.42,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+      var layer = L.geoJSON(payload.featureCollection, {
+        pointToLayer: function (feature, latlng) {
+          return L.circleMarker(latlng, {
+            color: "#006b5b",
+            fillColor: "#006b5b",
+            fillOpacity: 0.9,
+            radius: 6,
+            weight: 1
+          });
+        },
+        style: function (feature) {
+          if (feature.geometry.type === "Polygon") {
+            return {
+              color: "#b45309",
+              fillColor: "#fbbf24",
+              fillOpacity: 0.18,
+              weight: 2
+            };
+          }
+          return {
+            color: "#1d4ed8",
+            opacity: 0.9,
+            weight: 3
+          };
+        },
+        onEachFeature: function (feature, featureLayer) {
+          featureLayer.bindPopup(feature.properties.field || "Géométrie GPS");
+        }
+      }).addTo(map);
+      if (layer.getBounds && layer.getBounds().isValid()) {
+        map.fitBounds(layer.getBounds(), { padding: [18, 18], maxZoom: 18 });
+      }
+      window.setTimeout(function () {
+        map.invalidateSize();
+      }, 80);
+    }());
+  </script>
+<% } %>
+<% if (isPalEmbed) { %>
+    </main>
+  </body>
+</html>
+<% } else { %>
+<%- include("../partials/footer") %>
+<% } %>

@@ -39,7 +39,6 @@
       const showSettingsNav = can("missions.read")
         || can("teams.read")
         || can("agents.read")
-        || can("users.read")
         || can("kobo.manage")
         || can("admin.access");
       const currentUserName = currentUser
@@ -109,13 +108,25 @@
             </button>
             <div class="nav-menu-panel" role="menu">
               <% if (can("sig.read")) { %>
-                <a href="/cartographie" role="menuitem"><%= t("nav.cartography") %></a>
+                <a href="/cartographie" role="menuitem">
+                  <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+                  <span><%= t("nav.cartography") %></span>
+                </a>
               <% } %>
               <% if (showInfographicsNav) { %>
                 <span class="nav-menu-panel-title"><%= t("nav.infographics") %></span>
-                <a href="/infographies/mission-globale" role="menuitem"><%= t("nav.infographicsGlobal") %></a>
-                <a href="/infographies/par-superviseur" role="menuitem"><%= t("nav.infographicsSupervisor") %></a>
-                <a href="/infographies/par-region" role="menuitem"><%= t("nav.infographicsRegion") %></a>
+                <a href="/infographies/mission-globale" role="menuitem">
+                  <i class="fa-solid fa-chart-pie" aria-hidden="true"></i>
+                  <span><%= t("nav.infographicsGlobal") %></span>
+                </a>
+                <a href="/infographies/par-superviseur" role="menuitem">
+                  <i class="fa-solid fa-user-tie" aria-hidden="true"></i>
+                  <span><%= t("nav.infographicsSupervisor") %></span>
+                </a>
+                <a href="/infographies/par-region" role="menuitem">
+                  <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+                  <span><%= t("nav.infographicsRegion") %></span>
+                </a>
               <% } %>
             </div>
           </div>
@@ -135,22 +146,40 @@
             </button>
             <div class="nav-menu-panel" role="menu">
               <% if (can("missions.read")) { %>
-                <a href="/missions" role="menuitem"><%= t("nav.missions") %></a>
+                <a href="/missions" role="menuitem">
+                  <i class="fa-solid fa-briefcase" aria-hidden="true"></i>
+                  <span><%= t("nav.missions") %></span>
+                </a>
               <% } %>
               <% if (can("teams.read")) { %>
-                <a href="/equipes" role="menuitem"><%= t("nav.teams") %></a>
+                <a href="/equipes" role="menuitem">
+                  <i class="fa-solid fa-people-group" aria-hidden="true"></i>
+                  <span><%= t("nav.teams") %></span>
+                </a>
               <% } %>
               <% if (can("agents.read")) { %>
-                <a href="/agents" role="menuitem"><%= t("nav.agents") %></a>
+                <a href="/agents" role="menuitem">
+                  <i class="fa-solid fa-user-check" aria-hidden="true"></i>
+                  <span><%= t("nav.agents") %></span>
+                </a>
               <% } %>
-              <% if (can("users.read")) { %>
-                <a href="/users" role="menuitem"><%= t("nav.users") %></a>
+              <% if (can("kobo.manage") || can("admin.access")) { %>
+                <hr class="nav-menu-separator" aria-hidden="true">
               <% } %>
               <% if (can("kobo.manage")) { %>
-                <a href="/parametrages/kobo" role="menuitem"><%= t("nav.kobo") %></a>
+                <a href="/parametrages/kobo" role="menuitem">
+                  <i class="fa-solid fa-cloud-arrow-down" aria-hidden="true"></i>
+                  <span><%= t("nav.kobo") %></span>
+                </a>
               <% } %>
               <% if (can("admin.access")) { %>
-              <a href="/admin" role="menuitem"><%= t("nav.admin") %></a>
+                <% if (can("kobo.manage")) { %>
+                  <hr class="nav-menu-separator" aria-hidden="true">
+                <% } %>
+                <a href="/admin" role="menuitem">
+                  <i class="fa-solid fa-screwdriver-wrench" aria-hidden="true"></i>
+                  <span><%= t("nav.admin") %></span>
+                </a>
               <% } %>
             </div>
           </div>
@@ -185,19 +214,10 @@
                 <span><%= currentUser.email %></span>
                 <span><%= t("session.role") %> : <%= currentUserRoleLabel %></span>
               </div>
-              <div class="nav-menu-section" aria-label="<%= t("nav.personalization") %>">
-                <p class="nav-menu-section-title"><%= t("nav.personalization") %></p>
-                <div class="nav-menu-language-row">
-                  <a class="<%= locale === "fr" ? "is-active" : "" %>" href="<%= localeUrls.fr %>" role="menuitem" lang="fr"><%= t("nav.languageFrench") %></a>
-                  <a class="<%= locale === "en" ? "is-active" : "" %>" href="<%= localeUrls.en %>" role="menuitem" lang="en"><%= t("nav.languageEnglish") %></a>
-                  <a class="<%= locale === "es" ? "is-active " : "" %>is-hidden" href="<%= localeUrls.es %>" role="menuitem" lang="es"><%= t("nav.languageSpanish") %></a>
-                </div>
-                <div class="nav-display-size-row" aria-label="<%= t("nav.displaySize") %>">
-                  <button class="display-size-option" type="button" role="menuitem" data-display-size-value="small"><%= t("nav.displaySizeSmall") %></button>
-                  <button class="display-size-option" type="button" role="menuitem" data-display-size-value="medium"><%= t("nav.displaySizeMedium") %></button>
-                  <button class="display-size-option" type="button" role="menuitem" data-display-size-value="large"><%= t("nav.displaySizeLarge") %></button>
-                </div>
-              </div>
+              <button class="nav-menu-action" type="button" role="menuitem" data-personalization-open>
+                <i class="fa-solid fa-sliders" aria-hidden="true"></i>
+                <span><%= t("nav.personalization") %></span>
+              </button>
               <form action="/logout" method="post" class="nav-session-form">
                 <button type="submit" class="nav-session-logout" role="menuitem">
                   <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
@@ -213,6 +233,44 @@
           </a>
         <% } %>
       </nav>
+      <% if (currentUser) { %>
+        <div
+          class="personalization-modal"
+          id="personalization-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="personalization-title"
+          aria-hidden="true"
+        >
+          <div class="personalization-backdrop" data-personalization-close></div>
+          <section class="personalization-dialog">
+            <div class="personalization-header">
+              <h2 id="personalization-title"><%= t("nav.personalization") %></h2>
+              <button class="personalization-close" type="button" aria-label="<%= t("nav.personalizationClose") %>" data-personalization-close>
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </div>
+            <div class="personalization-body">
+              <section class="personalization-section" aria-labelledby="personalization-language-title">
+                <h3 id="personalization-language-title"><%= t("nav.language") %></h3>
+                <div class="personalization-language-options">
+                  <a class="<%= locale === "fr" ? "is-active" : "" %>" href="<%= localeUrls.fr %>" lang="fr"><%= t("nav.languageFrench") %></a>
+                  <a class="<%= locale === "en" ? "is-active" : "" %>" href="<%= localeUrls.en %>" lang="en"><%= t("nav.languageEnglish") %></a>
+                  <a class="<%= locale === "es" ? "is-active " : "" %>is-hidden" href="<%= localeUrls.es %>" lang="es"><%= t("nav.languageSpanish") %></a>
+                </div>
+              </section>
+              <section class="personalization-section" aria-labelledby="personalization-display-title">
+                <h3 id="personalization-display-title"><%= t("nav.displaySize") %></h3>
+                <div class="personalization-display-options" aria-label="<%= t("nav.displaySize") %>">
+                  <button class="display-size-option" type="button" data-display-size-value="small"><%= t("nav.displaySizeSmall") %></button>
+                  <button class="display-size-option" type="button" data-display-size-value="medium"><%= t("nav.displaySizeMedium") %></button>
+                  <button class="display-size-option" type="button" data-display-size-value="large"><%= t("nav.displaySizeLarge") %></button>
+                </div>
+              </section>
+            </div>
+          </section>
+        </div>
+      <% } %>
       <% if (showSiteSearch) { %>
         <div
           class="site-search-modal"

@@ -1,6 +1,7 @@
 const SoumissionCollecte = require("../models/SoumissionCollecte");
 const { buildSubmissionReport } = require("../services/submissionReportRenderer");
 const { buildSubmissionDetail } = require("../services/submissionViewService");
+const { buildSubmissionDiagnostic } = require("../services/submissionDiagnosticService");
 
 exports.detail = (req, res) => {
   const submission = SoumissionCollecte.findById(req.params.id);
@@ -37,6 +38,28 @@ exports.report = (req, res) => {
     title: `Rapport ${submission.display_submission_id || submission.source_submission_id}`,
     submission,
     report,
+    embedMode
+  });
+};
+
+exports.diagnostic = (req, res) => {
+  const submission = SoumissionCollecte.findById(req.params.id);
+
+  if (!submission) {
+    return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
+  }
+  if (submission.mission_archived === 1 && req.currentUser?.role !== "admin") {
+    return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
+  }
+
+  const axis = req.params.axis || "geometric";
+  const diagnostic = buildSubmissionDiagnostic(submission, axis);
+  const embedMode = req.query.embed === "pal" ? "pal" : null;
+
+  return res.render("soumissions/diagnostic", {
+    title: diagnostic.title,
+    submission,
+    diagnostic,
     embedMode
   });
 };

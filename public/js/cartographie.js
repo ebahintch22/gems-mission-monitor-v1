@@ -2,6 +2,7 @@
   const points = JSON.parse(document.getElementById("sig-points-data").textContent);
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
   const siteCategoryIcons = JSON.parse(document.getElementById("sig-site-category-icons-data").textContent);
+  const geometryImportConfig = JSON.parse(document.getElementById("sig-geometry-import-config-data")?.textContent || "{}");
   const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
   const messages = i18nPayload.messages || {};
   const filterLabels = i18nPayload.filters || {};
@@ -19,6 +20,14 @@
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const mapLegendItems = document.getElementById("sig-map-legend-items");
+  const mapPane = document.getElementById("sig-map-pane");
+  const geometryImportOpen = document.getElementById("sig-geometry-import-open");
+  const geometryImportInput = document.getElementById("sig-geometry-import-input");
+  const geometryOverlay = document.getElementById("sig-geometry-overlay");
+  const geometryOverlayHandle = document.getElementById("sig-geometry-overlay-handle");
+  const geometryOverlayBody = document.getElementById("sig-geometry-results-body");
+  const geometryClear = document.getElementById("sig-geometry-clear");
+  const buildingsOpen = document.getElementById("sig-buildings-open");
   const loadingOverlay = document.getElementById("sig-loading-overlay");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
   const CartographieSessionState = {
@@ -54,12 +63,44 @@
   let activeLayerContext = { id: "root", submissionId: null };
   let userDefinedToolsWidth = normalizeToolsWidth(savedContext?.layout?.toolsWidth);
   let contextPersistenceFrozenUntil = 0;
+  const importedGeometryStyleKey = "g2m.sig.importedGeometryStyle.v1";
+  let importedGeometryStylePrefs = loadImportedGeometryStylePrefs();
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
   map.getPane("collectionPointsPane").style.zIndex = 450;
   const clusterToggle = document.getElementById("sig-cluster-toggle");
   const collectionLayer = L.layerGroup().addTo(map);
+  const importedGeometryLayer = L.geoJSON(null, {
+    style: importedGeometryStyle,
+    pointToLayer(feature, latlng) {
+      return L.circleMarker(latlng, {
+        ...importedGeometryStyle(),
+        fillOpacity: 0,
+        radius: 6
+      });
+    },
+    onEachFeature(feature, layer) {
+      const props = feature.properties || {};
+      layer.bindPopup([
+        props.nomSite,
+        props.batiment,
+        props.denomination
+      ].filter(Boolean).join("<br>"));
+    }
+  }).addTo(map);
+  const preparedBuildingsLayer = L.geoJSON(null, {
+    style: preparedBuildingStyle,
+    onEachFeature(feature, layer) {
+      const props = feature.properties || {};
+      layer.bindPopup([
+        `<strong>${escapeHtml(props.building_code || "Bâtiment")}</strong>`,
+        props.site_name ? escapeHtml(props.site_name) : "",
+        props.status ? `Statut : ${escapeHtml(props.status)}` : "",
+        props.source ? `Source : ${escapeHtml(props.source)}` : ""
+      ].filter(Boolean).join("<br>"));
+    }
+  }).addTo(map);
   const clusteredMarkersLayer = L.markerClusterGroup({
     chunkedLoading: true,
     disableClusteringAtZoom: 14,
@@ -70,6 +111,11 @@
   const plainMarkersLayer = L.layerGroup();
   let clusteringEnabled = true;
   let activeMarkersLayer = clusteredMarkersLayer;
+  let importedGeometryRows = [];
+  let importedGeometryTable = null;
+  let importedGeometryTableHost = null;
+  let preparedBuildingsTable = null;
+  let preparedBuildingsData = [];
   collectionLayer.addLayer(activeMarkersLayer);
   const colors = {
     validee: "#16856f",
@@ -153,6 +199,94 @@
     loadingOverlay.setAttribute("aria-busy", "false");
   }
 
+  function loadImportedGeometryStylePrefs() {
+    const defaults = {
+      strokeColor: "#FF0000",
+      highlightColor: "#0000FF",
+      strokeWeight: 2,
+      dashStyle: "dashed"
+    };
+    try {
+      return normalizeImportedGeometryStylePrefs({
+        ...defaults,
+        ...JSON.parse(localStorage.getItem(importedGeometryStyleKey) || "{}")
+      });
+    } catch (error) {
+      return defaults;
+    }
+  }
+
+  function normalizeImportedGeometryStylePrefs(prefs) {
+    const dashStyles = new Set(["solid", "dashed", "dotted", "dashdot"]);
+    const hexColor = /^#[0-9a-f]{6}$/i;
+    return {
+      strokeColor: hexColor.test(prefs.strokeColor || "") ? prefs.strokeColor : "#FF0000",
+      highlightColor: hexColor.test(prefs.highlightColor || "") ? prefs.highlightColor : "#0000FF",
+      strokeWeight: Math.max(1, Math.min(8, Number.parseInt(prefs.strokeWeight, 10) || 2)),
+      dashStyle: dashStyles.has(prefs.dashStyle) ? prefs.dashStyle : "dashed"
+    };
+  }
+
+  function saveImportedGeometryStylePrefs(prefs) {
+    importedGeometryStylePrefs = normalizeImportedGeometryStylePrefs(prefs);
+    try {
+      localStorage.setItem(importedGeometryStyleKey, JSON.stringify(importedGeometryStylePrefs));
+    } catch (error) {
+      // The map remains usable if browser storage is disabled.
+    }
+    applyImportedGeometryStyles();
+  }
+
+  function importedGeometryDashArray() {
+    return {
+      solid: null,
+      dashed: "5,5",
+      dotted: "1,5",
+      dashdot: "8,4,2,4"
+    }[importedGeometryStylePrefs.dashStyle] || "5,5";
+  }
+
+  function applyImportedGeometryStyles() {
+    importedGeometryLayer.eachLayer((layer) => {
+      if (typeof layer.setStyle === "function") {
+        layer.setStyle(importedGeometryStyle());
+      }
+    });
+  }
+
+  function importedGeometryStyle(options = {}) {
+    const highlighted = options.highlighted === true;
+    return {
+      color: highlighted ? importedGeometryStylePrefs.highlightColor : importedGeometryStylePrefs.strokeColor,
+      dashArray: highlighted ? null : importedGeometryDashArray(),
+      fill: false,
+      fillOpacity: 0,
+      opacity: 1,
+      weight: highlighted ? importedGeometryStylePrefs.strokeWeight + 2 : importedGeometryStylePrefs.strokeWeight
+    };
+  }
+
+  function preparedBuildingStyle(feature) {
+    const status = feature?.properties?.status || "prepare";
+    const color = {
+      prepare: "#7f7f7f",
+      transmis_terrain: "#1f4e79",
+      verifie_terrain: "#16856f",
+      a_corriger: "#d38b13",
+      valide: "#0f766e",
+      archive: "#777777"
+    }[status] || "#1f4e79";
+    return {
+      color,
+      dashArray: status === "valide" ? null : "6,4",
+      fill: true,
+      fillColor: color,
+      fillOpacity: 0.12,
+      opacity: 1,
+      weight: 2
+    };
+  }
+
   const territoryLayer = L.geoJSON(regions, {
     pane: "territoryPane",
     style: {
@@ -168,7 +302,9 @@
 
   const layerControl = L.control.layers(baseLayers, {
     [t("layerCollectionPoints")]: collectionLayer,
-    [t("layerRegionalBoundaries")]: territoryLayer
+    [t("layerRegionalBoundaries")]: territoryLayer,
+    "Bâtiments préparés": preparedBuildingsLayer,
+    "Géométries importées": importedGeometryLayer
   }, {
     collapsed: false,
     position: "topright"
@@ -265,6 +401,482 @@
       duration: 0.9
     });
     map.invalidateSize();
+  }
+
+  function parseTabSeparatedCsv(text) {
+    const lines = String(text || "").replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.trim() !== "");
+    if (!lines.length) {
+      return { rows: [], errors: [{ line: 1, value: "", message: "Fichier vide." }] };
+    }
+    const headers = lines[0].split("\t").map((header) => header.trim());
+    const expectedHeaders = ["NOM DU SITE", "BATIMENT", "GEOMETRIE", "DENOMINATION"];
+    const headerIsValid = expectedHeaders.length === headers.length
+      && expectedHeaders.every((header, index) => headers[index] === header);
+    if (!headerIsValid) {
+      return {
+        rows: [],
+        errors: [{
+          line: 1,
+          value: headers.join(" | "),
+          message: `En-tête invalide. Colonnes attendues : ${expectedHeaders.join(", ")}.`
+        }]
+      };
+    }
+    const rows = [];
+    const errors = [];
+    lines.slice(1).forEach((line, index) => {
+      const lineNumber = index + 2;
+      const values = line.split("\t");
+      if (values.length !== expectedHeaders.length) {
+        errors.push({
+          line: lineNumber,
+          value: line,
+          message: "Nombre de colonnes invalide."
+        });
+        return;
+      }
+      const row = expectedHeaders.reduce((record, header, columnIndex) => {
+        record[header] = (values[columnIndex] || "").trim();
+        return record;
+      }, {});
+      if (!row.GEOMETRIE) {
+        errors.push({ line: lineNumber, value: "", message: "Champ GEOMETRIE vide." });
+        return;
+      }
+      rows.push({ ...row, lineNumber });
+    });
+    return { rows, errors };
+  }
+
+  function parseImportedGeometry(encodedGeometry) {
+    const normalized = String(encodedGeometry || "").trim();
+    const typeMatch = normalized.match(/^([A-Za-z]+)\s*\(([\s\S]*)\)$/);
+    if (!typeMatch) {
+      throw new Error("Géométrie invalide ou parenthèses manquantes.");
+    }
+    const type = typeMatch[1].toUpperCase();
+    const body = typeMatch[2].trim();
+    if (type === "POINT") {
+      const coordinates = parseEncodedCoordinateList(body);
+      if (coordinates.length !== 1) {
+        throw new Error("POINT doit contenir un seul couple longitude latitude.");
+      }
+      return {
+        type: "Point",
+        coordinates: coordinates[0]
+      };
+    }
+    if (type === "LINE") {
+      const coordinates = parseEncodedCoordinateList(body);
+      if (coordinates.length < 2) {
+        throw new Error("LINE doit contenir au moins deux points.");
+      }
+      return {
+        type: "LineString",
+        coordinates
+      };
+    }
+    if (type === "POLYGON") {
+      const coordinates = parseEncodedCoordinateList(body);
+      if (coordinates.length < 4) {
+        throw new Error("POLYGON doit contenir au moins quatre points.");
+      }
+      if (!sameCoordinatePair(coordinates[0], coordinates[coordinates.length - 1])) {
+        throw new Error("POLYGON doit être fermé : le dernier point doit répéter le premier.");
+      }
+      return {
+        type: "Polygon",
+        coordinates: [coordinates]
+      };
+    }
+    throw new Error(`Type non supporté : ${type}. Types autorisés : POINT, LINE, POLYGON.`);
+  }
+
+  function parseEncodedCoordinateList(text) {
+    return String(text)
+      .split(";")
+      .map((part) => part.trim())
+      .filter(Boolean)
+      .map(parseEncodedCoordinate);
+  }
+
+  function parseEncodedCoordinate(text) {
+    if (String(text).includes(",")) {
+      throw new Error(`Coordonnée invalide : ${text}. Utiliser le point décimal et un espace entre longitude et latitude.`);
+    }
+    const parts = String(text).trim().split(/\s+/).map(Number);
+    if (parts.length < 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1])) {
+      throw new Error(`Coordonnée invalide : ${text}`);
+    }
+    if (parts.length > 2) {
+      throw new Error(`Coordonnée invalide : ${text}. Seuls longitude et latitude sont attendus.`);
+    }
+    return [parts[0], parts[1]];
+  }
+
+  function sameCoordinatePair(first, second) {
+    return Math.abs(first[0] - second[0]) <= 1e-9 && Math.abs(first[1] - second[1]) <= 1e-9;
+  }
+
+  function importGeometryFile(text, fileName = "") {
+    const extension = String(fileName || "").toLowerCase().split(".").pop();
+    if (extension === "gpx") {
+      return importGeometryGpx(text, fileName);
+    }
+    if (extension === "gems") {
+      return importGeometryGems(text);
+    }
+    window.alert("Format non supporte. Utiliser un fichier .gems ou .gpx.");
+    return undefined;
+  }
+
+  function importGeometryGems(text) {
+    const parsed = parseTabSeparatedCsv(text);
+    const features = [];
+    const errors = [...parsed.errors];
+    parsed.rows.forEach((row) => {
+      try {
+        const geometry = parseImportedGeometry(row.GEOMETRIE);
+        features.push({
+          type: "Feature",
+          properties: {
+            id: `imported-${row.lineNumber}`,
+            lineNumber: row.lineNumber,
+            nomSite: row["NOM DU SITE"],
+            batiment: row.BATIMENT,
+            denomination: row.DENOMINATION
+          },
+          geometry
+        });
+      } catch (error) {
+        errors.push({
+          line: row.lineNumber,
+          value: row.GEOMETRIE,
+          message: error.message
+        });
+        console.warn("Import géométrie ignoré", { line: row.lineNumber, value: row.GEOMETRIE, error });
+      }
+    });
+    renderImportedGeometries(features);
+    if (errors.length) {
+      window.alert(errors.map((error) => `Ligne ${error.line} : ${error.message}\n${error.value || ""}`).join("\n\n"));
+    }
+  }
+
+  function importGeometryGpx(text, fileName = "") {
+    const parsed = parseGpxFeatures(text, fileName);
+    renderImportedGeometries(parsed.features);
+    if (parsed.errors.length) {
+      window.alert(parsed.errors.map((error) => `${error.label} : ${error.message}`).join("\n\n"));
+    }
+  }
+
+  function parseGpxFeatures(text, fileName = "") {
+    const parser = new DOMParser();
+    const document = parser.parseFromString(String(text || ""), "application/xml");
+    if (document.querySelector("parsererror")) {
+      return {
+        features: [],
+        errors: [{ label: fileName || "GPX", message: "Fichier GPX invalide ou illisible." }]
+      };
+    }
+
+    const sourceName = stripFileExtension(fileName) || childText(document.documentElement, "name") || "Import GPX";
+    const features = [];
+    const errors = [];
+
+    Array.from(document.getElementsByTagName("wpt")).forEach((waypoint, index) => {
+      const coordinate = gpxPointCoordinate(waypoint);
+      if (!coordinate) {
+        errors.push({ label: `Waypoint ${index + 1}`, message: "Coordonnees lat/lon absentes ou invalides." });
+        return;
+      }
+      features.push(gpxFeature({
+        id: `gpx-wpt-${index + 1}`,
+        sourceName,
+        name: childText(waypoint, "name") || `Waypoint ${index + 1}`,
+        description: gpxDescription(waypoint),
+        geometry: { type: "Point", coordinates: coordinate }
+      }));
+    });
+
+    Array.from(document.getElementsByTagName("trk")).forEach((track, trackIndex) => {
+      const trackName = childText(track, "name") || `Trace ${trackIndex + 1}`;
+      Array.from(track.getElementsByTagName("trkseg")).forEach((segment, segmentIndex) => {
+        const coordinates = Array.from(segment.getElementsByTagName("trkpt"))
+          .map(gpxPointCoordinate)
+          .filter(Boolean);
+        const label = `${trackName} - segment ${segmentIndex + 1}`;
+        const geometry = gpxLineOrPolygonGeometry(coordinates);
+        if (!geometry) {
+          errors.push({ label, message: "Trace ignoree : moins de deux points valides." });
+          return;
+        }
+        features.push(gpxFeature({
+          id: `gpx-trk-${trackIndex + 1}-${segmentIndex + 1}`,
+          sourceName,
+          name: label,
+          description: gpxDescription(track),
+          geometry
+        }));
+      });
+    });
+
+    Array.from(document.getElementsByTagName("rte")).forEach((route, routeIndex) => {
+      const coordinates = Array.from(route.getElementsByTagName("rtept"))
+        .map(gpxPointCoordinate)
+        .filter(Boolean);
+      const routeName = childText(route, "name") || `Route ${routeIndex + 1}`;
+      const geometry = gpxLineOrPolygonGeometry(coordinates);
+      if (!geometry) {
+        errors.push({ label: routeName, message: "Route ignoree : moins de deux points valides." });
+        return;
+      }
+      features.push(gpxFeature({
+        id: `gpx-rte-${routeIndex + 1}`,
+        sourceName,
+        name: routeName,
+        description: gpxDescription(route),
+        geometry
+      }));
+    });
+
+    if (!features.length && !errors.length) {
+      errors.push({ label: sourceName, message: "Aucune geometrie GPX exploitable trouvee." });
+    }
+
+    return { features, errors };
+  }
+
+  function gpxFeature({ id, sourceName, name, description, geometry }) {
+    return {
+      type: "Feature",
+      properties: {
+        id,
+        lineNumber: "",
+        nomSite: sourceName,
+        batiment: name,
+        denomination: description || geometry.type
+      },
+      geometry
+    };
+  }
+
+  function gpxPointCoordinate(node) {
+    const latitude = Number(node.getAttribute("lat"));
+    const longitude = Number(node.getAttribute("lon"));
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+      return null;
+    }
+    return [longitude, latitude];
+  }
+
+  function gpxLineOrPolygonGeometry(coordinates) {
+    if (coordinates.length < 2) {
+      return null;
+    }
+    if (coordinates.length >= 4 && sameCoordinatePair(coordinates[0], coordinates[coordinates.length - 1])) {
+      return {
+        type: "Polygon",
+        coordinates: [coordinates]
+      };
+    }
+    return {
+      type: "LineString",
+      coordinates
+    };
+  }
+
+  function childText(node, tagName) {
+    const child = Array.from(node.children || []).find((element) => element.localName === tagName);
+    return child ? child.textContent.trim() : "";
+  }
+
+  function gpxDescription(node) {
+    return childText(node, "desc") || childText(node, "cmt") || childText(node, "type");
+  }
+
+  function stripFileExtension(fileName) {
+    return String(fileName || "").replace(/\.[^.]+$/, "");
+  }
+
+  function renderImportedGeometries(features) {
+    importedGeometryLayer.clearLayers();
+    importedGeometryRows = features.map((feature) => ({
+      id: feature.properties.id,
+      nomSite: feature.properties.nomSite,
+      batiment: feature.properties.batiment,
+      denomination: feature.properties.denomination
+    }));
+    importedGeometryLayer.addData({
+      type: "FeatureCollection",
+      features
+    });
+    openGeometryResultsView();
+    importedGeometryTable.setData(importedGeometryRows);
+    if (features.length && importedGeometryLayer.getBounds().isValid()) {
+      map.fitBounds(importedGeometryLayer.getBounds(), { padding: [24, 24], maxZoom: 18 });
+    }
+  }
+
+  function renderGeometryResultsContent(container) {
+    if (!container) {
+      return;
+    }
+    container.innerHTML = "";
+    const controls = document.createElement("div");
+    controls.className = "sig-geometry-style-tools";
+    controls.innerHTML = `
+      <label>
+        <span>Contour</span>
+        <input type="color" data-geometry-style="strokeColor" value="${importedGeometryStylePrefs.strokeColor}">
+      </label>
+      <label>
+        <span>Surbrillance</span>
+        <input type="color" data-geometry-style="highlightColor" value="${importedGeometryStylePrefs.highlightColor}">
+      </label>
+      <label>
+        <span>Epaisseur</span>
+        <input type="number" min="1" max="8" step="1" data-geometry-style="strokeWeight" value="${importedGeometryStylePrefs.strokeWeight}">
+      </label>
+      <label>
+        <span>Style</span>
+        <select data-geometry-style="dashStyle">
+          <option value="solid" ${importedGeometryStylePrefs.dashStyle === "solid" ? "selected" : ""}>Continu</option>
+          <option value="dashed" ${importedGeometryStylePrefs.dashStyle === "dashed" ? "selected" : ""}>Pointille</option>
+          <option value="dotted" ${importedGeometryStylePrefs.dashStyle === "dotted" ? "selected" : ""}>Points</option>
+          <option value="dashdot" ${importedGeometryStylePrefs.dashStyle === "dashdot" ? "selected" : ""}>Mixte</option>
+        </select>
+      </label>
+      <button class="sig-geometry-clear-inline" type="button" data-geometry-clear>
+        <i class="fa-solid fa-trash" aria-hidden="true"></i>
+      </button>
+    `;
+    const tableHost = document.createElement("div");
+    tableHost.className = "sig-geometry-table";
+    tableHost.id = container === geometryOverlayBody ? "sig-geometry-table" : "";
+    container.append(controls, tableHost);
+    controls.addEventListener("input", updateImportedGeometryStyleFromControls);
+    controls.addEventListener("change", updateImportedGeometryStyleFromControls);
+    controls.querySelector("[data-geometry-clear]")?.addEventListener("click", clearImportedGeometries);
+    ensureImportedGeometryTable(tableHost);
+  }
+
+  function updateImportedGeometryStyleFromControls(event) {
+    const field = event.target?.dataset?.geometryStyle;
+    if (!field) {
+      return;
+    }
+    saveImportedGeometryStylePrefs({
+      ...importedGeometryStylePrefs,
+      [field]: event.target.value
+    });
+  }
+
+  function ensureImportedGeometryTable(tableHost) {
+    if (!tableHost) {
+      return importedGeometryTable;
+    }
+    if (importedGeometryTable && importedGeometryTableHost === tableHost) {
+      return importedGeometryTable;
+    }
+    if (importedGeometryTable && typeof importedGeometryTable.destroy === "function") {
+      importedGeometryTable.destroy();
+    }
+    importedGeometryTableHost = tableHost;
+    importedGeometryTable = new Tabulator(tableHost, {
+      data: importedGeometryRows,
+      height: "100%",
+      layout: "fitColumns",
+      placeholder: "Aucune forme",
+      columns: [
+        { title: "SITE", field: "nomSite", minWidth: 90 },
+        { title: "BAT.", field: "batiment", minWidth: 70 },
+        { title: "DENOM.", field: "denomination", minWidth: 110 }
+      ]
+    });
+    importedGeometryTable.on("rowClick", function (event, row) {
+      highlightImportedGeometry(row.getData().id);
+    });
+    return importedGeometryTable;
+  }
+
+  function highlightImportedGeometry(id) {
+    importedGeometryLayer.eachLayer((layer) => {
+      const featureId = layer.feature?.properties?.id;
+      if (featureId !== id || typeof layer.setStyle !== "function") {
+        return;
+      }
+      layer.setStyle(importedGeometryStyle({ highlighted: true }));
+      if (layer.getBounds && layer.getBounds().isValid()) {
+        map.fitBounds(layer.getBounds(), { padding: [30, 30], maxZoom: 19 });
+      } else if (layer.getLatLng) {
+        map.flyTo(layer.getLatLng(), Math.max(map.getZoom(), 18), { duration: 0.6 });
+      }
+      window.setTimeout(() => {
+        if (typeof layer.setStyle === "function") {
+          layer.setStyle(importedGeometryStyle());
+        }
+      }, 3000);
+    });
+  }
+
+  function openGeometryResultsView() {
+    if (geometryImportConfig.resultsTarget === "layerbox") {
+      if (geometryOverlay) {
+        geometryOverlay.classList.remove("is-open");
+      }
+      layerBoxManager.renderToLayer("geometry-import-results", function (container) {
+        container.classList.add("sig-geometry-layerbox");
+        renderGeometryResultsContent(container);
+      }, {
+        title: "Resultat de l'importation",
+        activate: true
+      });
+      window.setTimeout(function () {
+        if (importedGeometryTable) {
+          importedGeometryTable.redraw(true);
+        }
+      }, 0);
+      return;
+    }
+
+    if (!geometryOverlay) {
+      return;
+    }
+    geometryOverlay.classList.add("is-open");
+    renderGeometryResultsContent(geometryOverlayBody);
+    clampGeometryOverlayToMapPane();
+    window.setTimeout(function () {
+      if (importedGeometryTable) {
+        importedGeometryTable.redraw(true);
+      }
+    }, 0);
+  }
+
+  function clearImportedGeometries() {
+    importedGeometryLayer.clearLayers();
+    importedGeometryRows = [];
+    if (importedGeometryTable) {
+      importedGeometryTable.setData([]);
+    }
+    if (geometryOverlay) {
+      geometryOverlay.classList.remove("is-open");
+    }
+  }
+
+  function clampGeometryOverlayToMapPane() {
+    if (!geometryOverlay || !mapPane) {
+      return;
+    }
+    const overlayRect = geometryOverlay.getBoundingClientRect();
+    const hostRect = mapPane.getBoundingClientRect();
+    const currentLeft = overlayRect.left - hostRect.left;
+    const currentTop = overlayRect.top - hostRect.top;
+    const maxLeft = Math.max(0, hostRect.width - overlayRect.width);
+    const maxTop = Math.max(0, hostRect.height - overlayRect.height);
+    geometryOverlay.style.left = `${Math.max(0, Math.min(currentLeft, maxLeft))}px`;
+    geometryOverlay.style.top = `${Math.max(0, Math.min(currentTop, maxTop))}px`;
   }
 
   function popupContent(point) {
@@ -560,6 +1172,30 @@
     }
   }
 
+  function showSubmissionDiagnostic(submissionId, axis, title) {
+    if (!submissionId) {
+      return;
+    }
+    const diagnosticTitle = title || "Diagnostic";
+    activeLayerContext = { id: "submission-diagnostic", submissionId };
+    layerBoxManager.renderToLayer("submission-diagnostic", function (container) {
+      const wrapper = document.createElement("section");
+      const iframe = document.createElement("iframe");
+
+      wrapper.className = "decision-detail-layer diagnostic-layer";
+      iframe.className = "decision-detail-frame diagnostic-frame";
+      iframe.src = `/soumissions/${encodeURIComponent(submissionId)}/diagnostics/${encodeURIComponent(axis || "geometric")}?embed=pal`;
+      iframe.title = diagnosticTitle;
+      wrapper.append(iframe);
+      container.append(wrapper);
+    }, {
+      activate: true,
+      title: diagnosticTitle
+    });
+    setToolsOpen(true);
+    saveCurrentCartographyContext();
+  }
+
   async function openKoboLightLayer(options = {}) {
     activeLayerContext = { id: "kobo-import", submissionId: null };
     layerBoxManager.renderToLayer("kobo-import", function (container) {
@@ -703,6 +1339,201 @@
     }
   }
 
+  function openPreparedBuildingsLayer(options = {}) {
+    activeLayerContext = { id: "prepared-buildings", submissionId: null };
+    layerBoxManager.renderToLayer("prepared-buildings", function (container) {
+      const shell = document.createElement("section");
+      shell.className = "prepared-buildings";
+      shell.innerHTML = `
+        <p class="muted">Import, listing et visualisation des bâtiments préparés avant terrain.</p>
+        <form class="prepared-buildings-form" id="prepared-buildings-form">
+          <label>Mission
+            <select name="mission_id" required>
+              <option value="">Sélectionner une mission</option>
+              ${missionOptionsHtml()}
+            </select>
+          </label>
+          <label>Code site
+            <input name="site_code" placeholder="Ex. SITE023">
+          </label>
+          <label>Nom du site
+            <input name="site_name" placeholder="Nom officiel du site">
+          </label>
+          <label>Source
+            <select name="source">
+              <option value="import">Import</option>
+              <option value="osm">OpenStreetMap</option>
+              <option value="topoexport">TopoExport</option>
+              <option value="satellite">Imagerie satellite</option>
+              <option value="manual">Saisie manuelle</option>
+            </select>
+          </label>
+          <label class="prepared-buildings-wide">Fichier GeoJSON
+            <input name="geojson_file" type="file" accept=".geojson,.json,application/geo+json,application/json">
+          </label>
+          <div class="prepared-buildings-actions">
+            <button class="button" type="button" data-buildings-refresh>Charger</button>
+            ${buildingsOpen?.dataset.canImportBuildings === "true"
+              ? '<button class="button button-primary" type="submit">Importer</button>'
+              : '<span class="form-hint">Import réservé aux profils autorisés.</span>'}
+          </div>
+        </form>
+        <div class="prepared-buildings-feedback" role="status" aria-live="polite"></div>
+        <div id="prepared-buildings-table" class="prepared-buildings-table"></div>
+      `;
+      container.append(shell);
+      initializePreparedBuildingsShell(shell);
+    }, {
+      activate: true,
+      title: "Bâtiments préparés"
+    });
+    setToolsOpen(true, { saveState: options.saveState });
+    if (options.saveState !== false) {
+      saveCurrentCartographyContext();
+    }
+  }
+
+  function missionOptionsHtml() {
+    return Array.from(document.querySelectorAll("#sig-mission-filter option"))
+      .filter((option) => option.value)
+      .map((option) => `<option value="${escapeHtml(option.value)}">${escapeHtml(option.textContent.trim())}</option>`)
+      .join("");
+  }
+
+  function initializePreparedBuildingsShell(shell) {
+    const form = shell.querySelector("#prepared-buildings-form");
+    const feedback = shell.querySelector(".prepared-buildings-feedback");
+    const missionSelect = form.elements.mission_id;
+    const activeMission = document.getElementById("sig-mission-filter").value;
+    if (activeMission) {
+      missionSelect.value = activeMission;
+    }
+    ensurePreparedBuildingsTable(shell.querySelector("#prepared-buildings-table"));
+    form.querySelector("[data-buildings-refresh]").addEventListener("click", async function () {
+      await loadPreparedBuildings(form, feedback);
+    });
+    form.addEventListener("submit", async function (event) {
+      event.preventDefault();
+      await submitPreparedBuildingsImport(form, feedback);
+    });
+    if (missionSelect.value) {
+      loadPreparedBuildings(form, feedback);
+    }
+  }
+
+  function ensurePreparedBuildingsTable(host) {
+    if (preparedBuildingsTable) {
+      preparedBuildingsTable.destroy();
+    }
+    preparedBuildingsTable = new Tabulator(host, {
+      data: preparedBuildingsData,
+      height: 260,
+      layout: "fitColumns",
+      placeholder: "Aucun bâtiment préparé",
+      columns: [
+        { title: "Site", field: "site_name", minWidth: 110 },
+        { title: "Code", field: "building_code", minWidth: 90 },
+        { title: "Source", field: "source", width: 90 },
+        { title: "Statut", field: "status", width: 120 }
+      ]
+    });
+    preparedBuildingsTable.on("rowClick", function (event, row) {
+      focusPreparedBuilding(row.getData().id);
+    });
+  }
+
+  async function submitPreparedBuildingsImport(form, feedback) {
+    const file = form.elements.geojson_file.files?.[0];
+    if (!file) {
+      feedback.textContent = "Sélectionner un fichier GeoJSON.";
+      feedback.className = "prepared-buildings-feedback is-error";
+      return;
+    }
+    try {
+      feedback.className = "prepared-buildings-feedback";
+      feedback.textContent = "Import en cours...";
+      const geojson = JSON.parse(await file.text());
+      const payload = {
+        mission_id: form.elements.mission_id.value,
+        site_code: form.elements.site_code.value,
+        site_name: form.elements.site_name.value,
+        source: form.elements.source.value,
+        geojson
+      };
+      const response = await fetch("/cartographie/buildings/import", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Import impossible.");
+      }
+      feedback.className = "prepared-buildings-feedback is-success";
+      feedback.textContent = `${result.result.imported} bâtiment(s) importé(s).`;
+      form.elements.geojson_file.value = "";
+      await loadPreparedBuildings(form, feedback, { keepMessage: true });
+    } catch (error) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = error.message;
+    }
+  }
+
+  async function loadPreparedBuildings(form, feedback, options = {}) {
+    const missionId = form.elements.mission_id.value;
+    if (!missionId) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Sélectionner une mission.";
+      return;
+    }
+    const params = new URLSearchParams({ mission_id: missionId });
+    const response = await fetch(`/cartographie/buildings?${params.toString()}`, {
+      headers: { Accept: "application/json" }
+    });
+    const featureCollection = await response.json();
+    if (!response.ok) {
+      throw new Error(featureCollection.error || "Chargement impossible.");
+    }
+    preparedBuildingsLayer.clearLayers();
+    preparedBuildingsLayer.addData(featureCollection);
+    preparedBuildingsData = (featureCollection.features || []).map((feature) => ({
+      id: feature.properties.id,
+      site_name: feature.properties.site_name || feature.properties.site_code || "-",
+      building_code: feature.properties.building_code || "-",
+      source: feature.properties.source || "-",
+      status: feature.properties.status || "-"
+    }));
+    if (preparedBuildingsTable) {
+      preparedBuildingsTable.setData(preparedBuildingsData);
+    }
+    if (!options.keepMessage) {
+      feedback.className = "prepared-buildings-feedback";
+      feedback.textContent = `${preparedBuildingsData.length} bâtiment(s) préparé(s).`;
+    }
+    if (preparedBuildingsLayer.getBounds && preparedBuildingsLayer.getBounds().isValid()) {
+      map.fitBounds(preparedBuildingsLayer.getBounds(), { padding: [28, 28], maxZoom: 19 });
+    }
+  }
+
+  function focusPreparedBuilding(id) {
+    preparedBuildingsLayer.eachLayer((layer) => {
+      const featureId = layer.feature?.properties?.id;
+      if (featureId !== id || typeof layer.setStyle !== "function") {
+        return;
+      }
+      layer.setStyle({ color: "#0000FF", weight: 4, dashArray: null, fillOpacity: 0.18 });
+      if (layer.getBounds && layer.getBounds().isValid()) {
+        map.fitBounds(layer.getBounds(), { padding: [32, 32], maxZoom: 20 });
+      }
+      window.setTimeout(() => {
+        layer.setStyle(preparedBuildingStyle(layer.feature));
+      }, 3000);
+    });
+  }
+
   function escapeHtml(value) {
     return String(value ?? "")
       .replace(/&/g, "&amp;")
@@ -741,6 +1572,7 @@
   function filters() {
     return {
       mission: document.getElementById("sig-mission-filter").value,
+      region: document.getElementById("sig-region-filter").value,
       equipe: document.getElementById("sig-equipe-filter").value,
       agent: document.getElementById("sig-agent-filter").value,
       validation: document.getElementById("sig-validation-filter").value,
@@ -752,6 +1584,7 @@
   function isVisible(point, criteria) {
     const day = point.submitted_at.slice(0, 10);
     return (!criteria.mission || String(point.mission_id) === criteria.mission)
+      && (!criteria.region || point.nom_region === criteria.region)
       && (!criteria.equipe || String(point.equipe_id) === criteria.equipe)
       && (!criteria.agent || String(point.agent_id) === criteria.agent)
       && (!criteria.validation || point.statut_validation === criteria.validation)
@@ -928,6 +1761,7 @@
       return;
     }
     document.getElementById("sig-mission-filter").value = criteria.mission || "";
+    document.getElementById("sig-region-filter").value = criteria.region || "";
     document.getElementById("sig-validation-filter").value = criteria.validation || "";
     document.getElementById("sig-date-from").value = criteria.from || "";
     document.getElementById("sig-date-to").value = criteria.to || "";
@@ -992,6 +1826,10 @@
     }
     if (layout.activeLayerId === "kobo-import") {
       openKoboLightLayer({ saveState: false });
+      return;
+    }
+    if (layout.activeLayerId === "prepared-buildings") {
+      openPreparedBuildingsLayer({ saveState: false });
       return;
     }
     const point = points.find(function (candidate) {
@@ -1061,6 +1899,76 @@
   toolsClose.addEventListener("click", function () {
     setToolsOpen(false);
   });
+  if (geometryImportOpen && geometryImportInput) {
+    geometryImportOpen.addEventListener("click", function () {
+      geometryImportInput.click();
+    });
+    geometryImportInput.addEventListener("change", function () {
+      const file = geometryImportInput.files?.[0];
+      if (!file) {
+        return;
+      }
+      const reader = new FileReader();
+      reader.addEventListener("load", function () {
+        importGeometryFile(reader.result || "", file.name);
+        geometryImportInput.value = "";
+      });
+      reader.readAsText(file, "utf-8");
+    });
+  }
+  if (geometryClear) {
+    geometryClear.addEventListener("click", clearImportedGeometries);
+  }
+  if (buildingsOpen) {
+    buildingsOpen.addEventListener("click", function () {
+      openPreparedBuildingsLayer();
+    });
+  }
+  if (geometryOverlay && geometryOverlayHandle) {
+    let overlayDrag = null;
+    geometryOverlayHandle.addEventListener("pointerdown", function (event) {
+      if (event.target.closest("button")) {
+        return;
+      }
+      const rect = geometryOverlay.getBoundingClientRect();
+      const hostRect = mapPane.getBoundingClientRect();
+      overlayDrag = {
+        offsetX: event.clientX - rect.left,
+        offsetY: event.clientY - rect.top,
+        hostLeft: hostRect.left,
+        hostTop: hostRect.top,
+        maxLeft: hostRect.width - rect.width,
+        maxTop: hostRect.height - rect.height
+      };
+      geometryOverlayHandle.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    geometryOverlayHandle.addEventListener("pointermove", function (event) {
+      if (!overlayDrag) {
+        return;
+      }
+      const left = Math.max(0, Math.min(event.clientX - overlayDrag.hostLeft - overlayDrag.offsetX, overlayDrag.maxLeft));
+      const top = Math.max(0, Math.min(event.clientY - overlayDrag.hostTop - overlayDrag.offsetY, overlayDrag.maxTop));
+      geometryOverlay.style.left = `${left}px`;
+      geometryOverlay.style.top = `${top}px`;
+    });
+    geometryOverlayHandle.addEventListener("pointerup", function (event) {
+      overlayDrag = null;
+      geometryOverlayHandle.releasePointerCapture(event.pointerId);
+    });
+    geometryOverlayHandle.addEventListener("pointercancel", function () {
+      overlayDrag = null;
+    });
+    if ("ResizeObserver" in window) {
+      const geometryOverlayResizeObserver = new ResizeObserver(function () {
+        clampGeometryOverlayToMapPane();
+        if (importedGeometryTable) {
+          importedGeometryTable.redraw(true);
+        }
+      });
+      geometryOverlayResizeObserver.observe(geometryOverlay);
+    }
+  }
   koboLightTriggers.forEach(function (trigger) {
     trigger.addEventListener("click", function (event) {
       event.preventDefault();
@@ -1137,6 +2045,16 @@
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape") {
       setToolsOpen(false);
+    }
+  });
+
+  window.addEventListener("message", function (event) {
+    if (event.origin !== window.location.origin) {
+      return;
+    }
+    const message = event.data || {};
+    if (message.type === "g2m:open-submission-diagnostic") {
+      showSubmissionDiagnostic(message.submissionId, message.axis, message.title);
     }
   });
 

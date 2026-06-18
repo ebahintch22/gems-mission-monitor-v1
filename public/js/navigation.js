@@ -6,6 +6,9 @@
   const displaySizeOptions = document.querySelectorAll("[data-display-size-value]");
   const displaySizeStorageKey = "g2m_display_size";
   const supportedDisplaySizes = ["small", "medium", "large"];
+  const personalizationOpenButtons = document.querySelectorAll("[data-personalization-open]");
+  const personalizationModal = document.getElementById("personalization-modal");
+  const personalizationCloseButtons = document.querySelectorAll("[data-personalization-close]");
   const siteSearchOpen = document.getElementById("site-search-open");
   const siteSearchModal = document.getElementById("site-search-modal");
   const siteSearchInput = document.getElementById("site-search-input");
@@ -89,6 +92,26 @@
     }
   }
 
+  function openPersonalization() {
+    if (!personalizationModal) {
+      return;
+    }
+    personalizationModal.classList.add("is-open");
+    personalizationModal.setAttribute("aria-hidden", "false");
+    document.body.classList.add("is-personalization-open");
+    menus.forEach(closeMenu);
+    closeSiteNav();
+  }
+
+  function closePersonalization() {
+    if (!personalizationModal) {
+      return;
+    }
+    personalizationModal.classList.remove("is-open");
+    personalizationModal.setAttribute("aria-hidden", "true");
+    document.body.classList.remove("is-personalization-open");
+  }
+
   if (displaySizeOptions.length) {
     let storedDisplaySize = "medium";
     try {
@@ -121,6 +144,7 @@
     if (event.key === "Escape") {
       menus.forEach(closeMenu);
       closeSiteNav();
+      closePersonalization();
       closeSiteSearch();
     }
   });
@@ -143,6 +167,14 @@
       }
     });
   }
+
+  personalizationOpenButtons.forEach(function (button) {
+    button.addEventListener("click", openPersonalization);
+  });
+
+  personalizationCloseButtons.forEach(function (button) {
+    button.addEventListener("click", closePersonalization);
+  });
 
   function openSiteSearch() {
     if (!siteSearchModal || !siteSearchInput) {
