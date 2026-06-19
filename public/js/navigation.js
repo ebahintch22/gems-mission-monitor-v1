@@ -232,7 +232,7 @@
       const title = document.createElement("strong");
       const meta = document.createElement("span");
       link.className = "site-search-result";
-      link.href = site.url || `/soumissions/${site.id}/report`;
+      link.href = site.url || `/cartographie?submission_id=${encodeURIComponent(site.id)}`;
       link.setAttribute("role", "option");
       title.textContent = site.nom_officiel || `Site #${site.id}`;
       meta.textContent = [site.ville, site.sous_prefecture, site.region, site.type_infrastructure]

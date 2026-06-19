@@ -296,6 +296,7 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /localStorage\.setItem\(displaySizeStorageKey, displaySize\)/);
   assert.match(navigationScriptResponse.text, /function scheduleSiteSearch\(\)/);
   assert.match(navigationScriptResponse.text, /\/api\/sites\/search\?q=/);
+  assert.match(navigationScriptResponse.text, /\/cartographie\?submission_id=\$\{encodeURIComponent\(site\.id\)\}/);
   assert.match(navigationScriptResponse.text, /window\.setTimeout\(function \(\) \{[\s\S]*\}, 600\)/);
   assert.match(navigationScriptResponse.text, /AbortController/);
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
@@ -2287,7 +2288,7 @@ test("GET /api/sites/search recherche les sites avec debounce cote client", asyn
   assert.equal(apiResponse.body.results.length <= 3, true);
   assert.equal(apiResponse.body.results.length > 0, true);
   assert.match(apiResponse.body.results[0].nom_officiel, /Centre|centre/i);
-  assert.match(apiResponse.body.results[0].url, /^\/soumissions\/\d+\/report$/);
+  assert.match(apiResponse.body.results[0].url, /^\/cartographie\?submission_id=\d+$/);
   assert.equal(shortQueryResponse.status, 200);
   assert.deepEqual(shortQueryResponse.body.results, []);
   assert.equal(deniedResponse.status, 403);
@@ -2440,6 +2441,13 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /localStorage\.setItem\(importedGeometryStyleKey/);
   assert.match(scriptResponse.text, /importedGeometryStylePrefs\.strokeColor/);
   assert.match(scriptResponse.text, /importedGeometryStylePrefs\.highlightColor/);
+  assert.match(scriptResponse.text, /g2m\.sig\.preparedBuildingStyle\.v1/);
+  assert.match(scriptResponse.text, /function buildPreparedBuildingStyleTools\(\)/);
+  assert.match(scriptResponse.text, /data-prepared-building-style="strokeColor"/);
+  assert.match(scriptResponse.text, /data-prepared-building-style="strokeWeight"/);
+  assert.match(scriptResponse.text, /data-prepared-building-style="dashStyle"/);
+  assert.match(scriptResponse.text, /localStorage\.setItem\(preparedBuildingStyleKey/);
+  assert.match(scriptResponse.text, /function applyPreparedBuildingStyles\(\)/);
   assert.match(scriptResponse.text, /geometryImportConfig\.resultsTarget === "layerbox"/);
   assert.match(scriptResponse.text, /geometry-import-results/);
   assert.match(scriptResponse.text, /new FileReader\(\)/);
@@ -2450,6 +2458,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function showDecisionDetail\(point, options = \{\}\)/);
   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("decision-detail"/);
   assert.match(scriptResponse.text, /\/soumissions\/\$\{point\.id\}\/report\?embed=pal/);
+  assert.match(scriptResponse.text, /async function openSubmissionFromQuery\(\)/);
+  assert.match(scriptResponse.text, /new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)/);
+  assert.match(scriptResponse.text, /await loadMissionScopedFilters\(point\.mission_id \|\| "", \{ reframeMap: false \}\)/);
+  assert.match(scriptResponse.text, /showDecisionDetail\(point\)/);
   assert.match(scriptResponse.text, /function showSubmissionDiagnostic\(submissionId, axis, title\)/);
   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("submission-diagnostic"/);
   assert.match(scriptResponse.text, /g2m:open-submission-diagnostic/);
@@ -2480,7 +2492,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
   assert.match(scriptResponse.text, /mapControlToggle\.className = "map-control-toggle"/);
   assert.match(scriptResponse.text, /mapControlToggle\.setAttribute\("aria-expanded", "false"\)/);
-  assert.match(scriptResponse.text, /mapControlContainer\.classList\.toggle\("is-collapsed"\)/);
+  assert.match(scriptResponse.text, /function setMapControlCollapsed\(collapsed, options = \{\}\)/);
+  assert.match(scriptResponse.text, /mapControlContainer\.classList\.toggle\("is-collapsed", isCollapsed\)/);
+  assert.match(scriptResponse.text, /mapControlContainer\.addEventListener\("mouseleave"/);
+  assert.match(scriptResponse.text, /setMapControlCollapsed\(true\)/);
   assert.match(scriptResponse.text, /aria-expanded/);
   assert.match(scriptResponse.text, /mapLegend\.classList\.toggle\("is-collapsed"\)/);
   assert.match(scriptResponse.text, /t\("legendExpand"\)/);
@@ -2566,6 +2581,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.prepared-buildings-tab-list\s*\{[\s\S]*overflow-x: auto/);
   assert.match(styleResponse.text, /\.prepared-buildings-tab\.is-active\s*\{[\s\S]*border-bottom-color: var\(--primary\)/);
   assert.match(styleResponse.text, /\.prepared-buildings-tab-panel\[hidden\]\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.prepared-buildings-feedback-row\s*\{[\s\S]*justify-content: space-between/);
+  assert.match(styleResponse.text, /\.prepared-buildings-style-tools summary\s*\{[\s\S]*cursor: pointer/);
+  assert.match(styleResponse.text, /\.prepared-buildings-style-panel\s*\{[\s\S]*position: absolute/);
   assert.match(styleResponse.text, /\.prepared-buildings-grid\s*\{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styleResponse.text, /\.prepared-buildings-list\s*\{[\s\S]*min-height: 260px/);
   assert.match(styleResponse.text, /\.prepared-buildings-osm\s*\{[\s\S]*border: 1px solid #d9c8f2/);

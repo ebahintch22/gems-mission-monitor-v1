@@ -68,7 +68,7 @@ class SiteSearch {
         region: record.region,
         sous_prefecture: record.sous_prefecture,
         type_infrastructure: record.type_infrastructure,
-        url: `/soumissions/${record.id}/report`
+        url: `/cartographie?submission_id=${record.id}`
       }));
   }
 }

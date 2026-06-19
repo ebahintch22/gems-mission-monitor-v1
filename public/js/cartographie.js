@@ -67,6 +67,8 @@
   let contextPersistenceFrozenUntil = 0;
   const importedGeometryStyleKey = "g2m.sig.importedGeometryStyle.v1";
   let importedGeometryStylePrefs = loadImportedGeometryStylePrefs();
+  const preparedBuildingStyleKey = "g2m.sig.preparedBuildingStyle.v1";
+  let preparedBuildingStylePrefs = loadPreparedBuildingStylePrefs();
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
@@ -236,13 +238,13 @@
   }
 
   function normalizeImportedGeometryStylePrefs(prefs) {
-    const dashStyles = new Set(["solid", "dashed", "dotted", "dashdot"]);
-    const hexColor = /^#[0-9a-f]{6}$/i;
     return {
-      strokeColor: hexColor.test(prefs.strokeColor || "") ? prefs.strokeColor : "#FF0000",
-      highlightColor: hexColor.test(prefs.highlightColor || "") ? prefs.highlightColor : "#0000FF",
-      strokeWeight: Math.max(1, Math.min(8, Number.parseInt(prefs.strokeWeight, 10) || 2)),
-      dashStyle: dashStyles.has(prefs.dashStyle) ? prefs.dashStyle : "dashed"
+      ...normalizeStrokeStylePrefs(prefs, {
+        strokeColor: "#FF0000",
+        strokeWeight: 2,
+        dashStyle: "dashed"
+      }),
+      highlightColor: /^#[0-9a-f]{6}$/i.test(prefs.highlightColor || "") ? prefs.highlightColor : "#0000FF"
     };
   }
 
@@ -257,12 +259,16 @@
   }
 
   function importedGeometryDashArray() {
+    return dashArrayForStyle(importedGeometryStylePrefs.dashStyle);
+  }
+
+  function dashArrayForStyle(dashStyle) {
     return {
       solid: null,
       dashed: "5,5",
       dotted: "1,5",
       dashdot: "8,4,2,4"
-    }[importedGeometryStylePrefs.dashStyle] || "5,5";
+    }[dashStyle] || "5,5";
   }
 
   function applyImportedGeometryStyles() {
@@ -285,9 +291,61 @@
     };
   }
 
+  function loadPreparedBuildingStylePrefs() {
+    const defaults = {
+      strokeColor: "#1f4e79",
+      strokeWeight: 2,
+      dashStyle: "dashed"
+    };
+    try {
+      return normalizePreparedBuildingStylePrefs({
+        ...defaults,
+        ...JSON.parse(localStorage.getItem(preparedBuildingStyleKey) || "{}")
+      });
+    } catch (error) {
+      return defaults;
+    }
+  }
+
+  function normalizePreparedBuildingStylePrefs(prefs) {
+    return normalizeStrokeStylePrefs(prefs, {
+      strokeColor: "#1f4e79",
+      strokeWeight: 2,
+      dashStyle: "dashed"
+    });
+  }
+
+  function normalizeStrokeStylePrefs(prefs, defaults) {
+    const dashStyles = new Set(["solid", "dashed", "dotted", "dashdot"]);
+    const hexColor = /^#[0-9a-f]{6}$/i;
+    return {
+      strokeColor: hexColor.test(prefs.strokeColor || "") ? prefs.strokeColor : defaults.strokeColor,
+      strokeWeight: Math.max(1, Math.min(8, Number.parseInt(prefs.strokeWeight, 10) || defaults.strokeWeight)),
+      dashStyle: dashStyles.has(prefs.dashStyle) ? prefs.dashStyle : defaults.dashStyle
+    };
+  }
+
+  function savePreparedBuildingStylePrefs(prefs) {
+    preparedBuildingStylePrefs = normalizePreparedBuildingStylePrefs(prefs);
+    try {
+      localStorage.setItem(preparedBuildingStyleKey, JSON.stringify(preparedBuildingStylePrefs));
+    } catch (error) {
+      // The map remains usable if browser storage is disabled.
+    }
+    applyPreparedBuildingStyles();
+  }
+
+  function applyPreparedBuildingStyles() {
+    preparedBuildingsLayer.eachLayer((layer) => {
+      if (typeof layer.setStyle === "function") {
+        layer.setStyle(preparedBuildingStyle(layer.feature));
+      }
+    });
+  }
+
   function preparedBuildingStyle(feature) {
     const status = feature?.properties?.status || "prepare";
-    const color = {
+    const statusColor = {
       prepare: "#7f7f7f",
       transmis_terrain: "#1f4e79",
       verifie_terrain: "#16856f",
@@ -295,14 +353,15 @@
       valide: "#0f766e",
       archive: "#777777"
     }[status] || "#1f4e79";
+    const color = preparedBuildingStylePrefs.strokeColor || statusColor;
     return {
       color,
-      dashArray: status === "valide" ? null : "6,4",
+      dashArray: dashArrayForStyle(preparedBuildingStylePrefs.dashStyle),
       fill: true,
       fillColor: color,
       fillOpacity: 0.12,
       opacity: 1,
-      weight: 2
+      weight: preparedBuildingStylePrefs.strokeWeight
     };
   }
 
@@ -346,8 +405,9 @@
   L.DomEvent.disableClickPropagation(mapControlContainer);
   L.DomEvent.disableScrollPropagation(mapControlContainer);
 
-  mapControlToggle.addEventListener("click", function () {
-    const isCollapsed = mapControlContainer.classList.toggle("is-collapsed");
+  function setMapControlCollapsed(collapsed, options = {}) {
+    const isCollapsed = Boolean(collapsed);
+    mapControlContainer.classList.toggle("is-collapsed", isCollapsed);
     mapControlToggle.setAttribute("aria-expanded", String(!isCollapsed));
     mapControlToggle.setAttribute(
       "aria-label",
@@ -356,7 +416,25 @@
     mapControlToggleIcon.className = isCollapsed
       ? "fa-solid fa-chevron-down"
       : "fa-solid fa-chevron-up";
-    saveCurrentCartographyContext();
+    if (options.saveState !== false) {
+      saveCurrentCartographyContext();
+    }
+  }
+
+  mapControlToggle.addEventListener("click", function () {
+    setMapControlCollapsed(!mapControlContainer.classList.contains("is-collapsed"));
+  });
+
+  mapControlContainer.addEventListener("mouseleave", function () {
+    if (!mapControlContainer.classList.contains("is-collapsed")) {
+      setMapControlCollapsed(true);
+    }
+  });
+
+  mapControlContainer.addEventListener("focusout", function (event) {
+    if (!mapControlContainer.contains(event.relatedTarget)) {
+      setMapControlCollapsed(true);
+    }
   });
 
   const layerBoxManager = new LayerBoxManager(toolsPanel, {
@@ -893,6 +971,50 @@
     }
     saveImportedGeometryStylePrefs({
       ...importedGeometryStylePrefs,
+      [field]: event.target.value
+    });
+  }
+
+  function buildPreparedBuildingStyleTools() {
+    const details = document.createElement("details");
+    details.className = "prepared-buildings-style-tools";
+    details.innerHTML = `
+      <summary>
+        <i class="fa-solid fa-palette" aria-hidden="true"></i>
+        Style
+      </summary>
+      <div class="prepared-buildings-style-panel">
+        <label>
+          <span>Couleur</span>
+          <input type="color" data-prepared-building-style="strokeColor" value="${preparedBuildingStylePrefs.strokeColor}">
+        </label>
+        <label>
+          <span>Epaisseur</span>
+          <input type="number" min="1" max="8" step="1" data-prepared-building-style="strokeWeight" value="${preparedBuildingStylePrefs.strokeWeight}">
+        </label>
+        <label>
+          <span>Trait</span>
+          <select data-prepared-building-style="dashStyle">
+            <option value="solid" ${preparedBuildingStylePrefs.dashStyle === "solid" ? "selected" : ""}>Continu</option>
+            <option value="dashed" ${preparedBuildingStylePrefs.dashStyle === "dashed" ? "selected" : ""}>Pointille</option>
+            <option value="dotted" ${preparedBuildingStylePrefs.dashStyle === "dotted" ? "selected" : ""}>Points</option>
+            <option value="dashdot" ${preparedBuildingStylePrefs.dashStyle === "dashdot" ? "selected" : ""}>Mixte</option>
+          </select>
+        </label>
+      </div>
+    `;
+    details.addEventListener("input", updatePreparedBuildingStyleFromControls);
+    details.addEventListener("change", updatePreparedBuildingStyleFromControls);
+    return details;
+  }
+
+  function updatePreparedBuildingStyleFromControls(event) {
+    const field = event.target?.dataset?.preparedBuildingStyle;
+    if (!field) {
+      return;
+    }
+    savePreparedBuildingStylePrefs({
+      ...preparedBuildingStylePrefs,
       [field]: event.target.value
     });
   }
@@ -1691,7 +1813,10 @@
     }
 
     if (feedback) {
-      form.after(feedback);
+      const feedbackRow = document.createElement("div");
+      feedbackRow.className = "prepared-buildings-feedback-row";
+      feedbackRow.append(feedback, buildPreparedBuildingStyleTools());
+      form.after(feedbackRow);
     }
     form.dataset.layoutOrganized = "true";
   }
@@ -2392,12 +2517,7 @@
     mapLegend.classList.toggle("is-collapsed", legendCollapsed);
     mapLegendToggle.setAttribute("aria-expanded", String(!legendCollapsed));
     mapLegendToggle.setAttribute("aria-label", legendCollapsed ? t("legendExpand") : t("legendCollapse"));
-    mapControlContainer.classList.toggle("is-collapsed", layerControlCollapsed);
-    mapControlToggle.setAttribute("aria-expanded", String(!layerControlCollapsed));
-    mapControlToggle.setAttribute("aria-label", layerControlCollapsed ? t("layersExpand") : t("layersCollapse"));
-    mapControlToggleIcon.className = layerControlCollapsed
-      ? "fa-solid fa-chevron-down"
-      : "fa-solid fa-chevron-up";
+    setMapControlCollapsed(layerControlCollapsed, { saveState: false });
   }
 
   function restoreActiveLayer(layout) {
@@ -2423,6 +2543,31 @@
     } else if (layout.activeLayerId === "site-detail") {
       showSiteIdentification(point, { saveState: false });
     }
+  }
+
+  async function openSubmissionFromQuery() {
+    const submissionId = new URLSearchParams(window.location.search).get("submission_id");
+    if (!submissionId) {
+      return false;
+    }
+    const point = points.find(function (candidate) {
+      return String(candidate.id) === String(submissionId);
+    });
+    if (!point) {
+      return false;
+    }
+    if (!isVisible(point, filters())) {
+      document.getElementById("sig-mission-filter").value = String(point.mission_id || "");
+      document.getElementById("sig-region-filter").value = "";
+      document.getElementById("sig-validation-filter").value = "";
+      document.getElementById("sig-date-from").value = "";
+      document.getElementById("sig-date-to").value = "";
+      await loadMissionScopedFilters(point.mission_id || "", { reframeMap: false });
+    }
+    selectSite(point);
+    flyToSubmission(point);
+    showDecisionDetail(point);
+    return true;
   }
 
   async function restoreCartographyContext(context) {
@@ -2660,6 +2805,7 @@
       }
     } finally {
       hideLoading();
+      await openSubmissionFromQuery();
       if (new URLSearchParams(window.location.search).get("kobo") === "1") {
         openKoboLightLayer();
       }
