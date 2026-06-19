@@ -3,6 +3,7 @@
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
   const siteCategoryIcons = JSON.parse(document.getElementById("sig-site-category-icons-data").textContent);
   const geometryImportConfig = JSON.parse(document.getElementById("sig-geometry-import-config-data")?.textContent || "{}");
+  let markerBounceDurationMs = 600;
   const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
   const messages = i18nPayload.messages || {};
   const filterLabels = i18nPayload.filters || {};
@@ -30,6 +31,7 @@
   const buildingsOpen = document.getElementById("sig-buildings-open");
   const loadingOverlay = document.getElementById("sig-loading-overlay");
   const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
+  applyMarkerBounceConfig();
   const CartographieSessionState = {
     key: "g2m.cartographie.session.v1",
     load() {
@@ -127,6 +129,9 @@
   let preparedBuildingsTable = null;
   let preparedBuildingsData = [];
   let selectedPreparedBuildingId = null;
+  let selectedSiteId = null;
+  const siteMarkersById = new Map();
+  const markerBounceTimers = new WeakMap();
   let osmSelectionMode = null;
   let osmSelectionPoints = [];
   let osmSelectionGeometry = null;
@@ -377,15 +382,16 @@
     layout: "fitColumns",
     placeholder: t("tableEmpty"),
     columns: [
-      { title: t("tableAgent"), field: "code_agent", minWidth: 80 },
-      { title: t("tableTeam"), field: "nom_equipe", minWidth: 115 },
-      { title: t("tableSubpref"), field: "nom_sous_prefecture", minWidth: 115 },
-      { title: t("status"), field: "statut_validation", minWidth: 95 }
+      { title: t("tableAgent"), field: "code_agent", minWidth: 110, formatter: agentTeamFormatter },
+      { title: t("tableSite"), field: "display_submission_id", minWidth: 150, formatter: siteNameFormatter },
+      { title: t("status"), field: "statut_validation", minWidth: 95 },
+      { title: t("tableDate"), field: "submitted_at", minWidth: 120, formatter: submittedDateFormatter }
     ]
   });
 
   table.on("rowClick", function (event, row) {
     const point = row.getData();
+    selectSite(point);
     flyToSubmission(point);
   });
 
@@ -415,6 +421,110 @@
       duration: 0.9
     });
     map.invalidateSize();
+  }
+
+  function applyMarkerBounceConfig() {
+    const duration = Number(geometryImportConfig.markerBounceDurationMs);
+    const normalizedDuration = Number.isInteger(duration) && duration >= 100 && duration <= 5000 ? duration : 600;
+    markerBounceDurationMs = normalizedDuration;
+    document.documentElement.style.setProperty("--marker-bounce-duration", `${normalizedDuration}ms`);
+  }
+
+  function agentTeamFormatter(cell) {
+    const point = cell.getData();
+    return escapeHtml([
+      point.code_agent || t("unlinkedAgent"),
+      point.nom_equipe || t("noTeam")
+    ].join("/"));
+  }
+
+  function siteNameFormatter(cell) {
+    const point = cell.getData();
+    const raw = rawData(point);
+    const siteName = rawValue(raw, "modB.nom_officiel") || rawValue(raw, "modB/nom_officiel");
+    return escapeHtml(siteName || point.display_submission_id || point.source_submission_id || "-");
+  }
+
+  function submittedDateFormatter(cell) {
+    const value = cell.getValue();
+    if (!value) {
+      return "-";
+    }
+    return escapeHtml(new Date(value).toLocaleDateString(locale));
+  }
+
+  function siteMarkerKey(pointOrId) {
+    const id = typeof pointOrId === "object" ? pointOrId?.id : pointOrId;
+    return id === null || id === undefined ? null : String(id);
+  }
+
+  function markerIconElement(marker) {
+    if (!marker) {
+      return null;
+    }
+    return marker._icon || marker.getElement?.() || null;
+  }
+
+  function clearMarkerBounceTimer(marker) {
+    const timeout = markerBounceTimers.get(marker);
+    if (timeout) {
+      window.clearTimeout(timeout);
+      markerBounceTimers.delete(marker);
+    }
+  }
+
+  function setSiteMarkerBounce(marker, active) {
+    const icon = markerIconElement(marker);
+    clearMarkerBounceTimer(marker);
+    if (!icon) {
+      return;
+    }
+    icon.classList.remove("marker-bounce");
+    if (!active) {
+      return;
+    }
+    void icon.offsetWidth;
+    icon.classList.add("marker-bounce");
+    markerBounceTimers.set(marker, window.setTimeout(function () {
+      icon.classList.remove("marker-bounce");
+      markerBounceTimers.delete(marker);
+    }, markerBounceDurationMs));
+  }
+
+  function updateSelectedSiteMarkerBounce() {
+    siteMarkersById.forEach(function (markers, markerKey) {
+      markers.forEach(function (marker) {
+        setSiteMarkerBounce(marker, markerKey === selectedSiteId);
+      });
+    });
+  }
+
+  function registerSiteMarker(point, marker) {
+    const markerKey = siteMarkerKey(point);
+    if (!markerKey) {
+      return marker;
+    }
+    if (!siteMarkersById.has(markerKey)) {
+      siteMarkersById.set(markerKey, []);
+    }
+    siteMarkersById.get(markerKey).push(marker);
+    marker.on("add", function () {
+      setSiteMarkerBounce(marker, markerKey === selectedSiteId);
+    });
+    marker.on("remove", function () {
+      setSiteMarkerBounce(marker, false);
+    });
+    return marker;
+  }
+
+  function selectSite(pointOrId) {
+    const nextSiteId = siteMarkerKey(pointOrId);
+    if (selectedSiteId === nextSiteId) {
+      updateSelectedSiteMarkerBounce();
+      return;
+    }
+    selectedSiteId = nextSiteId;
+    updateSelectedSiteMarkerBounce();
   }
 
   function parseTabSeparatedCsv(text) {
@@ -981,23 +1091,29 @@
   function createSiteMarker(point) {
     const category = categoryForPoint(point);
     const markerIcon = extraMarkerIcon(category);
+    let marker = null;
 
     if (markerIcon) {
-      return L.marker([point.latitude, point.longitude], {
+      marker = L.marker([point.latitude, point.longitude], {
         icon: markerIcon,
         pane: "collectionPointsPane",
         title: category.label
       });
+    } else {
+      marker = L.circleMarker([point.latitude, point.longitude], {
+        pane: "collectionPointsPane",
+        color: markerColorHex[category.markerColor] || markerColorHex.gray,
+        fillColor: markerColorHex[category.markerColor] || markerColorHex.gray,
+        fillOpacity: 0.82,
+        radius: 6,
+        weight: 1
+      });
     }
 
-    return L.circleMarker([point.latitude, point.longitude], {
-      pane: "collectionPointsPane",
-      color: markerColorHex[category.markerColor] || markerColorHex.gray,
-      fillColor: markerColorHex[category.markerColor] || markerColorHex.gray,
-      fillOpacity: 0.82,
-      radius: 6,
-      weight: 1
+    marker.on("click", function () {
+      selectSite(point);
     });
+    return registerSiteMarker(point, marker);
   }
 
   function renderCategoryLegend() {
@@ -1089,6 +1205,7 @@
     const latitude = Number(point.latitude).toFixed(6);
     const longitude = Number(point.longitude).toFixed(6);
 
+    selectSite(point);
     activeLayerContext = { id: "site-detail", submissionId: point.id };
     layerBoxManager.renderToLayer("site-detail", function (container) {
       const wrapper = document.createElement("section");
@@ -1165,6 +1282,7 @@
 
   function showDecisionDetail(point, options = {}) {
     const title = point.display_submission_id || point.source_submission_id || t("decisionDetailTitle");
+    selectSite(point);
     activeLayerContext = { id: "decision-detail", submissionId: point.id };
     layerBoxManager.renderToLayer("decision-detail", function (container) {
       const wrapper = document.createElement("section");
@@ -2085,12 +2203,17 @@
 
     clusteredMarkersLayer.clearLayers();
     plainMarkersLayer.clearLayers();
+    siteMarkersById.clear();
     visiblePoints.forEach(function (point) {
       const clusteredMarker = createSiteMarker(point).bindPopup(popupContent(point));
       const plainMarker = createSiteMarker(point).bindPopup(popupContent(point));
       clusteredMarker.addTo(clusteredMarkersLayer);
       plainMarker.addTo(plainMarkersLayer);
     });
+    if (selectedSiteId && !siteMarkersById.has(selectedSiteId)) {
+      selectedSiteId = null;
+    }
+    updateSelectedSiteMarkerBounce();
 
     table.setData(visiblePoints);
     updateMetrics(visiblePoints);
@@ -2160,6 +2283,7 @@
     collectionLayer.removeLayer(activeMarkersLayer);
     activeMarkersLayer = clusteringEnabled ? clusteredMarkersLayer : plainMarkersLayer;
     collectionLayer.addLayer(activeMarkersLayer);
+    updateSelectedSiteMarkerBounce();
     clusterToggle.setAttribute("aria-pressed", String(clusteringEnabled));
     clusterToggle.classList.toggle("is-active", clusteringEnabled);
     clusterToggle.title = clusteringEnabled

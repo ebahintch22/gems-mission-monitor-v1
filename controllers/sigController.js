@@ -22,7 +22,8 @@ exports.index = (req, res) => {
     regions,
     siteCategoryIcons,
     geometryImportConfig: {
-      resultsTarget: Setting.rawValue("map.geometry_import_results_target") || "floating"
+      resultsTarget: Setting.rawValue("map.geometry_import_results_target") || "floating",
+      markerBounceDurationMs: normalizeMarkerBounceDuration(Setting.rawValue("map.marker_bounce_duration_ms"))
     },
     filters: SoumissionCollecte.mapFilters()
   });
@@ -78,3 +79,8 @@ exports.koboLightSync = async (req, res) => {
     res.status(400).json({ ok: false, error: error.message.replace(/Token\s+[A-Za-z0-9._-]+/g, "Token ***") });
   }
 };
+
+function normalizeMarkerBounceDuration(value) {
+  const duration = Number(value);
+  return Number.isInteger(duration) && duration >= 100 && duration <= 5000 ? duration : 600;
+}

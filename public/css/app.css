@@ -1830,6 +1830,37 @@ h2 {
   stroke-width: 0.5px;
 }
 
+@keyframes bounce {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+
+  35% {
+    translate: 0 -12px;
+  }
+
+  70% {
+    translate: 0 -5px;
+  }
+}
+
+#sig-map .marker-bounce {
+  animation: bounce var(--marker-bounce-duration, 600ms) ease-out 1;
+  will-change: translate;
+}
+
+#sig-map .marker-bounce-static {
+  translate: 0 -8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #sig-map .marker-bounce {
+    animation: none;
+    translate: 0 -8px;
+  }
+}
+
 .g2m-loading-overlay {
   align-items: center;
   background: rgba(255, 255, 255, 0.72);

@@ -1035,6 +1035,7 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
         "app.name": "G2M Test",
         "app.default_mission_id": "",
         "map.geometry_import_results_target": "layerbox",
+        "map.marker_bounce_duration_ms": "900",
         "alerts.anomaly_threshold": "5",
         "search.site_fields": ["nom_officiel", "region"],
         "search.site_limit": "7",
@@ -1057,11 +1058,13 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   const persistedSearchFields = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_fields");
   const persistedSearchLimit = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_limit");
   const persistedGeometryTarget = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.geometry_import_results_target");
+  const persistedBounceDuration = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.marker_bounce_duration_ms");
   assert.equal(persistedName.value, "G2M Test");
   assert.equal(persistedSecret.value, "secret-smtp-test");
   assert.deepEqual(JSON.parse(persistedSearchFields.value), ["nom_officiel", "region"]);
   assert.equal(persistedSearchLimit.value, "7");
   assert.equal(persistedGeometryTarget.value, "layerbox");
+  assert.equal(persistedBounceDuration.value, "900");
 
   const formResponse = await request(app)
     .get("/admin/settings")
@@ -1074,6 +1077,8 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   assert.match(formResponse.text, /fa-xmark/);
   assert.match(formResponse.text, /name="settings\[search\.site_fields\]\[\]"/);
   assert.match(formResponse.text, /name="settings\[map\.geometry_import_results_target\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.marker_bounce_duration_ms\]"/);
+  assert.match(formResponse.text, /Duree du rebond des marqueurs/);
   assert.match(formResponse.text, /LayerBox - Resultat de l'importation/);
   assert.match(formResponse.text, /value="nom_officiel"[\s\S]*checked/);
   assert.match(formResponse.text, /value="region"[\s\S]*checked/);
@@ -2362,6 +2367,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-geometry-overlay"/);
   assert.match(response.text, /id="sig-geometry-results-body"/);
   assert.match(response.text, /id="sig-geometry-import-config-data"/);
+  assert.match(response.text, /"markerBounceDurationMs":\d+/);
   assert.match(layerScriptResponse.text, /class LayerBoxManager/);
   assert.match(layerScriptResponse.text, /renderToLayer\(id, content, options = \{\}\)/);
   assert.match(layerScriptResponse.text, /activateLayer\(id\)/);
@@ -2376,6 +2382,16 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /disableClusteringAtZoom: 14/);
   assert.match(scriptResponse.text, /function setClustering\(enabled\)/);
   assert.match(scriptResponse.text, /setClustering\(!clusteringEnabled\)/);
+  assert.match(scriptResponse.text, /function applyMarkerBounceConfig\(\)/);
+  assert.match(scriptResponse.text, /--marker-bounce-duration/);
+  assert.match(scriptResponse.text, /geometryImportConfig\.markerBounceDurationMs/);
+  assert.match(scriptResponse.text, /title: t\("tableAgent"\), field: "code_agent"[\s\S]*formatter: agentTeamFormatter/);
+  assert.match(scriptResponse.text, /title: t\("tableSite"\), field: "display_submission_id"[\s\S]*formatter: siteNameFormatter/);
+  assert.match(scriptResponse.text, /title: t\("status"\), field: "statut_validation"/);
+  assert.match(scriptResponse.text, /title: t\("tableDate"\), field: "submitted_at"[\s\S]*formatter: submittedDateFormatter/);
+  assert.match(scriptResponse.text, /function agentTeamFormatter\(cell\)/);
+  assert.match(scriptResponse.text, /function siteNameFormatter\(cell\)/);
+  assert.match(scriptResponse.text, /function submittedDateFormatter\(cell\)/);
   assert.match(scriptResponse.text, /region: document\.getElementById\("sig-region-filter"\)\.value/);
   assert.match(scriptResponse.text, /point\.nom_region === criteria\.region/);
   assert.match(scriptResponse.text, /document\.getElementById\("sig-region-filter"\)\.value = criteria\.region/);
@@ -2441,6 +2457,15 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /\/cartographie\/kobo-light\/sync/);
   assert.match(scriptResponse.text, /function showLoading\(message\)/);
   assert.match(scriptResponse.text, /function hideLoading\(\)/);
+  assert.match(scriptResponse.text, /let selectedSiteId = null/);
+  assert.match(scriptResponse.text, /const siteMarkersById = new Map\(\)/);
+  assert.match(scriptResponse.text, /const markerBounceTimers = new WeakMap\(\)/);
+  assert.match(scriptResponse.text, /function selectSite\(pointOrId\)/);
+  assert.match(scriptResponse.text, /function updateSelectedSiteMarkerBounce\(\)/);
+  assert.match(scriptResponse.text, /markerBounceDurationMs = normalizedDuration/);
+  assert.match(scriptResponse.text, /function clearMarkerBounceTimer\(marker\)/);
+  assert.match(scriptResponse.text, /icon\.classList\.remove\("marker-bounce"\)/);
+  assert.match(scriptResponse.text, /window\.setTimeout\(function \(\) \{[\s\S]*icon\.classList\.remove\("marker-bounce"\)[\s\S]*\}, markerBounceDurationMs\)/);
   assert.match(scriptResponse.text, /function flyToSubmission\(point\)/);
   assert.match(scriptResponse.text, /map\.flyTo\(\[latitude, longitude\]/);
   assert.match(scriptResponse.text, /function refreshPalLayout\(\)/);
@@ -2449,7 +2474,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function addDetailAction\(container, submissionId\)/);
   assert.match(scriptResponse.text, /\/soumissions\/\$\{submissionId\}\/report/);
   assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\)/);
-  assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\) \{[\s\S]*flyToSubmission\(point\);[\s\S]*\}\);/);
+  assert.match(scriptResponse.text, /table\.on\("rowClick", function \(event, row\) \{[\s\S]*selectSite\(point\);[\s\S]*flyToSubmission\(point\);[\s\S]*\}\);/);
   assert.doesNotMatch(scriptResponse.text, /table\.on\("rowClick", function \(event, row\) \{[\s\S]*showSiteIdentification\(point\);[\s\S]*\}\);/);
   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("site-detail"/);
   assert.match(scriptResponse.text, /mapControlContainer\.classList\.add\("map-control-container", "is-collapsed"\)/);
@@ -2551,6 +2576,11 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke: #7f7f7f/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke-dasharray: 4px 4px/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke-width: 0\.5px/);
+  assert.match(styleResponse.text, /@keyframes bounce/);
+  assert.match(styleResponse.text, /#sig-map \.marker-bounce\s*\{[\s\S]*animation: bounce var\(--marker-bounce-duration, 600ms\) ease-out 1/);
+  assert.doesNotMatch(styleResponse.text, /infinite alternate/);
+  assert.match(styleResponse.text, /#sig-map \.marker-bounce-static\s*\{[\s\S]*translate: 0 -8px/);
+  assert.match(styleResponse.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*#sig-map \.marker-bounce/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*bottom: var\(--mobile-map-control-bottom\)/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*top: auto/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-top\.leaflet-right\s*\{[\s\S]*left: calc\(10px \+ min\(360px, calc\(100vw - 24px\)\)\)/);

@@ -4,6 +4,7 @@ const editableKeys = [
   "app.name",
   "app.default_mission_id",
   "map.geometry_import_results_target",
+  "map.marker_bounce_duration_ms",
   "alerts.anomaly_threshold",
   "search.site_fields",
   "search.site_limit",
@@ -143,6 +144,14 @@ function normalizeValue(setting, value) {
       throw new Error("invalid_geometry_import_results_target");
     }
     return target;
+  }
+
+  if (setting.key === "map.marker_bounce_duration_ms") {
+    const duration = Number(String(value ?? "").trim());
+    if (!Number.isInteger(duration) || duration < 100 || duration > 5000) {
+      throw new Error("invalid_number");
+    }
+    return String(duration);
   }
 
   if (setting.key === "app.default_mission_id") {

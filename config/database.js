@@ -759,6 +759,14 @@ function seedDefaultSettings() {
       description: "Mode d'affichage des resultats apres import de geometries."
     },
     {
+      key: "map.marker_bounce_duration_ms",
+      value: "600",
+      type: "number",
+      group_name: "map",
+      label: "Duree du rebond des marqueurs",
+      description: "Duree en millisecondes de l'animation du marqueur selectionne sur la carte."
+    },
+    {
       key: "alerts.anomaly_threshold",
       value: "3",
       type: "number",
