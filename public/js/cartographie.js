@@ -101,6 +101,16 @@
       ].filter(Boolean).join("<br>"));
     }
   }).addTo(map);
+  const osmSelectionLayer = L.geoJSON(null, {
+    style: {
+      color: "#6f42c1",
+      dashArray: "4,4",
+      fillColor: "#6f42c1",
+      fillOpacity: 0.08,
+      opacity: 1,
+      weight: 2
+    }
+  }).addTo(map);
   const clusteredMarkersLayer = L.markerClusterGroup({
     chunkedLoading: true,
     disableClusteringAtZoom: 14,
@@ -116,6 +126,10 @@
   let importedGeometryTableHost = null;
   let preparedBuildingsTable = null;
   let preparedBuildingsData = [];
+  let selectedPreparedBuildingId = null;
+  let osmSelectionMode = null;
+  let osmSelectionPoints = [];
+  let osmSelectionGeometry = null;
   collectionLayer.addLayer(activeMarkersLayer);
   const colors = {
     validee: "#16856f",
@@ -1365,6 +1379,29 @@
               <option value="osm">OpenStreetMap</option>
               <option value="topoexport">TopoExport</option>
               <option value="satellite">Imagerie satellite</option>
+              <option value="terrain">Terrain</option>
+              <option value="manual">Saisie manuelle</option>
+            </select>
+          </label>
+          <label>Filtrer par statut
+            <select name="filter_status">
+              <option value="">Tous les statuts</option>
+              <option value="prepare">Pr&eacute;par&eacute;</option>
+              <option value="transmis_terrain">Transmis terrain</option>
+              <option value="verifie_terrain">V&eacute;rifi&eacute; terrain</option>
+              <option value="a_corriger">&Agrave; corriger</option>
+              <option value="valide">Valid&eacute;</option>
+              <option value="archive">Archiv&eacute;</option>
+            </select>
+          </label>
+          <label>Filtrer par source
+            <select name="filter_source">
+              <option value="">Toutes les sources</option>
+              <option value="import">Import</option>
+              <option value="osm">OpenStreetMap</option>
+              <option value="topoexport">TopoExport</option>
+              <option value="satellite">Imagerie satellite</option>
+              <option value="terrain">Terrain</option>
               <option value="manual">Saisie manuelle</option>
             </select>
           </label>
@@ -1377,6 +1414,33 @@
               ? '<button class="button button-primary" type="submit">Importer</button>'
               : '<span class="form-hint">Import réservé aux profils autorisés.</span>'}
           </div>
+          ${buildingsOpen?.dataset.canImportBuildings === "true"
+            ? `<div class="prepared-buildings-osm prepared-buildings-wide">
+                <strong>Import OSM par zone</strong>
+                <div class="prepared-buildings-osm-actions">
+                  <button class="button" type="button" data-osm-rectangle>Rectangle</button>
+                  <button class="button" type="button" data-osm-polygon>Polygone</button>
+                  <button class="button" type="button" data-osm-clear>Effacer</button>
+                  <button class="button button-primary" type="button" data-osm-import disabled>Importer OSM</button>
+                </div>
+                <p class="form-hint" data-osm-status>Aucune zone OSM d&eacute;finie. Surface maximale autoris&eacute;e : 5 km&sup2;.</p>
+              </div>`
+            : ""}
+          ${buildingsOpen?.dataset.canImportBuildings === "true"
+            ? `<div class="prepared-buildings-status prepared-buildings-wide">
+                <label>Statut du b&acirc;timent s&eacute;lectionn&eacute;
+                  <select name="status_update" disabled>
+                    <option value="prepare">Pr&eacute;par&eacute;</option>
+                    <option value="transmis_terrain">Transmis terrain</option>
+                    <option value="verifie_terrain">V&eacute;rifi&eacute; terrain</option>
+                    <option value="a_corriger">&Agrave; corriger</option>
+                    <option value="valide">Valid&eacute;</option>
+                    <option value="archive">Archiv&eacute;</option>
+                  </select>
+                </label>
+                <button class="button" type="button" data-buildings-status-apply disabled>Appliquer</button>
+              </div>`
+            : ""}
         </form>
         <div class="prepared-buildings-feedback" role="status" aria-live="polite"></div>
         <div id="prepared-buildings-table" class="prepared-buildings-table"></div>
@@ -1401,6 +1465,7 @@
   }
 
   function initializePreparedBuildingsShell(shell) {
+    organizePreparedBuildingsLayout(shell);
     const form = shell.querySelector("#prepared-buildings-form");
     const feedback = shell.querySelector(".prepared-buildings-feedback");
     const missionSelect = form.elements.mission_id;
@@ -1412,12 +1477,180 @@
     form.querySelector("[data-buildings-refresh]").addEventListener("click", async function () {
       await loadPreparedBuildings(form, feedback);
     });
+    form.querySelector("[data-buildings-status-apply]")?.addEventListener("click", async function () {
+      await updatePreparedBuildingStatus(form, feedback);
+    });
+    form.querySelector("[data-osm-rectangle]")?.addEventListener("click", function () {
+      startOsmSelection("rectangle", form);
+    });
+    form.querySelector("[data-osm-polygon]")?.addEventListener("click", function () {
+      startOsmSelection("polygon", form);
+    });
+    form.querySelector("[data-osm-clear]")?.addEventListener("click", function () {
+      clearOsmSelection(form);
+    });
+    form.querySelector("[data-osm-import]")?.addEventListener("click", async function () {
+      await importPreparedBuildingsFromOsm(form, feedback);
+    });
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
       await submitPreparedBuildingsImport(form, feedback);
     });
     if (missionSelect.value) {
       loadPreparedBuildings(form, feedback);
+    }
+  }
+
+  function organizePreparedBuildingsLayout(shell) {
+    const form = shell.querySelector("#prepared-buildings-form");
+    const feedback = shell.querySelector(".prepared-buildings-feedback");
+    const table = shell.querySelector("#prepared-buildings-table");
+    if (!form || form.dataset.layoutOrganized === "true") {
+      return;
+    }
+
+    const sectionContext = preparedBuildingsSection("[1. Contexte]");
+    const sectionFilters = preparedBuildingsSection("[2. Filtres d'affichage]");
+    const sectionLoad = preparedBuildingsSection("[3. Charger]");
+    const sectionSelection = preparedBuildingsSection("[5. Actions sur la s&eacute;lection]");
+    const gridContext = preparedBuildingsGrid();
+    const gridFilters = preparedBuildingsGrid();
+    const gridLoad = preparedBuildingsGrid();
+    const actions = form.querySelector(".prepared-buildings-actions");
+    const refreshButton = form.querySelector("[data-buildings-refresh]");
+    const osmBlock = form.querySelector(".prepared-buildings-osm");
+    const statusBlock = form.querySelector(".prepared-buildings-status");
+
+    appendField(gridContext, form.elements.mission_id);
+    appendField(gridContext, form.elements.site_code);
+    appendField(gridContext, form.elements.site_name);
+    sectionContext.append(gridContext);
+
+    appendField(gridFilters, form.elements.filter_status);
+    appendField(gridFilters, form.elements.filter_source);
+    if (refreshButton) {
+      const refreshActions = document.createElement("div");
+      refreshActions.className = "prepared-buildings-actions";
+      refreshActions.append(refreshButton);
+      gridFilters.append(refreshActions);
+    }
+    sectionFilters.append(gridFilters);
+
+    appendField(gridLoad, form.elements.source);
+    appendField(gridLoad, form.elements.geojson_file);
+    if (actions && actions.childElementCount) {
+      gridLoad.append(actions);
+    }
+    sectionLoad.append(gridLoad);
+    if (osmBlock) {
+      sectionLoad.append(osmBlock);
+    }
+
+    form.innerHTML = "";
+    form.append(sectionContext, sectionFilters, sectionLoad);
+    if (statusBlock) {
+      while (statusBlock.firstChild) {
+        sectionSelection.append(statusBlock.firstChild);
+      }
+    }
+
+    const tabs = buildPreparedBuildingsTabs([
+      { id: "context", title: "1. Contexte", panel: sectionContext },
+      { id: "filters", title: "2. Filtres", panel: sectionFilters },
+      { id: "load", title: "3. Charger", panel: sectionLoad },
+      ...(statusBlock ? [{ id: "selection", title: "5. S&eacute;lection", panel: sectionSelection }] : [])
+    ]);
+
+    form.append(tabs);
+
+    if (table && !shell.querySelector(".prepared-buildings-list")) {
+      const listSection = document.createElement("section");
+      const heading = document.createElement("h3");
+      listSection.className = "prepared-buildings-list";
+      heading.innerHTML = "[4. Liste des b&acirc;timents]";
+      table.before(listSection);
+      listSection.append(heading, table);
+    }
+
+    if (feedback) {
+      form.after(feedback);
+    }
+    form.dataset.layoutOrganized = "true";
+  }
+
+  function buildPreparedBuildingsTabs(items) {
+    const wrapper = document.createElement("div");
+    const tabList = document.createElement("div");
+    const panels = document.createElement("div");
+    wrapper.className = "prepared-buildings-tabs";
+    tabList.className = "prepared-buildings-tab-list";
+    tabList.setAttribute("role", "tablist");
+    panels.className = "prepared-buildings-tab-panels";
+
+    items.forEach((item, index) => {
+      const tab = document.createElement("button");
+      const panelId = `prepared-buildings-panel-${item.id}`;
+      const tabId = `prepared-buildings-tab-${item.id}`;
+      tab.className = "prepared-buildings-tab";
+      tab.type = "button";
+      tab.id = tabId;
+      tab.innerHTML = item.title;
+      tab.setAttribute("role", "tab");
+      tab.setAttribute("aria-controls", panelId);
+      tab.setAttribute("aria-selected", String(index === 0));
+      tab.classList.toggle("is-active", index === 0);
+
+      item.panel.classList.add("prepared-buildings-tab-panel");
+      item.panel.id = panelId;
+      item.panel.setAttribute("role", "tabpanel");
+      item.panel.setAttribute("aria-labelledby", tabId);
+      item.panel.hidden = index !== 0;
+      item.panel.classList.toggle("is-active", index === 0);
+
+      tab.addEventListener("click", function () {
+        activatePreparedBuildingsTab(wrapper, tabId);
+      });
+
+      tabList.append(tab);
+      panels.append(item.panel);
+    });
+
+    wrapper.append(tabList, panels);
+    return wrapper;
+  }
+
+  function activatePreparedBuildingsTab(wrapper, activeTabId) {
+    wrapper.querySelectorAll(".prepared-buildings-tab").forEach((tab) => {
+      const active = tab.id === activeTabId;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", String(active));
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
+      if (panel) {
+        panel.hidden = !active;
+        panel.classList.toggle("is-active", active);
+      }
+    });
+  }
+
+  function preparedBuildingsSection(title) {
+    const section = document.createElement("fieldset");
+    const legend = document.createElement("legend");
+    section.className = "prepared-buildings-section";
+    legend.innerHTML = title;
+    section.append(legend);
+    return section;
+  }
+
+  function preparedBuildingsGrid() {
+    const grid = document.createElement("div");
+    grid.className = "prepared-buildings-grid";
+    return grid;
+  }
+
+  function appendField(container, field) {
+    const label = field?.closest("label");
+    if (label) {
+      container.append(label);
     }
   }
 
@@ -1438,7 +1671,15 @@
       ]
     });
     preparedBuildingsTable.on("rowClick", function (event, row) {
-      focusPreparedBuilding(row.getData().id);
+      const rowData = row.getData();
+      selectedPreparedBuildingId = rowData.id;
+      const form = document.getElementById("prepared-buildings-form");
+      if (form?.elements.status_update) {
+        form.elements.status_update.disabled = false;
+        form.elements.status_update.value = rowData.status || "prepare";
+        form.querySelector("[data-buildings-status-apply]").disabled = false;
+      }
+      focusPreparedBuilding(selectedPreparedBuildingId);
     });
   }
 
@@ -1490,6 +1731,15 @@
       return;
     }
     const params = new URLSearchParams({ mission_id: missionId });
+    if (form.elements.site_code.value.trim()) {
+      params.set("site_code", form.elements.site_code.value.trim());
+    }
+    if (form.elements.filter_status.value) {
+      params.set("status", form.elements.filter_status.value);
+    }
+    if (form.elements.filter_source.value) {
+      params.set("source", form.elements.filter_source.value);
+    }
     const response = await fetch(`/cartographie/buildings?${params.toString()}`, {
       headers: { Accept: "application/json" }
     });
@@ -1502,6 +1752,7 @@
     preparedBuildingsData = (featureCollection.features || []).map((feature) => ({
       id: feature.properties.id,
       site_name: feature.properties.site_name || feature.properties.site_code || "-",
+      site_code: feature.properties.site_code || "-",
       building_code: feature.properties.building_code || "-",
       source: feature.properties.source || "-",
       status: feature.properties.status || "-"
@@ -1509,12 +1760,217 @@
     if (preparedBuildingsTable) {
       preparedBuildingsTable.setData(preparedBuildingsData);
     }
+    if (!preparedBuildingsData.some((row) => row.id === selectedPreparedBuildingId)) {
+      selectedPreparedBuildingId = null;
+      if (form.elements.status_update) {
+        form.elements.status_update.disabled = true;
+        form.querySelector("[data-buildings-status-apply]").disabled = true;
+      }
+    }
     if (!options.keepMessage) {
       feedback.className = "prepared-buildings-feedback";
       feedback.textContent = `${preparedBuildingsData.length} bâtiment(s) préparé(s).`;
     }
     if (preparedBuildingsLayer.getBounds && preparedBuildingsLayer.getBounds().isValid()) {
       map.fitBounds(preparedBuildingsLayer.getBounds(), { padding: [28, 28], maxZoom: 19 });
+    }
+  }
+
+  async function updatePreparedBuildingStatus(form, feedback) {
+    if (!selectedPreparedBuildingId) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Sélectionner un bâtiment dans le tableau.";
+      return;
+    }
+    try {
+      feedback.className = "prepared-buildings-feedback";
+      feedback.textContent = "Mise à jour du statut...";
+      const response = await fetch(`/cartographie/buildings/${selectedPreparedBuildingId}/status`, {
+        method: "PATCH",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ status: form.elements.status_update.value })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error(result.error || "Mise à jour impossible.");
+      }
+      feedback.className = "prepared-buildings-feedback is-success";
+      feedback.textContent = "Statut mis à jour.";
+      await loadPreparedBuildings(form, feedback, { keepMessage: true });
+      focusPreparedBuilding(selectedPreparedBuildingId);
+    } catch (error) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = error.message;
+    }
+  }
+
+  function startOsmSelection(mode, form) {
+    osmSelectionMode = mode;
+    osmSelectionPoints = [];
+    osmSelectionGeometry = null;
+    osmSelectionLayer.clearLayers();
+    updateOsmSelectionStatus(form, mode === "rectangle"
+      ? "Cliquer deux coins opposés du rectangle sur la carte."
+      : "Cliquer les sommets du polygone, puis double-cliquer pour terminer.");
+    map.getContainer().classList.add("is-osm-selecting");
+  }
+
+  function clearOsmSelection(form) {
+    osmSelectionMode = null;
+    osmSelectionPoints = [];
+    osmSelectionGeometry = null;
+    osmSelectionLayer.clearLayers();
+    map.getContainer().classList.remove("is-osm-selecting");
+    updateOsmSelectionStatus(form, "Aucune zone OSM définie. Surface maximale autorisée : 5 km².");
+  }
+
+  function handleOsmSelectionClick(event) {
+    if (!osmSelectionMode) {
+      return;
+    }
+    const point = [event.latlng.lng, event.latlng.lat];
+    osmSelectionPoints.push(point);
+    if (osmSelectionMode === "rectangle" && osmSelectionPoints.length === 2) {
+      setOsmSelectionGeometry(rectangleToPolygon(osmSelectionPoints[0], osmSelectionPoints[1]));
+      osmSelectionMode = null;
+      map.getContainer().classList.remove("is-osm-selecting");
+      return;
+    }
+    if (osmSelectionMode === "polygon") {
+      previewOsmSelectionPolygon();
+    }
+  }
+
+  function finishOsmSelectionPolygon() {
+    if (osmSelectionMode !== "polygon") {
+      return;
+    }
+    if (osmSelectionPoints.length < 3) {
+      return;
+    }
+    setOsmSelectionGeometry(closeRing(osmSelectionPoints));
+    osmSelectionMode = null;
+    map.getContainer().classList.remove("is-osm-selecting");
+  }
+
+  function previewOsmSelectionPolygon() {
+    osmSelectionLayer.clearLayers();
+    if (osmSelectionPoints.length === 1) {
+      L.marker([osmSelectionPoints[0][1], osmSelectionPoints[0][0]]).addTo(osmSelectionLayer);
+      return;
+    }
+    L.polyline(osmSelectionPoints.map(([lng, lat]) => [lat, lng]), {
+      color: "#6f42c1",
+      dashArray: "4,4",
+      weight: 2
+    }).addTo(osmSelectionLayer);
+  }
+
+  function setOsmSelectionGeometry(ring) {
+    osmSelectionGeometry = {
+      type: "Polygon",
+      coordinates: [ring]
+    };
+    osmSelectionLayer.clearLayers();
+    osmSelectionLayer.addData(osmSelectionGeometry);
+    const form = document.getElementById("prepared-buildings-form");
+    const area = polygonAreaKm2(ring);
+    const valid = area > 0 && area <= 5;
+    form.querySelector("[data-osm-import]").disabled = !valid;
+    updateOsmSelectionStatus(form, valid
+      ? `Zone OSM prête : ${area.toFixed(3)} km².`
+      : `Zone trop grande ou invalide : ${area.toFixed(3)} km². Maximum : 5 km².`);
+  }
+
+  function updateOsmSelectionStatus(form, message) {
+    const status = form?.querySelector("[data-osm-status]");
+    if (status) {
+      status.textContent = message;
+    }
+    const importButton = form?.querySelector("[data-osm-import]");
+    if (importButton && !osmSelectionGeometry) {
+      importButton.disabled = true;
+    }
+  }
+
+  function rectangleToPolygon(first, second) {
+    const west = Math.min(first[0], second[0]);
+    const east = Math.max(first[0], second[0]);
+    const south = Math.min(first[1], second[1]);
+    const north = Math.max(first[1], second[1]);
+    return closeRing([
+      [west, south],
+      [east, south],
+      [east, north],
+      [west, north]
+    ]);
+  }
+
+  function closeRing(points) {
+    const ring = points.map((point) => [...point]);
+    const first = ring[0];
+    const last = ring[ring.length - 1];
+    if (first[0] !== last[0] || first[1] !== last[1]) {
+      ring.push([...first]);
+    }
+    return ring;
+  }
+
+  function polygonAreaKm2(ring) {
+    if (!Array.isArray(ring) || ring.length < 4) {
+      return 0;
+    }
+    const meanLat = ring.reduce((sum, point) => sum + point[1], 0) / ring.length;
+    const metersPerDegreeLat = 111320;
+    const metersPerDegreeLng = 111320 * Math.cos(meanLat * Math.PI / 180);
+    const projected = ring.map(([lng, lat]) => [lng * metersPerDegreeLng, lat * metersPerDegreeLat]);
+    let area = 0;
+    for (let index = 0; index < projected.length - 1; index += 1) {
+      area += projected[index][0] * projected[index + 1][1] - projected[index + 1][0] * projected[index][1];
+    }
+    return Math.abs(area) / 2 / 1000000;
+  }
+
+  async function importPreparedBuildingsFromOsm(form, feedback) {
+    if (!osmSelectionGeometry) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Définir une zone OSM avant import.";
+      return;
+    }
+    if (!form.elements.mission_id.value) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Sélectionner une mission.";
+      return;
+    }
+    try {
+      feedback.className = "prepared-buildings-feedback";
+      feedback.textContent = "Import OSM en cours...";
+      const response = await fetch("/cartographie/buildings/import-osm", {
+        method: "POST",
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          mission_id: form.elements.mission_id.value,
+          site_code: form.elements.site_code.value,
+          site_name: form.elements.site_name.value,
+          selection: osmSelectionGeometry
+        })
+      });
+      const result = await response.json();
+      if (!response.ok || !result.ok) {
+        throw new Error([result.error || "Import OSM impossible.", result.details].filter(Boolean).join(" - "));
+      }
+      feedback.className = "prepared-buildings-feedback is-success";
+      feedback.textContent = `${result.result.imported} bâtiment(s) OSM importé(s).`;
+      await loadPreparedBuildings(form, feedback, { keepMessage: true });
+    } catch (error) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = error.message;
     }
   }
 
@@ -1985,6 +2441,13 @@
     saveCurrentCartographyContext();
   });
   map.on("moveend zoomend", saveCurrentCartographyContext);
+  map.on("click", handleOsmSelectionClick);
+  map.on("dblclick", function (event) {
+    if (osmSelectionMode === "polygon") {
+      event.originalEvent?.preventDefault();
+      finishOsmSelectionPolygon();
+    }
+  });
   map.on("baselayerchange", function (event) {
     activeBaseLayerName = event.name;
     saveCurrentCartographyContext();

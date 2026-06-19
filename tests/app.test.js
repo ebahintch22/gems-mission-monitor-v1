@@ -2393,9 +2393,32 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function openPreparedBuildingsLayer\(options = \{\}\)/);
   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("prepared-buildings"/);
   assert.match(scriptResponse.text, /\/cartographie\/buildings\/import/);
+  assert.match(scriptResponse.text, /\/cartographie\/buildings\/import-osm/);
+  assert.match(scriptResponse.text, /\/cartographie\/buildings\/\$\{selectedPreparedBuildingId\}\/status/);
   assert.match(scriptResponse.text, /\/cartographie\/buildings\?\$\{params\.toString\(\)\}/);
+  assert.match(scriptResponse.text, /filter_status/);
+  assert.match(scriptResponse.text, /filter_source/);
+  assert.match(scriptResponse.text, /data-osm-rectangle/);
+  assert.match(scriptResponse.text, /data-osm-polygon/);
+  assert.match(scriptResponse.text, /Surface maximale autoris/);
+  assert.match(scriptResponse.text, /function importPreparedBuildingsFromOsm\(form, feedback\)/);
+  assert.match(scriptResponse.text, /function polygonAreaKm2\(ring\)/);
+  assert.match(scriptResponse.text, /function updatePreparedBuildingStatus\(form, feedback\)/);
+  assert.match(scriptResponse.text, /function organizePreparedBuildingsLayout\(shell\)/);
+  assert.match(scriptResponse.text, /function buildPreparedBuildingsTabs\(items\)/);
+  assert.match(scriptResponse.text, /function activatePreparedBuildingsTab\(wrapper, activeTabId\)/);
+  assert.match(scriptResponse.text, /role", "tablist"/);
+  assert.match(scriptResponse.text, /prepared-buildings-tab-panel/);
+  assert.match(scriptResponse.text, /item\.panel\.classList\.toggle\("is-active", index === 0\)/);
+  assert.match(scriptResponse.text, /panel\.classList\.toggle\("is-active", active\)/);
+  assert.match(scriptResponse.text, /\[1\. Contexte\]/);
+  assert.match(scriptResponse.text, /\[2\. Filtres d'affichage\]/);
+  assert.match(scriptResponse.text, /\[3\. Charger\]/);
+  assert.match(scriptResponse.text, /\[4\. Liste des b&acirc;timents\]/);
+  assert.match(scriptResponse.text, /\[5\. Actions sur la s&eacute;lection\]/);
   assert.match(scriptResponse.text, /new Tabulator\(host/);
-  assert.match(scriptResponse.text, /focusPreparedBuilding\(row\.getData\(\)\.id\)/);
+  assert.match(scriptResponse.text, /selectedPreparedBuildingId = rowData\.id/);
+  assert.match(scriptResponse.text, /focusPreparedBuilding\(selectedPreparedBuildingId\)/);
   assert.match(scriptResponse.text, /L\.geoJSON\(null/);
   assert.match(scriptResponse.text, /loadImportedGeometryStylePrefs\(\)/);
   assert.match(scriptResponse.text, /localStorage\.setItem\(importedGeometryStyleKey/);
@@ -2514,8 +2537,16 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*max-width: 500px/);
   assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*max-height: 600px/);
   assert.match(styleResponse.text, /\.sig-geometry-overlay\s*\{[\s\S]*resize: both/);
-  assert.match(styleResponse.text, /\.prepared-buildings-form\s*\{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styleResponse.text, /\.prepared-buildings-form\s*\{[\s\S]*flex-direction: column/);
+  assert.match(styleResponse.text, /\.prepared-buildings-tab-list\s*\{[\s\S]*overflow-x: auto/);
+  assert.match(styleResponse.text, /\.prepared-buildings-tab\.is-active\s*\{[\s\S]*border-bottom-color: var\(--primary\)/);
+  assert.match(styleResponse.text, /\.prepared-buildings-tab-panel\[hidden\]\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.prepared-buildings-grid\s*\{[\s\S]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(styleResponse.text, /\.prepared-buildings-list\s*\{[\s\S]*min-height: 260px/);
+  assert.match(styleResponse.text, /\.prepared-buildings-osm\s*\{[\s\S]*border: 1px solid #d9c8f2/);
+  assert.match(styleResponse.text, /\.prepared-buildings-status\s*\{[\s\S]*grid-template-columns: minmax\(0, 1fr\) auto/);
   assert.match(styleResponse.text, /\.prepared-buildings-table\s*\{[\s\S]*min-height: 220px/);
+  assert.match(styleResponse.text, /#sig-map\.is-osm-selecting\s*\{[\s\S]*cursor: crosshair/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*outline: none/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke: #7f7f7f/);
   assert.match(styleResponse.text, /#sig-map \.leaflet-interactive:focus\s*\{[\s\S]*stroke-dasharray: 4px 4px/);
@@ -2611,6 +2642,186 @@ test("POST /cartographie/buildings/import alimente le referentiel batimentaire p
     && feature.properties.site_code === "SITE-TEST"
     && feature.geometry.type === "Polygon"
   )), true);
+
+  const buildingId = listResponse.body.features.find((feature) => (
+    feature.properties.building_code === "BAT-ADMIN"
+  )).properties.id;
+
+  const deniedStatusResponse = await request(app)
+    .patch(`/cartographie/buildings/${buildingId}/status`)
+    .set("Cookie", partnerCookie)
+    .send({ status: "valide" });
+
+  assert.equal(deniedStatusResponse.status, 403);
+
+  const statusResponse = await request(app)
+    .patch(`/cartographie/buildings/${buildingId}/status`)
+    .set("Cookie", gisCookie)
+    .send({ status: "valide" });
+
+  assert.equal(statusResponse.status, 200);
+  assert.equal(statusResponse.body.ok, true);
+  assert.equal(statusResponse.body.feature.properties.status, "valide");
+
+  const filteredResponse = await request(app)
+    .get(`/cartographie/buildings?mission_id=${mission.id}&status=valide&source=osm&site_code=SITE-TEST`)
+    .set("Cookie", gisCookie);
+
+  assert.equal(filteredResponse.status, 200);
+  assert.equal(filteredResponse.body.features.length, 1);
+  assert.equal(filteredResponse.body.features[0].properties.status, "valide");
+});
+
+test("POST /cartographie/buildings/import-osm importe les batiments OSM dans une zone bornee", async () => {
+  const gisCookie = await loginTestUser({
+    email: "gis.buildings-osm@g2m.test",
+    role: "specialiste_gis"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+  const originalFetch = global.fetch;
+  let overpassCalls = 0;
+  global.fetch = async (url, options) => {
+    overpassCalls += 1;
+    assert.match(String(options.body), /way%5B%22building%22%5D|way/);
+    if (overpassCalls === 1) {
+      assert.match(String(url), /overpass-api/);
+      return {
+        ok: false,
+        status: 429,
+        statusText: "Too Many Requests",
+        async text() {
+          return "rate limit";
+        }
+      };
+    }
+    assert.match(String(url), /overpass\.kumi\.systems/);
+    return {
+      ok: true,
+      async json() {
+        return {
+          elements: [{
+            type: "way",
+            id: 12345,
+            tags: {
+              building: "yes",
+              name: "Bloc administratif"
+            },
+            geometry: [
+              { lon: -4.00650, lat: 5.35010 },
+              { lon: -4.00620, lat: 5.35010 },
+              { lon: -4.00620, lat: 5.34985 },
+              { lon: -4.00650, lat: 5.34985 },
+              { lon: -4.00650, lat: 5.35010 }
+            ]
+          }]
+        };
+      }
+    };
+  };
+
+  try {
+    const response = await request(app)
+      .post("/cartographie/buildings/import-osm")
+      .set("Cookie", gisCookie)
+      .send({
+        mission_id: mission.id,
+        site_code: "SITE-OSM",
+        site_name: "Site OSM",
+        selection: {
+          type: "Polygon",
+          coordinates: [[
+            [-4.007, 5.349],
+            [-4.005, 5.349],
+            [-4.005, 5.351],
+            [-4.007, 5.351],
+            [-4.007, 5.349]
+          ]]
+        }
+      });
+
+    assert.equal(response.status, 201);
+    assert.equal(response.body.ok, true);
+    assert.equal(response.body.result.imported, 1);
+    assert.equal(response.body.areaKm2 <= 5, true);
+    assert.equal(overpassCalls, 2);
+
+    const persisted = db.prepare(`
+      SELECT site_code, site_name, building_code, source, source_reference
+      FROM building_features
+      WHERE mission_id = ?
+        AND site_code = 'SITE-OSM'
+    `).get(mission.id);
+
+    assert.equal(persisted.site_name, "Site OSM");
+    assert.equal(persisted.building_code, "Bloc administratif");
+    assert.equal(persisted.source, "osm");
+    assert.equal(persisted.source_reference, "way/12345");
+  } finally {
+    global.fetch = originalFetch;
+  }
+
+  const tooLargeResponse = await request(app)
+    .post("/cartographie/buildings/import-osm")
+    .set("Cookie", gisCookie)
+    .send({
+      mission_id: mission.id,
+      selection: {
+        type: "Polygon",
+        coordinates: [[
+          [-4.20, 5.20],
+          [-4.00, 5.20],
+          [-4.00, 5.40],
+          [-4.20, 5.40],
+          [-4.20, 5.20]
+        ]]
+      }
+    });
+
+  assert.equal(tooLargeResponse.status, 413);
+  assert.equal(tooLargeResponse.body.error, "osm_selection_area_too_large");
+});
+
+test("POST /cartographie/buildings/import-osm retourne le diagnostic Overpass", async () => {
+  const gisCookie = await loginTestUser({
+    email: "gis.buildings-osm-error@g2m.test",
+    role: "specialiste_gis"
+  });
+  const mission = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote");
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: false,
+    status: 504,
+    statusText: "Gateway Timeout",
+    async text() {
+      return "overpass timeout";
+    }
+  });
+
+  try {
+    const response = await request(app)
+      .post("/cartographie/buildings/import-osm")
+      .set("Cookie", gisCookie)
+      .send({
+        mission_id: mission.id,
+        selection: {
+          type: "Polygon",
+          coordinates: [[
+            [-4.007, 5.349],
+            [-4.005, 5.349],
+            [-4.005, 5.351],
+            [-4.007, 5.351],
+            [-4.007, 5.349]
+          ]]
+        }
+      });
+
+    assert.equal(response.status, 400);
+    assert.equal(response.body.error, "overpass_request_failed");
+    assert.match(response.body.details, /HTTP 504/);
+    assert.match(response.body.details, /overpass timeout/);
+  } finally {
+    global.fetch = originalFetch;
+  }
 });
 
 test("GET /soumissions/:id/detail affiche la fiche decisionnelle et exige infographics.read", async () => {

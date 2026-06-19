@@ -1638,6 +1638,71 @@ h2 {
 }
 
 .prepared-buildings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.prepared-buildings-tabs {
+  display: grid;
+  gap: 8px;
+}
+
+.prepared-buildings-tab-list {
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+
+.prepared-buildings-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font: 700 var(--font-small)/1.2 Arial, sans-serif;
+  padding: 8px 9px;
+}
+
+.prepared-buildings-tab:hover,
+.prepared-buildings-tab:focus {
+  color: var(--primary);
+  outline: none;
+}
+
+.prepared-buildings-tab.is-active {
+  border-bottom-color: var(--primary);
+  color: var(--primary-dark);
+}
+
+.prepared-buildings-tab-panels {
+  min-width: 0;
+}
+
+.prepared-buildings-tab-panel[hidden] {
+  display: none;
+}
+
+.prepared-buildings-section {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 9px;
+  margin: 0;
+  min-width: 0;
+  padding: 10px;
+}
+
+.prepared-buildings-section legend {
+  color: var(--primary-dark);
+  font-size: var(--font-small);
+  font-weight: 700;
+  padding: 0 5px;
+}
+
+.prepared-buildings-grid {
   display: grid;
   gap: 10px;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1676,6 +1741,37 @@ h2 {
   gap: 8px;
 }
 
+.prepared-buildings-osm {
+  background: #fbf8ff;
+  border: 1px solid #d9c8f2;
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  padding: 9px;
+}
+
+.prepared-buildings-osm strong {
+  color: var(--ink);
+  font-size: var(--font-small);
+}
+
+.prepared-buildings-osm-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.prepared-buildings-status {
+  align-items: end;
+  background: #f8fafb;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 9px;
+}
+
 .prepared-buildings-feedback {
   color: var(--muted);
   font-size: var(--font-small);
@@ -1696,6 +1792,22 @@ h2 {
   overflow: hidden;
 }
 
+.prepared-buildings-list {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 260px;
+  padding-top: 10px;
+}
+
+.prepared-buildings-list h3 {
+  color: var(--primary-dark);
+  font-size: var(--font-small);
+  margin: 0;
+}
+
 .prepared-buildings-table .tabulator {
   border: 1px solid var(--border);
   font-size: var(--font-small);
@@ -1705,6 +1817,10 @@ h2 {
   border-radius: 9px;
   height: 100%;
   min-height: 0;
+}
+
+#sig-map.is-osm-selecting {
+  cursor: crosshair;
 }
 
 #sig-map .leaflet-interactive:focus {

@@ -1,4 +1,5 @@
 const BuildingFeature = require("../models/BuildingFeature");
+const { fetchOsmBuildings } = require("../services/osmBuildingImportService");
 
 exports.index = (req, res) => {
   const features = BuildingFeature.all({
@@ -33,6 +34,53 @@ exports.importGeoJson = (req, res) => {
     res.status(201).json({ ok: true, result });
   } catch (error) {
     res.status(400).json({ ok: false, error: error.message });
+  }
+};
+
+exports.importFromOsm = async (req, res) => {
+  try {
+    const missionId = Number(req.body.mission_id);
+    const { areaKm2, geojson } = await fetchOsmBuildings(req.body.selection);
+    const result = BuildingFeature.importGeoJson({
+      missionId,
+      geojson,
+      actorUserId: req.currentUser?.id || null,
+      defaults: {
+        site_code: req.body.site_code,
+        site_name: req.body.site_name,
+        source: "osm",
+        source_reference: "Overpass API",
+        status: "prepare"
+      }
+    });
+
+    res.status(201).json({
+      ok: true,
+      areaKm2,
+      result
+    });
+  } catch (error) {
+    const statusCode = error.message === "osm_selection_area_too_large" ? 413 : 400;
+    res.status(statusCode).json({
+      ok: false,
+      error: error.message,
+      details: error.details || ""
+    });
+  }
+};
+
+exports.updateStatus = (req, res) => {
+  try {
+    const record = BuildingFeature.updateStatus(
+      Number(req.params.id),
+      req.body.status,
+      req.currentUser?.id || null
+    );
+
+    res.json({ ok: true, feature: toGeoJsonFeature(record) });
+  } catch (error) {
+    const statusCode = error.message === "building_not_found" ? 404 : 400;
+    res.status(statusCode).json({ ok: false, error: error.message });
   }
 };
 

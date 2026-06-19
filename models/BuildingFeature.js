@@ -5,6 +5,10 @@ const VALID_SOURCES = new Set(["osm", "topoexport", "satellite", "terrain", "man
 const VALID_STATUSES = new Set(["prepare", "transmis_terrain", "verifie_terrain", "a_corriger", "valide", "archive"]);
 
 class BuildingFeature {
+  static validStatuses() {
+    return Array.from(VALID_STATUSES);
+  }
+
   static all(filters = {}) {
     const conditions = [];
     const params = {};
@@ -48,6 +52,34 @@ class BuildingFeature {
       WHERE bf.id = ?
     `).get(id);
     return row ? hydrate(row) : null;
+  }
+
+  static updateStatus(id, status, actorUserId = null) {
+    const requestedStatus = String(status || "").trim().toLowerCase();
+    if (!VALID_STATUSES.has(requestedStatus)) {
+      throw new Error("invalid_building_status");
+    }
+
+    const record = this.findById(id);
+    if (!record) {
+      throw new Error("building_not_found");
+    }
+
+    db.prepare(`
+      UPDATE building_features
+      SET
+        status = @status,
+        validated_by = CASE WHEN @status = 'valide' THEN @actorUserId ELSE validated_by END,
+        validated_at = CASE WHEN @status = 'valide' THEN CURRENT_TIMESTAMP ELSE validated_at END,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `).run({
+      id: record.id,
+      status: requestedStatus,
+      actorUserId
+    });
+
+    return this.findById(record.id);
   }
 
   static importGeoJson({ missionId, geojson, actorUserId = null, defaults = {} }) {
