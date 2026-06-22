@@ -5,6 +5,14 @@ const editableKeys = [
   "app.default_mission_id",
   "map.geometry_import_results_target",
   "map.marker_bounce_duration_ms",
+  "map.site_contour_stroke_color",
+  "map.site_contour_stroke_weight",
+  "map.site_contour_dash_style",
+  "map.site_contour_fill_opacity",
+  "map.osm_building_stroke_color",
+  "map.osm_building_stroke_weight",
+  "map.osm_building_dash_style",
+  "map.osm_building_fill_opacity",
   "alerts.anomaly_threshold",
   "search.site_fields",
   "search.site_limit",
@@ -152,6 +160,38 @@ function normalizeValue(setting, value) {
       throw new Error("invalid_number");
     }
     return String(duration);
+  }
+
+  if (setting.key.endsWith("_stroke_color")) {
+    const color = String(value ?? "").trim();
+    if (!/^#[0-9a-f]{6}$/i.test(color)) {
+      throw new Error("invalid_color");
+    }
+    return color;
+  }
+
+  if (setting.key.endsWith("_stroke_weight")) {
+    const weight = Number(String(value ?? "").trim());
+    if (!Number.isInteger(weight) || weight < 1 || weight > 12) {
+      throw new Error("invalid_number");
+    }
+    return String(weight);
+  }
+
+  if (setting.key.endsWith("_dash_style")) {
+    const dashStyle = String(value ?? "").trim();
+    if (!["solid", "dashed", "dotted", "dashdot"].includes(dashStyle)) {
+      throw new Error("invalid_dash_style");
+    }
+    return dashStyle;
+  }
+
+  if (setting.key.endsWith("_fill_opacity")) {
+    const opacity = Number(String(value ?? "").trim());
+    if (!Number.isFinite(opacity) || opacity < 0 || opacity > 1) {
+      throw new Error("invalid_opacity");
+    }
+    return String(opacity);
   }
 
   if (setting.key === "app.default_mission_id") {

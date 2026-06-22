@@ -608,6 +608,116 @@ db.exec(`
 
   CREATE INDEX IF NOT EXISTS idx_building_features_site_code
     ON building_features(site_code);
+
+  CREATE TABLE IF NOT EXISTS building_features_v2 (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    mission_id INTEGER NOT NULL,
+    site_planning_id INTEGER,
+    site_code TEXT NOT NULL COLLATE NOCASE,
+    building_code TEXT NOT NULL,
+    building_name TEXT,
+    source TEXT NOT NULL DEFAULT 'osm'
+      CHECK (source IN ('osm', 'topoexport', 'manual', 'terrain', 'import')),
+    source_feature_id TEXT,
+    source_reference TEXT,
+    import_batch_id TEXT,
+    geometry_type TEXT NOT NULL DEFAULT 'Polygon'
+      CHECK (geometry_type IN ('Polygon', 'MultiPolygon')),
+    geometry_geojson TEXT NOT NULL,
+    centroid_lon REAL,
+    centroid_lat REAL,
+    bbox_min_lon REAL,
+    bbox_min_lat REAL,
+    bbox_max_lon REAL,
+    bbox_max_lat REAL,
+    status TEXT NOT NULL DEFAULT 'imported'
+      CHECK (status IN ('imported', 'prepare', 'transmis_terrain', 'verifie_terrain', 'a_corriger', 'valide', 'archive')),
+    properties_json TEXT,
+    geometry_hash TEXT NOT NULL,
+    imported_by INTEGER,
+    imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (mission_id, site_code, building_code),
+    FOREIGN KEY (mission_id) REFERENCES missions(id)
+      ON UPDATE CASCADE
+      ON DELETE RESTRICT,
+    FOREIGN KEY (site_planning_id) REFERENCES sites_planning(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL,
+    FOREIGN KEY (imported_by) REFERENCES users(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_v2_mission_site
+    ON building_features_v2(mission_id, site_code);
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_v2_site_planning_id
+    ON building_features_v2(site_planning_id);
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_v2_status
+    ON building_features_v2(status);
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_v2_source
+    ON building_features_v2(source);
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_v2_import_batch
+    ON building_features_v2(import_batch_id);
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_building_features_v2_source_unique
+    ON building_features_v2(mission_id, site_code, source, source_feature_id)
+    WHERE source_feature_id IS NOT NULL AND source_feature_id <> '';
+
+  CREATE INDEX IF NOT EXISTS idx_building_features_v2_bbox
+    ON building_features_v2(bbox_min_lon, bbox_min_lat, bbox_max_lon, bbox_max_lat);
+
+  CREATE TABLE IF NOT EXISTS sites_planning (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL DEFAULT '',
+    source_ord TEXT NOT NULL DEFAULT '',
+    localite TEXT NOT NULL DEFAULT '',
+    site_name TEXT NOT NULL DEFAULT '',
+    ministere TEXT NOT NULL DEFAULT '',
+    region TEXT NOT NULL DEFAULT '',
+    phase TEXT NOT NULL DEFAULT '',
+    planned_visit_date TEXT,
+    actual_visit_date TEXT,
+    point_geo TEXT,
+    polygon_geo TEXT,
+    emprise_bat_osm TEXT,
+    statut_old TEXT,
+    statut TEXT NOT NULL DEFAULT 'planned'
+      CHECK (statut IN ('planned', 'ongoing', 'done')),
+    source_hash TEXT NOT NULL UNIQUE,
+    raw_json TEXT,
+    imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_sites_planning_statut
+    ON sites_planning(statut);
+
+  CREATE INDEX IF NOT EXISTS idx_sites_planning_region
+    ON sites_planning(region);
+
+  CREATE INDEX IF NOT EXISTS idx_sites_planning_ministere
+    ON sites_planning(ministere);
+
+  CREATE INDEX IF NOT EXISTS idx_sites_planning_localite
+    ON sites_planning(localite);
+`);
+
+const sitesPlanningColumns = db.prepare("PRAGMA table_info('sites_planning')").all()
+  .map((column) => column.name);
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "code", "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "phase", "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "point_geo", "TEXT");
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "polygon_geo", "TEXT");
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "emprise_bat_osm", "TEXT");
+db.exec(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_planning_code_unique
+    ON sites_planning(code)
+    WHERE code IS NOT NULL AND code <> '';
 `);
 
 const missionColumns = db.prepare("PRAGMA table_info('missions')").all()
@@ -767,6 +877,70 @@ function seedDefaultSettings() {
       description: "Duree en millisecondes de l'animation du marqueur selectionne sur la carte."
     },
     {
+      key: "map.site_contour_stroke_color",
+      value: "#006b5b",
+      type: "string",
+      group_name: "map",
+      label: "Contours de site - couleur",
+      description: "Couleur du trait et du remplissage des contours de sites."
+    },
+    {
+      key: "map.site_contour_stroke_weight",
+      value: "2",
+      type: "number",
+      group_name: "map",
+      label: "Contours de site - epaisseur",
+      description: "Epaisseur du trait des contours de sites, de 1 a 12 pixels."
+    },
+    {
+      key: "map.site_contour_dash_style",
+      value: "solid",
+      type: "string",
+      group_name: "map",
+      label: "Contours de site - type de trace",
+      description: "Style de trait applique aux contours de sites."
+    },
+    {
+      key: "map.site_contour_fill_opacity",
+      value: "0.12",
+      type: "number",
+      group_name: "map",
+      label: "Contours de site - opacite du remplissage",
+      description: "Opacite du remplissage des contours de sites, entre 0 et 1."
+    },
+    {
+      key: "map.osm_building_stroke_color",
+      value: "#7c3aed",
+      type: "string",
+      group_name: "map",
+      label: "Emprises batiments - couleur",
+      description: "Couleur du trait et du remplissage des emprises de batiments importees."
+    },
+    {
+      key: "map.osm_building_stroke_weight",
+      value: "2",
+      type: "number",
+      group_name: "map",
+      label: "Emprises batiments - epaisseur",
+      description: "Epaisseur du trait des emprises de batiments, de 1 a 12 pixels."
+    },
+    {
+      key: "map.osm_building_dash_style",
+      value: "dashed",
+      type: "string",
+      group_name: "map",
+      label: "Emprises batiments - type de trace",
+      description: "Style de trait applique aux emprises de batiments."
+    },
+    {
+      key: "map.osm_building_fill_opacity",
+      value: "0.28",
+      type: "number",
+      group_name: "map",
+      label: "Emprises batiments - opacite du remplissage",
+      description: "Opacite du remplissage des emprises de batiments, entre 0 et 1."
+    },
+    {
       key: "alerts.anomaly_threshold",
       value: "3",
       type: "number",
@@ -924,6 +1098,8 @@ function seedDefaultPermissions() {
     ["sig.read", "Consultation SIG", "Acces a la cartographie.", "sig", 0],
     ["sig.manage", "Gestion SIG", "Parametrage ou fonctions avancees SIG.", "sig", 0],
     ["buildings.manage", "Gestion des batiments prepares", "Import et gestion du referentiel batimentaire preparatoire.", "sig", 0],
+    ["sites.planning.read", "Exploration des sites a visiter", "Consultation du planning previsionnel des sites.", "sites", 0],
+    ["sites.planning.manage", "Import du planning des sites", "Reimport du fichier CSV des sites prioritaires.", "sites", 0],
     ["infographics.read", "Infographies", "Consultation des infographies.", "infographics", 0],
     ["quality.read", "Consultation qualite", "Lecture des controles qualite.", "quality", 0],
     ["quality.manage", "Gestion qualite", "Actions de controle et validation.", "quality", 0],
@@ -1014,6 +1190,8 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "monitoring.read",
       "sig.read",
       "buildings.manage",
+      "sites.planning.read",
+      "sites.planning.manage",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -1032,6 +1210,8 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "monitoring.read",
       "sig.read",
       "buildings.manage",
+      "sites.planning.read",
+      "sites.planning.manage",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -1046,6 +1226,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "agents.manage",
       "sig.read",
       "buildings.manage",
+      "sites.planning.read",
       "infographics.read",
       "quality.read"
     ],
@@ -1056,6 +1237,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "teams.read",
       "agents.read",
       "sig.read",
+      "sites.planning.read",
       "infographics.read",
       "quality.read",
       "quality.manage",
@@ -1070,6 +1252,8 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "sig.read",
       "sig.manage",
       "buildings.manage",
+      "sites.planning.read",
+      "sites.planning.manage",
       "infographics.read",
       "exports.manage"
     ],
@@ -1081,6 +1265,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "agents.read",
       "monitoring.read",
       "sig.read",
+      "sites.planning.read",
       "infographics.read",
       "quality.read",
       "exports.manage"

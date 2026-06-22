@@ -1,0 +1,103 @@
+<%- include("../partials/header", { title, wideLayout: true }) %>
+<section class="page-heading">
+  <div>
+    <p class="eyebrow"><%= t("sitesPlanning.eyebrow") %></p>
+    <h1><%= title %></h1>
+    <p class="muted"><%= t("sitesPlanning.subtitle") %></p>
+  </div>
+  <button class="button button-primary" type="button" id="sites-planning-import">
+    <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+    <span><%= t("sitesPlanning.import") %></span>
+  </button>
+</section>
+
+<section
+  class="sites-planning-layer-shell"
+  id="sites-planning-app"
+  data-default-csv-path="<%= defaultCsvPath %>"
+  data-label-loading="<%= t("sitesPlanning.loading") %>"
+  data-label-empty="<%= t("sitesPlanning.empty") %>"
+  data-label-import-success="<%= t("sitesPlanning.importSuccess", { count: "__COUNT__" }) %>"
+  data-label-import-error="<%= t("sitesPlanning.importError") %>"
+  data-status-planned="<%= t("sitesPlanning.status.planned") %>"
+  data-status-ongoing="<%= t("sitesPlanning.status.ongoing") %>"
+  data-status-done="<%= t("sitesPlanning.status.done") %>"
+>
+  <div class="sites-planning-layer-host" id="sites-planning-layer-host"></div>
+</section>
+
+<template id="sites-planning-layer-template">
+  <div class="sites-planning-layer-content">
+    <div class="sites-planning-controls">
+      <p class="form-hint"><%= t("sitesPlanning.importHint", { path: defaultCsvPath }) %></p>
+      <fieldset class="sites-planning-fieldset">
+        <legend><%= t("sitesPlanning.statuses") %></legend>
+        <label>
+          <input type="checkbox" name="planning_status" value="planned" checked>
+          <span><%= t("sitesPlanning.status.planned") %></span>
+        </label>
+        <label>
+          <input type="checkbox" name="planning_status" value="ongoing" checked>
+          <span><%= t("sitesPlanning.status.ongoing") %></span>
+        </label>
+        <label>
+          <input type="checkbox" name="planning_status" value="done" checked>
+          <span><%= t("sitesPlanning.status.done") %></span>
+        </label>
+      </fieldset>
+      <label class="sites-planning-order">
+        <span><%= t("sitesPlanning.order") %></span>
+        <select id="sites-planning-order">
+          <option value="region-ministere-localite">REGION &rarr; MINISTERE &rarr; LOCALITE</option>
+          <option value="ministere-region-localite">MINISTERE &rarr; REGION &rarr; LOCALITE</option>
+        </select>
+      </label>
+      <p class="sites-planning-feedback" id="sites-planning-feedback" role="status" aria-live="polite"></p>
+    </div>
+
+    <section class="sites-planning-summary" aria-label="Indicateurs">
+      <div>
+        <span><%= t("sitesPlanning.total") %></span>
+        <strong id="sites-planning-total">0</strong>
+      </div>
+      <div>
+        <span><%= t("sitesPlanning.executionRate") %></span>
+        <strong id="sites-planning-rate">0%</strong>
+      </div>
+      <div>
+        <span><%= t("sitesPlanning.done") %></span>
+        <strong id="sites-planning-done">0</strong>
+      </div>
+      <div>
+        <span><%= t("sitesPlanning.scheduleMissing") %></span>
+        <strong id="sites-planning-missing">0</strong>
+      </div>
+    </section>
+
+    <div class="sites-planning-explorer" id="sites-planning-explorer">
+      <section class="sites-planning-tree-panel" aria-labelledby="sites-planning-tree-title">
+        <div class="panel-header">
+          <h2 id="sites-planning-tree-title"><%= t("sitesPlanning.tree") %></h2>
+        </div>
+        <div class="sites-planning-tree" id="sites-planning-tree"></div>
+      </section>
+      <div
+        class="sites-planning-pane-resizer"
+        id="sites-planning-pane-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Redimensionner les volets"
+      ></div>
+      <section class="sites-planning-table-panel" aria-labelledby="sites-planning-details-title">
+        <div class="panel-header">
+          <h2 id="sites-planning-details-title"><%= t("sitesPlanning.details") %></h2>
+          <span class="sites-planning-selection" id="sites-planning-selection">Tous les sites</span>
+        </div>
+        <div class="sites-planning-table" id="sites-planning-table"></div>
+      </section>
+    </div>
+  </div>
+</template>
+<script src="/js/layer-box-manager.js"></script>
+<script src="/js/sites-planning.js"></script>
+<%- include("../partials/footer") %>

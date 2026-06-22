@@ -23,7 +23,29 @@ exports.index = (req, res) => {
     siteCategoryIcons,
     geometryImportConfig: {
       resultsTarget: Setting.rawValue("map.geometry_import_results_target") || "floating",
-      markerBounceDurationMs: normalizeMarkerBounceDuration(Setting.rawValue("map.marker_bounce_duration_ms"))
+      markerBounceDurationMs: normalizeMarkerBounceDuration(Setting.rawValue("map.marker_bounce_duration_ms")),
+      siteContourStyle: normalizeMapFeatureStyle({
+        strokeColor: Setting.rawValue("map.site_contour_stroke_color"),
+        strokeWeight: Setting.rawValue("map.site_contour_stroke_weight"),
+        dashStyle: Setting.rawValue("map.site_contour_dash_style"),
+        fillOpacity: Setting.rawValue("map.site_contour_fill_opacity")
+      }, {
+        strokeColor: "#006b5b",
+        strokeWeight: 2,
+        dashStyle: "solid",
+        fillOpacity: 0.12
+      }),
+      osmBuildingStyle: normalizeMapFeatureStyle({
+        strokeColor: Setting.rawValue("map.osm_building_stroke_color"),
+        strokeWeight: Setting.rawValue("map.osm_building_stroke_weight"),
+        dashStyle: Setting.rawValue("map.osm_building_dash_style"),
+        fillOpacity: Setting.rawValue("map.osm_building_fill_opacity")
+      }, {
+        strokeColor: "#7c3aed",
+        strokeWeight: 2,
+        dashStyle: "dashed",
+        fillOpacity: 0.28
+      })
     },
     filters: SoumissionCollecte.mapFilters()
   });
@@ -83,4 +105,21 @@ exports.koboLightSync = async (req, res) => {
 function normalizeMarkerBounceDuration(value) {
   const duration = Number(value);
   return Number.isInteger(duration) && duration >= 100 && duration <= 5000 ? duration : 600;
+}
+
+function normalizeMapFeatureStyle(input, defaults) {
+  const strokeWeight = Number(input.strokeWeight);
+  const fillOpacity = Number(input.fillOpacity);
+  return {
+    strokeColor: /^#[0-9a-f]{6}$/i.test(input.strokeColor || "") ? input.strokeColor : defaults.strokeColor,
+    strokeWeight: Number.isInteger(strokeWeight) && strokeWeight >= 1 && strokeWeight <= 12
+      ? strokeWeight
+      : defaults.strokeWeight,
+    dashStyle: ["solid", "dashed", "dotted", "dashdot"].includes(input.dashStyle)
+      ? input.dashStyle
+      : defaults.dashStyle,
+    fillOpacity: Number.isFinite(fillOpacity) && fillOpacity >= 0 && fillOpacity <= 1
+      ? fillOpacity
+      : defaults.fillOpacity
+  };
 }

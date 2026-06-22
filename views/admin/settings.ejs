@@ -43,6 +43,37 @@
                 <option value="floating" <%= setting.value === "floating" ? "selected" : "" %>>Fenetre flottante</option>
                 <option value="layerbox" <%= setting.value === "layerbox" ? "selected" : "" %>>LayerBox - Resultat de l'importation</option>
               </select>
+            <% } else if (setting.key.endsWith("_stroke_color")) { %>
+              <input
+                type="color"
+                name="settings[<%= setting.key %>]"
+                value="<%= setting.value || "#000000" %>"
+              >
+            <% } else if (setting.key.endsWith("_dash_style")) { %>
+              <select name="settings[<%= setting.key %>]">
+                <option value="solid" <%= setting.value === "solid" ? "selected" : "" %>>Continu</option>
+                <option value="dashed" <%= setting.value === "dashed" ? "selected" : "" %>>Pointille</option>
+                <option value="dotted" <%= setting.value === "dotted" ? "selected" : "" %>>Points</option>
+                <option value="dashdot" <%= setting.value === "dashdot" ? "selected" : "" %>>Mixte</option>
+              </select>
+            <% } else if (setting.key.endsWith("_fill_opacity")) { %>
+              <input
+                type="number"
+                min="0"
+                max="1"
+                step="0.05"
+                name="settings[<%= setting.key %>]"
+                value="<%= setting.value || "0" %>"
+              >
+            <% } else if (setting.key.endsWith("_stroke_weight")) { %>
+              <input
+                type="number"
+                min="1"
+                max="12"
+                step="1"
+                name="settings[<%= setting.key %>]"
+                value="<%= setting.value || "1" %>"
+              >
             <% } else if (setting.key === "search.site_fields") { %>
               <div class="checkbox-grid">
                 <%

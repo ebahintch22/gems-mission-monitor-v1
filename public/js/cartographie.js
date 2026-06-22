@@ -21,6 +21,8 @@
   const mapLegend = document.getElementById("sig-map-legend");
   const mapLegendToggle = document.getElementById("sig-map-legend-toggle");
   const mapLegendItems = document.getElementById("sig-map-legend-items");
+  const mapFooterBand = document.getElementById("sig-map-footer-band");
+  const coordinateControlContainer = document.getElementById("sig-coordinate-control");
   const mapPane = document.getElementById("sig-map-pane");
   const geometryImportOpen = document.getElementById("sig-geometry-import-open");
   const geometryImportInput = document.getElementById("sig-geometry-import-input");
@@ -29,8 +31,10 @@
   const geometryOverlayBody = document.getElementById("sig-geometry-results-body");
   const geometryClear = document.getElementById("sig-geometry-clear");
   const buildingsOpen = document.getElementById("sig-buildings-open");
+  const sitesPlanningOpen = document.getElementById("sig-sites-planning-open");
+  const measureToggle = document.getElementById("sig-measure-toggle");
   const loadingOverlay = document.getElementById("sig-loading-overlay");
-  const map = L.map("sig-map", { maxZoom: 20 }).setView([7.54, -5.55], 6);
+  const map = L.map("sig-map", { maxZoom: 20 , zoomSnap: 0.1, zoomDelta: 0.1}).setView([7.54, -5.55], 6);
   applyMarkerBounceConfig();
   const CartographieSessionState = {
     key: "g2m.cartographie.session.v1",
@@ -69,6 +73,18 @@
   let importedGeometryStylePrefs = loadImportedGeometryStylePrefs();
   const preparedBuildingStyleKey = "g2m.sig.preparedBuildingStyle.v1";
   let preparedBuildingStylePrefs = loadPreparedBuildingStylePrefs();
+  let siteContourStylePrefs = loadConfiguredMapFeatureStyle(geometryImportConfig.siteContourStyle, {
+    strokeColor: "#006b5b",
+    strokeWeight: 2,
+    dashStyle: "solid",
+    fillOpacity: 0.12
+  });
+  let planningOsmBuildingStylePrefs = loadConfiguredMapFeatureStyle(geometryImportConfig.osmBuildingStyle, {
+    strokeColor: "#7c3aed",
+    strokeWeight: 2,
+    dashStyle: "dashed",
+    fillOpacity: 0.28
+  });
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
@@ -78,10 +94,8 @@
   const importedGeometryLayer = L.geoJSON(null, {
     style: importedGeometryStyle,
     pointToLayer(feature, latlng) {
-      return L.circleMarker(latlng, {
-        ...importedGeometryStyle(),
-        fillOpacity: 0,
-        radius: 6
+      return L.marker(latlng, {
+        icon: importedGeometryPointIcon()
       });
     },
     onEachFeature(feature, layer) {
@@ -105,6 +119,9 @@
       ].filter(Boolean).join("<br>"));
     }
   }).addTo(map);
+  const printExtentLayer = L.layerGroup().addTo(map);
+  const measureLayer = L.layerGroup().addTo(map);
+  const sitesPlanningGeometryLayer = L.layerGroup().addTo(map);
   const osmSelectionLayer = L.geoJSON(null, {
     style: {
       color: "#6f42c1",
@@ -130,6 +147,36 @@
   let importedGeometryTableHost = null;
   let preparedBuildingsTable = null;
   let preparedBuildingsData = [];
+  let preparedBuildingsFeatureCollection = { type: "FeatureCollection", features: [] };
+  let preparedBuildingSiteSuggestions = { missionId: null, siteCodes: [], siteNames: [] };
+  let sitesPlanningTable = null;
+  let sitesPlanningTree = null;
+  let sitesPlanningData = [];
+  let sitesPlanningSelection = null;
+  let sitesPlanningOsmImportResults = [];
+  let sitesPlanningOsmImportRunning = false;
+  const sitesPlanningOsmRequestTimeoutPassesMs = [30000, 60000];
+  const sitesPlanningColumnPrefsKey = "g2m.sig.sitesPlanningColumns.v1";
+  const sitesPlanningTableColumns = [
+    { title: "Code", field: "code", minWidth: 95 },
+    { title: "Site", field: "site_name", minWidth: 190 },
+    { title: "REGION", field: "region", minWidth: 145 },
+    { title: "MINISTERE", field: "ministere", minWidth: 110 },
+    { title: "LOCALITE", field: "localite", minWidth: 120 },
+    { title: "Statut", field: "statut", minWidth: 95, formatter: sitesPlanningStatusFormatter },
+    { title: "Date prevue", field: "planned_visit_date", minWidth: 115, formatter: sitesPlanningDateFormatter },
+    { title: "Date reelle", field: "actual_visit_date", minWidth: 115, formatter: sitesPlanningDateFormatter },
+    { title: "Ecart", field: "schedule_gap_label", minWidth: 95 }
+  ];
+  let selectedPlanningSite = null;
+  let planningLocationMode = null;
+  let planningContourPoints = [];
+  let planningReferenceMarker = null;
+  let planningContourLayer = null;
+  let planningOsmBuildingsLayer = null;
+  let planningDraftLayer = null;
+  let planningDraftPointGeo = null;
+  let planningDraftPolygonGeo = null;
   let selectedPreparedBuildingId = null;
   let selectedSiteId = null;
   const siteMarkersById = new Map();
@@ -137,6 +184,19 @@
   let osmSelectionMode = null;
   let osmSelectionPoints = [];
   let osmSelectionGeometry = null;
+  let printExtentMode = false;
+  let printExtentPoints = [];
+  let printExtentBounds = null;
+  let printExtentValidated = false;
+  let printExtentRectangle = null;
+  let printExtentHandles = [];
+  let activePrintExtentForm = null;
+  let measureMode = false;
+  let measurePoints = [];
+  let measureLine = null;
+  let measureTotalMeters = 0;
+  let measureStatusNode = null;
+  let measureControlContainer = null;
   collectionLayer.addLayer(activeMarkersLayer);
   const colors = {
     validee: "#16856f",
@@ -275,6 +335,8 @@
     importedGeometryLayer.eachLayer((layer) => {
       if (typeof layer.setStyle === "function") {
         layer.setStyle(importedGeometryStyle());
+      } else if (typeof layer.setIcon === "function") {
+        layer.setIcon(importedGeometryPointIcon());
       }
     });
   }
@@ -289,6 +351,19 @@
       opacity: 1,
       weight: highlighted ? importedGeometryStylePrefs.strokeWeight + 2 : importedGeometryStylePrefs.strokeWeight
     };
+  }
+
+  function importedGeometryPointIcon(options = {}) {
+    const highlighted = options.highlighted === true;
+    const color = highlighted ? importedGeometryStylePrefs.highlightColor : importedGeometryStylePrefs.strokeColor;
+    const size = highlighted ? 28 : 22;
+    return L.divIcon({
+      className: "sig-imported-geometry-marker",
+      html: `<span class="sig-imported-geometry-marker-pin" style="--geometry-marker-color: ${color}; --geometry-marker-size: ${size - 4}px;"></span>`,
+      iconSize: [size, size],
+      iconAnchor: [Math.round(size / 2), size],
+      popupAnchor: [0, -size]
+    });
   }
 
   function loadPreparedBuildingStylePrefs() {
@@ -320,8 +395,35 @@
     const hexColor = /^#[0-9a-f]{6}$/i;
     return {
       strokeColor: hexColor.test(prefs.strokeColor || "") ? prefs.strokeColor : defaults.strokeColor,
-      strokeWeight: Math.max(1, Math.min(8, Number.parseInt(prefs.strokeWeight, 10) || defaults.strokeWeight)),
+      strokeWeight: Math.max(1, Math.min(12, Number.parseInt(prefs.strokeWeight, 10) || defaults.strokeWeight)),
       dashStyle: dashStyles.has(prefs.dashStyle) ? prefs.dashStyle : defaults.dashStyle
+    };
+  }
+
+  function loadConfiguredMapFeatureStyle(prefs, defaults) {
+    const strokeStyle = normalizeStrokeStylePrefs(prefs || {}, {
+      strokeColor: defaults.strokeColor,
+      strokeWeight: defaults.strokeWeight,
+      dashStyle: defaults.dashStyle
+    });
+    const fillOpacity = Number(prefs?.fillOpacity);
+    return {
+      ...strokeStyle,
+      fillOpacity: Number.isFinite(fillOpacity) && fillOpacity >= 0 && fillOpacity <= 1
+        ? fillOpacity
+        : defaults.fillOpacity
+    };
+  }
+
+  function mapFeatureStyle(prefs) {
+    return {
+      color: prefs.strokeColor,
+      dashArray: dashArrayForStyle(prefs.dashStyle),
+      fill: true,
+      fillColor: prefs.strokeColor,
+      fillOpacity: prefs.fillOpacity,
+      opacity: 1,
+      weight: prefs.strokeWeight
     };
   }
 
@@ -404,6 +506,7 @@
   mapControlContainer.prepend(mapControlToggle);
   L.DomEvent.disableClickPropagation(mapControlContainer);
   L.DomEvent.disableScrollPropagation(mapControlContainer);
+  mapFooterBand?.append(mapControlContainer);
 
   function setMapControlCollapsed(collapsed, options = {}) {
     const isCollapsed = Boolean(collapsed);
@@ -416,6 +519,19 @@
     mapControlToggleIcon.className = isCollapsed
       ? "fa-solid fa-chevron-down"
       : "fa-solid fa-chevron-up";
+    if (options.saveState !== false) {
+      saveCurrentCartographyContext();
+    }
+  }
+
+  function setLegendCollapsed(collapsed, options = {}) {
+    const isCollapsed = Boolean(collapsed);
+    mapLegend.classList.toggle("is-collapsed", isCollapsed);
+    mapLegendToggle.setAttribute("aria-expanded", String(!isCollapsed));
+    mapLegendToggle.setAttribute(
+      "aria-label",
+      isCollapsed ? t("legendExpand") : t("legendCollapse")
+    );
     if (options.saveState !== false) {
       saveCurrentCartographyContext();
     }
@@ -437,6 +553,145 @@
     }
   });
 
+  if (coordinateControlContainer) {
+    L.DomEvent.disableClickPropagation(coordinateControlContainer);
+  }
+
+  const measureControl = L.control({ position: "bottomleft" });
+  measureControl.onAdd = function () {
+    const container = L.DomUtil.create("div", "sig-measure-control");
+    measureControlContainer = container;
+    const actions = L.DomUtil.create("div", "sig-measure-actions", container);
+    const clearButton = L.DomUtil.create("button", "", actions);
+    clearButton.type = "button";
+    clearButton.innerHTML = '<i class="fa-solid fa-trash" aria-hidden="true"></i><span>Effacer</span>';
+    measureStatusNode = L.DomUtil.create("div", "sig-measure-status", container);
+    measureStatusNode.textContent = "Distance : 0 m";
+    L.DomEvent.disableClickPropagation(container);
+    L.DomEvent.disableScrollPropagation(container);
+    L.DomEvent.on(clearButton, "click", function () {
+      clearMeasure();
+    });
+    return container;
+  };
+  measureControl.addTo(map);
+  setMeasureMode(false);
+
+  measureToggle?.addEventListener("click", function () {
+    setMeasureMode(!measureMode);
+  });
+
+  map.on("mousemove", function (event) {
+    updateCoordinateControl(event.latlng);
+    updateMeasurePreview(event.latlng);
+  });
+
+  function updateCoordinateControl(latlng) {
+    if (!coordinateControlContainer || !latlng) {
+      return;
+    }
+    coordinateControlContainer.textContent = `Longitude - Latitude : ${formatCoordinate(latlng.lng)} - ${formatCoordinate(latlng.lat)}`;
+  }
+
+  function formatCoordinate(value) {
+    return Number(value).toFixed(6);
+  }
+
+  function setMeasureMode(enabled) {
+    measureMode = Boolean(enabled);
+    map.getContainer().classList.toggle("is-measuring", measureMode);
+    measureControlContainer?.classList.toggle("is-open", measureMode);
+    if (measureToggle) {
+      measureToggle.classList.toggle("is-active", measureMode);
+      measureToggle.setAttribute("aria-pressed", String(measureMode));
+      measureToggle.setAttribute(
+        "aria-label",
+        measureMode ? "Masquer les outils de mesure" : "Afficher les outils de mesure"
+      );
+      measureToggle.setAttribute(
+        "title",
+        measureMode ? "Masquer les outils de mesure" : "Afficher les outils de mesure"
+      );
+    }
+    updateMeasureStatus();
+  }
+
+  function handleMeasureClick(event) {
+    if (!measureMode) {
+      return false;
+    }
+    const latlng = event.latlng;
+    const previous = measurePoints[measurePoints.length - 1];
+    if (previous) {
+      measureTotalMeters += map.distance(previous, latlng);
+    }
+    measurePoints.push(latlng);
+    renderMeasure();
+    updateMeasureStatus();
+    return true;
+  }
+
+  function renderMeasure() {
+    measureLayer.clearLayers();
+    measureLine = null;
+    if (measurePoints.length > 1) {
+      measureLine = L.polyline(measurePoints, {
+        color: "#0f766e",
+        opacity: 0.9,
+        weight: 3
+      }).addTo(measureLayer);
+    }
+    let cumulative = 0;
+    measurePoints.forEach((latlng, index) => {
+      if (index > 0) {
+        cumulative += map.distance(measurePoints[index - 1], latlng);
+      }
+      const marker = L.circleMarker(latlng, {
+        color: "#0f766e",
+        fillColor: "#ffffff",
+        fillOpacity: 1,
+        radius: 5,
+        weight: 2
+      }).addTo(measureLayer);
+      marker.bindTooltip(index === 0 ? "0 m" : formatDistanceMeters(cumulative), {
+        direction: "top",
+        offset: [0, -6],
+        permanent: true
+      });
+    });
+  }
+
+  function updateMeasurePreview(latlng) {
+    if (!measureMode || !latlng || !measurePoints.length) {
+      updateMeasureStatus();
+      return;
+    }
+    const lastPoint = measurePoints[measurePoints.length - 1];
+    const previewTotal = measureTotalMeters + map.distance(lastPoint, latlng);
+    updateMeasureStatus(previewTotal);
+  }
+
+  function updateMeasureStatus(previewMeters = null) {
+    if (!measureStatusNode) {
+      return;
+    }
+    const total = previewMeters ?? measureTotalMeters;
+    const suffix = previewMeters === null ? "" : " (curseur)";
+    measureStatusNode.textContent = `Distance : ${formatDistanceMeters(total)}${suffix}`;
+  }
+
+  function clearMeasure() {
+    measurePoints = [];
+    measureLine = null;
+    measureTotalMeters = 0;
+    measureLayer.clearLayers();
+    updateMeasureStatus();
+  }
+
+  function formatDistanceMeters(value) {
+    return `${Math.round(Number(value) || 0).toLocaleString(locale)} m`;
+  }
+
   const layerBoxManager = new LayerBoxManager(toolsPanel, {
     rootId: "root",
     rootTitle: t("palRootTitle"),
@@ -453,6 +708,1369 @@
     }
     saveCurrentCartographyContext();
   });
+
+  function openSitesPlanningLayer() {
+    layerBoxManager.push({
+      id: "sites-planning",
+      title: "Explorateur des sites a visiter",
+      render: renderSitesPlanningLayer,
+      onClose() {
+        cancelPlanningLocationEdit({ silent: true });
+        sitesPlanningTable = null;
+        sitesPlanningTree = null;
+        sitesPlanningSelection = null;
+      }
+    });
+    loadSitesPlanning();
+    setToolsOpen(true);
+  }
+
+  function renderSitesPlanningLayer(container) {
+    container.innerHTML = `
+      <div class="sites-planning-layer-content sites-planning-layer-content-map">
+        <div class="sites-planning-controls">
+          <fieldset class="sites-planning-fieldset">
+            <legend>Statuts</legend>
+            <label><input type="checkbox" name="sig_planning_status" value="planned" checked><span>Planifie</span></label>
+            <label><input type="checkbox" name="sig_planning_status" value="ongoing" checked><span>En cours</span></label>
+            <label><input type="checkbox" name="sig_planning_status" value="done" checked><span>Realise</span></label>
+          </fieldset>
+          <label class="sites-planning-order">
+            <span>Ordre hierarchique</span>
+            <select id="sig-sites-planning-order">
+              <option value="region-ministere-localite">REGION &rarr; MINISTERE &rarr; LOCALITE</option>
+              <option value="ministere-region-localite">MINISTERE &rarr; REGION &rarr; LOCALITE</option>
+            </select>
+          </label>
+          <button class="button" type="button" id="sig-sites-planning-refresh">
+            <i class="fa-solid fa-rotate" aria-hidden="true"></i>
+            <span>Actualiser</span>
+          </button>
+          <button class="button" type="button" id="sig-sites-planning-osm-open">
+            <i class="fa-solid fa-building" aria-hidden="true"></i>
+            <span>Importer emprise bâtiments</span>
+          </button>
+          <p class="sites-planning-feedback" id="sig-sites-planning-feedback" role="status" aria-live="polite"></p>
+        </div>
+        <section class="sites-planning-summary" aria-label="Indicateurs">
+          <div><span>Sites</span><strong id="sig-sites-planning-total">0</strong></div>
+          <div><span>Taux d'execution</span><strong id="sig-sites-planning-rate">0%</strong></div>
+          <div><span>Realises</span><strong id="sig-sites-planning-done">0</strong></div>
+          <div><span>Ecarts non renseignes</span><strong id="sig-sites-planning-missing">0</strong></div>
+        </section>
+        <section class="sites-planning-location-actions" id="sig-sites-planning-location-actions">
+          <strong id="sig-sites-planning-selected-site">Aucun site selectionne</strong>
+          <button class="button" type="button" id="sig-sites-planning-point-add" hidden disabled>Ajouter reference ponctuelle</button>
+          <button class="button" type="button" id="sig-sites-planning-point-edit" hidden>Modifier reference ponctuelle</button>
+          <button class="button" type="button" id="sig-sites-planning-polygon-add" hidden disabled>Ajouter contour</button>
+          <button class="button" type="button" id="sig-sites-planning-polygon-edit" hidden>Modifier contour</button>
+          <button class="button" type="button" id="sig-sites-planning-cancel-edit" hidden>Annuler</button>
+          <button class="button button-primary" type="button" id="sig-sites-planning-save-edit" hidden>Enregistrer</button>
+          <button class="button" type="button" id="sig-sites-planning-plan-open" hidden disabled>
+            <i class="fa-solid fa-print" aria-hidden="true"></i>
+            <span>Plan de situation</span>
+          </button>
+          <p class="form-hint" id="sig-sites-planning-location-hint">Selectionnez un site dans la liste filtree.</p>
+          <form class="sites-planning-plan-panel" id="sites-planning-plan-form" hidden>
+            <div class="sites-planning-plan-grid">
+              <label>
+                <span>Type de plan</span>
+                <select name="plan_type">
+                  <option value="satellite">Plan satellite</option>
+                  <option value="line">Plan filaire</option>
+                  <option value="mixed">Plan mixte</option>
+                </select>
+              </label>
+              <label>
+                <span>Orientation</span>
+                <select name="page_orientation">
+                  <option value="auto">Automatique</option>
+                  <option value="landscape">Paysage</option>
+                  <option value="portrait">Portrait</option>
+                </select>
+              </label>
+              <label>
+                <span>Numérotation</span>
+                <select name="numbering_mode">
+                  <option value="auto">Automatique</option>
+                  <option value="manual">Manuelle</option>
+                </select>
+              </label>
+              <label>
+                <span>Taille étiquettes</span>
+                <input name="label_size" type="number" min="16" max="48" step="1" value="24">
+              </label>
+              <label>
+                <span>Opacité étiquettes</span>
+                <input name="label_opacity" type="range" min="0.2" max="1" step="0.05" value="1">
+              </label>
+            </div>
+            <div class="prepared-buildings-plan-actions">
+              <button class="button" type="button" data-print-extent-draw>Définir emprise</button>
+              <button class="button" type="button" data-print-extent-validate disabled>Valider emprise</button>
+              <button class="button" type="button" data-print-extent-clear disabled>Effacer emprise</button>
+              <button class="button" type="button" data-buildings-plan-preview disabled>Aperçu imprimable</button>
+              <button class="button button-primary" type="button" data-buildings-plan-print disabled>Imprimer / PDF</button>
+            </div>
+            <p class="form-hint" data-print-extent-status>Tracer et valider un cadre d'impression pour activer l'aperçu et l'impression.</p>
+            <p class="sites-planning-plan-feedback" data-sites-planning-plan-feedback role="status" aria-live="polite"></p>
+          </form>
+        </section>
+        <div class="sites-planning-explorer" id="sig-sites-planning-explorer">
+          <section class="sites-planning-tree-panel">
+            <div class="panel-header">
+              <h2>Exploration</h2>
+            </div>
+            <div class="sites-planning-tree" id="sig-sites-planning-tree"></div>
+          </section>
+          <div class="sites-planning-pane-resizer" id="sig-sites-planning-pane-resizer" role="separator" aria-orientation="vertical" aria-label="Redimensionner les volets"></div>
+          <section class="sites-planning-table-panel">
+            <div class="panel-header">
+              <h2>Sites filtres</h2>
+              <span class="sites-planning-selection" id="sig-sites-planning-selection">Tous les sites</span>
+              <span class="sites-planning-counts" id="sig-sites-planning-counts">0 filtre / 0 geolocalise</span>
+            </div>
+            <details class="sites-planning-column-toggle" id="sig-sites-planning-column-toggle">
+              <summary>Colonnes</summary>
+              <div class="sites-planning-column-menu" id="sig-sites-planning-column-menu">
+                ${sitesPlanningTableColumns.map((column) => `
+                  <label>
+                    <input type="checkbox" value="${escapeHtml(column.field)}" checked>
+                    <span>${escapeHtml(column.title)}</span>
+                  </label>
+                `).join("")}
+              </div>
+            </details>
+            <div class="sites-planning-table" id="sig-sites-planning-table"></div>
+          </section>
+        </div>
+        <section class="sites-planning-osm-dialog" id="sig-sites-planning-osm-dialog" hidden aria-label="Importation par lot des bâtiments">
+          <div class="sites-planning-osm-panel">
+            <header>
+              <h2>Importer emprise bâtiments</h2>
+              <button class="button button-ghost" type="button" id="sig-sites-planning-osm-close">Fermer</button>
+            </header>
+            <div class="sites-planning-osm-source">
+              <strong>Source</strong>
+              <label><input type="radio" name="sig_planning_building_source" value="osm" checked> OpenStreetMap</label>
+              <label><input type="radio" name="sig_planning_building_source" value="topoexport" disabled> TopoExport</label>
+            </div>
+            <div class="sites-planning-osm-actions">
+              <button class="button" type="button" id="sig-sites-planning-osm-select-all">Tout sélectionner</button>
+              <button class="button" type="button" id="sig-sites-planning-osm-clear-all">Tout désélectionner</button>
+              <button class="button button-primary" type="button" id="sig-sites-planning-osm-start" disabled>Démarer l'importation</button>
+              <button class="button" type="button" id="sig-sites-planning-osm-save" hidden>Enregistrer les données</button>
+            </div>
+            <p class="sites-planning-osm-status" id="sig-sites-planning-osm-status" role="status" aria-live="polite"></p>
+            <div class="sites-planning-osm-list" id="sig-sites-planning-osm-list"></div>
+            <div class="sites-planning-osm-report" id="sig-sites-planning-osm-report"></div>
+          </div>
+        </section>
+      </div>
+    `;
+
+    container.querySelectorAll('input[name="sig_planning_status"]').forEach((input) => {
+      input.addEventListener("change", function () {
+        sitesPlanningSelection = null;
+        loadSitesPlanning();
+      });
+    });
+    container.querySelector("#sig-sites-planning-order")?.addEventListener("change", function () {
+      sitesPlanningSelection = null;
+      renderSitesPlanningTree();
+      renderSitesPlanningTable();
+    });
+    container.querySelector("#sig-sites-planning-refresh")?.addEventListener("click", function () {
+      sitesPlanningSelection = null;
+      loadSitesPlanning();
+    });
+    container.querySelector("#sig-sites-planning-osm-open")?.addEventListener("click", function () {
+      openSitesPlanningOsmDialog();
+    });
+    container.querySelector("#sig-sites-planning-osm-close")?.addEventListener("click", function () {
+      closeSitesPlanningOsmDialog();
+    });
+    container.querySelector("#sig-sites-planning-osm-select-all")?.addEventListener("click", function () {
+      setSitesPlanningOsmSelection(true);
+    });
+    container.querySelector("#sig-sites-planning-osm-clear-all")?.addEventListener("click", function () {
+      setSitesPlanningOsmSelection(false);
+    });
+    container.querySelector("#sig-sites-planning-osm-start")?.addEventListener("click", function () {
+      startSitesPlanningOsmImport();
+    });
+    container.querySelector("#sig-sites-planning-osm-save")?.addEventListener("click", function () {
+      saveSitesPlanningOsmImportResults();
+    });
+    container.querySelector("#sig-sites-planning-point-add")?.addEventListener("click", function () {
+      startPlanningPointCapture();
+    });
+    container.querySelector("#sig-sites-planning-point-edit")?.addEventListener("click", function () {
+      startPlanningPointCapture();
+    });
+    container.querySelector("#sig-sites-planning-polygon-add")?.addEventListener("click", function () {
+      startPlanningContourCapture();
+    });
+    container.querySelector("#sig-sites-planning-polygon-edit")?.addEventListener("click", function () {
+      startPlanningContourCapture();
+    });
+    container.querySelector("#sig-sites-planning-cancel-edit")?.addEventListener("click", function () {
+      cancelPlanningLocationEdit();
+    });
+    container.querySelector("#sig-sites-planning-save-edit")?.addEventListener("click", function () {
+      savePlanningSiteLocation(currentPlanningDraftPayload());
+    });
+    container.querySelector("#sig-sites-planning-plan-open")?.addEventListener("click", function () {
+      openSelectedPlanningSitePlanPanel();
+    });
+    const planForm = container.querySelector("#sites-planning-plan-form");
+    planForm?.querySelector("[data-print-extent-draw]")?.addEventListener("click", function () {
+      startPrintExtentSelection(planForm);
+    });
+    planForm?.querySelector("[data-print-extent-validate]")?.addEventListener("click", function () {
+      validatePrintExtent(planForm);
+    });
+    planForm?.querySelector("[data-print-extent-clear]")?.addEventListener("click", function () {
+      clearPrintExtent(planForm);
+    });
+    planForm?.querySelector("[data-buildings-plan-preview]")?.addEventListener("click", function () {
+      openSelectedPlanningSitePrintPlan(planForm, { autoPrint: false });
+    });
+    planForm?.querySelector("[data-buildings-plan-print]")?.addEventListener("click", function () {
+      openSelectedPlanningSitePrintPlan(planForm, { autoPrint: true });
+    });
+    setupSitesPlanningColumnControls(container);
+    setupSitesPlanningPaneResize(container);
+    updatePlanningLocationActions();
+  }
+
+  function loadSitesPlanning() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    if (!layer) {
+      return;
+    }
+    setSitesPlanningFeedback("Chargement du planning...");
+    fetch(`/api/sites${sitesPlanningStatusQuery()}`, { headers: { "Accept": "application/json" } })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("sites_planning_load_failed");
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        sitesPlanningData = Array.isArray(payload.sites) ? payload.sites : [];
+        selectedPlanningSite = selectedPlanningSite
+          ? sitesPlanningData.find((site) => site.id === selectedPlanningSite.id) || null
+          : null;
+        setSitesPlanningFeedback("");
+        renderSitesPlanningStats();
+        renderSitesPlanningTree();
+        renderSitesPlanningTable();
+        renderSelectedPlanningSiteGeometry();
+        updatePlanningLocationActions();
+        refreshPalLayout();
+      })
+      .catch(() => {
+        sitesPlanningData = [];
+        selectedPlanningSite = null;
+        setSitesPlanningFeedback("Impossible de charger le planning.", "is-error");
+        renderSitesPlanningTree();
+        renderSitesPlanningTable();
+        renderSelectedPlanningSiteGeometry();
+        updatePlanningLocationActions();
+      });
+  }
+
+  function sitesPlanningStatusQuery() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    const statuses = Array.from(layer?.content.querySelectorAll('input[name="sig_planning_status"]:checked') || [])
+      .map((input) => input.value);
+    return statuses.length ? `?status=${encodeURIComponent(statuses.join(","))}` : "?status=__none__";
+  }
+
+  function sitesPlanningSitesWithContours() {
+    return sitesPlanningData.filter((site) => site.polygon_geo?.type === "Polygon");
+  }
+
+  function openSitesPlanningOsmDialog() {
+    const dialog = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-osm-dialog");
+    if (!dialog) {
+      return;
+    }
+    sitesPlanningOsmImportResults = [];
+    dialog.hidden = false;
+    renderSitesPlanningOsmList();
+    renderSitesPlanningOsmReport(null);
+    setSitesPlanningOsmStatus("Sélectionnez les sites à traiter.");
+    updateSitesPlanningOsmActions();
+  }
+
+  function closeSitesPlanningOsmDialog() {
+    const dialog = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-osm-dialog");
+    if (dialog) {
+      dialog.hidden = true;
+    }
+  }
+
+  function renderSitesPlanningOsmList() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    const list = layer?.content.querySelector("#sig-sites-planning-osm-list");
+    if (!list) {
+      return;
+    }
+    const sites = sitesPlanningSitesWithContours();
+    if (!sites.length) {
+      list.innerHTML = '<p class="sites-planning-empty">Aucun site avec contour défini.</p>';
+      return;
+    }
+    list.innerHTML = sites.map((site) => `
+      <label class="sites-planning-osm-site">
+        <input type="checkbox" value="${escapeHtml(String(site.id))}">
+        <span><strong>${escapeHtml(site.code || `#${site.id}`)}</strong> ${escapeHtml(site.site_name || "Site sans nom")}</span>
+      </label>
+    `).join("");
+    list.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.addEventListener("change", updateSitesPlanningOsmActions);
+    });
+  }
+
+  function setSitesPlanningOsmSelection(checked) {
+    const list = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-osm-list");
+    list?.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.checked = checked;
+    });
+    updateSitesPlanningOsmActions();
+  }
+
+  function selectedSitesPlanningOsmIds() {
+    const list = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-osm-list");
+    return Array.from(list?.querySelectorAll('input[type="checkbox"]:checked') || [])
+      .map((input) => Number(input.value))
+      .filter((id) => Number.isInteger(id) && id > 0);
+  }
+
+  function updateSitesPlanningOsmActions() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    const startButton = layer?.content.querySelector("#sig-sites-planning-osm-start");
+    const saveButton = layer?.content.querySelector("#sig-sites-planning-osm-save");
+    if (startButton) {
+      startButton.disabled = sitesPlanningOsmImportRunning || selectedSitesPlanningOsmIds().length === 0;
+    }
+    if (saveButton) {
+      saveButton.hidden = sitesPlanningOsmImportRunning
+        || !sitesPlanningOsmImportResults.some((result) => result.status === "success" && result.geojson && !result.saved);
+    }
+  }
+
+  function setSitesPlanningOsmStatus(message, className = "") {
+    const status = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-osm-status");
+    if (!status) {
+      return;
+    }
+    status.textContent = message || "";
+    status.className = `sites-planning-osm-status ${className}`.trim();
+  }
+
+  async function startSitesPlanningOsmImport() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    const startButton = layer?.content.querySelector("#sig-sites-planning-osm-start");
+    const selectedIds = selectedSitesPlanningOsmIds();
+    const source = layer?.content.querySelector('input[name="sig_planning_building_source"]:checked')?.value || "osm";
+    if (!selectedIds.length || source !== "osm") {
+      return;
+    }
+    sitesPlanningOsmImportRunning = true;
+    sitesPlanningOsmImportResults = [];
+    renderSitesPlanningOsmReport(null);
+    updateSitesPlanningOsmActions();
+
+    const firstPassFailures = await runSitesPlanningOsmImportPass({
+      siteIds: selectedIds,
+      source,
+      passNumber: 1,
+      timeoutMs: sitesPlanningOsmRequestTimeoutPassesMs[0]
+    });
+
+    if (firstPassFailures.length) {
+      setSitesPlanningOsmStatus(
+        `Passe 1 terminee : ${firstPassFailures.length} echec(s). Relance avec timeout 60 s...`,
+        "is-warning"
+      );
+      await runSitesPlanningOsmImportPass({
+        siteIds: firstPassFailures.map((result) => result.site_id),
+        source,
+        passNumber: 2,
+        timeoutMs: sitesPlanningOsmRequestTimeoutPassesMs[1]
+      });
+    }
+
+    sitesPlanningOsmImportRunning = false;
+    const failures = sitesPlanningOsmImportResults.filter((result) => result.status === "error").length;
+    setSitesPlanningOsmStatus(
+      failures
+        ? `Importation terminée avec ${failures} échec(s).`
+        : "Importation terminée.",
+      failures ? "is-error" : "is-success"
+    );
+    updateSitesPlanningOsmActions();
+    if (startButton) {
+      startButton.disabled = selectedSitesPlanningOsmIds().length === 0;
+    }
+  }
+
+  async function runSitesPlanningOsmImportPass({ siteIds, source, passNumber, timeoutMs }) {
+    const failures = [];
+    for (const [index, siteId] of siteIds.entries()) {
+      const site = sitesPlanningData.find((candidate) => candidate.id === siteId);
+      const label = site?.site_name || site?.code || `site #${siteId}`;
+      setSitesPlanningOsmStatus(
+        `Extraction OSM passe ${passNumber}/2 (${Math.round(timeoutMs / 1000)} s) ${index + 1}/${siteIds.length} : ${label}`
+      );
+      try {
+        const payload = await fetchSitesPlanningOsmPreview([siteId], source, timeoutMs);
+        const result = payload.results?.[0] || {
+          site_id: siteId,
+          code: site?.code,
+          site_name: site?.site_name,
+          status: "error",
+          imported: 0,
+          error: "empty_osm_import_response"
+        };
+        const stored = upsertSitesPlanningOsmImportResult(siteId, result, {
+          pass: passNumber,
+          timeout_ms: timeoutMs,
+          status: result.status,
+          error: result.error || ""
+        });
+        if (stored.status === "error") {
+          failures.push(stored);
+        }
+      } catch (error) {
+        const stored = upsertSitesPlanningOsmImportResult(siteId, {
+          site_id: siteId,
+          code: site?.code,
+          site_name: site?.site_name,
+          status: "error",
+          imported: 0,
+          error: error.message
+        }, {
+          pass: passNumber,
+          timeout_ms: timeoutMs,
+          status: "error",
+          error: error.message
+        });
+        failures.push(stored);
+      }
+      renderSitesPlanningOsmReport(buildSitesPlanningOsmReportPayload());
+    }
+    return failures;
+  }
+
+  function upsertSitesPlanningOsmImportResult(siteId, result, attempt) {
+    const existingIndex = sitesPlanningOsmImportResults.findIndex((candidate) => candidate.site_id === siteId);
+    const previous = existingIndex >= 0 ? sitesPlanningOsmImportResults[existingIndex] : {};
+    const stored = {
+      ...previous,
+      ...result,
+      site_id: siteId,
+      saved: result.status === "success" ? Boolean(previous.saved) : false,
+      attempts: [
+        ...(previous.attempts || []),
+        attempt
+      ]
+    };
+    if (existingIndex >= 0) {
+      sitesPlanningOsmImportResults.splice(existingIndex, 1, stored);
+    } else {
+      sitesPlanningOsmImportResults.push(stored);
+    }
+    return stored;
+  }
+
+  function fetchSitesPlanningOsmPreview(siteIds, source, timeoutMs) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
+    return fetch("/api/sites/buildings/osm-preview", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ source, site_ids: siteIds }),
+      signal: controller.signal
+    })
+      .then((response) => response.json().then((payload) => ({ ok: response.ok, payload })))
+      .then(({ ok, payload }) => {
+        if (!ok || !payload.ok) {
+          throw new Error(payload.error || "sites_planning_osm_import_failed");
+        }
+        return payload;
+      })
+      .catch((error) => {
+        if (error.name === "AbortError") {
+          throw new Error("timeout_osm_import_site");
+        }
+        throw error;
+      })
+      .finally(() => {
+        clearTimeout(timeout);
+      });
+  }
+
+  function buildSitesPlanningOsmReportPayload() {
+    return {
+      results: sitesPlanningOsmImportResults,
+      summary: {
+        total_sites: sitesPlanningOsmImportResults.length,
+        success_sites: sitesPlanningOsmImportResults.filter((result) => result.status === "success").length,
+        failed_sites: sitesPlanningOsmImportResults.filter((result) => result.status === "error").length,
+        total_buildings: sitesPlanningOsmImportResults.reduce((sum, result) => sum + Number(result.imported || 0), 0)
+      }
+    };
+  }
+
+  function renderSitesPlanningOsmReport(payload) {
+    const report = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-osm-report");
+    if (!report) {
+      return;
+    }
+    if (!payload) {
+      report.innerHTML = "";
+      return;
+    }
+    const rows = (payload.results || []).map((result) => `
+      <tr>
+        <td>${escapeHtml(result.site_name || result.code || String(result.site_id))}</td>
+        <td>${result.status === "success" ? "Succès" : "Echec"}</td>
+        <td>${Number(result.imported || 0).toLocaleString(locale)}</td>
+      </tr>
+    `).join("");
+    report.innerHTML = `
+      <div class="sites-planning-osm-summary">
+        <strong>Résumé des importations</strong>
+        <span>${Number(payload.summary?.total_sites || 0).toLocaleString(locale)} site(s) traité(s)</span>
+        <span>${Number(payload.summary?.total_buildings || 0).toLocaleString(locale)} bâtiment(s) importé(s)</span>
+      </div>
+      <table>
+        <thead><tr><th>Site</th><th>Résultat</th><th>Bâtiments</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  async function saveSitesPlanningOsmImportResults() {
+    const imports = sitesPlanningOsmImportResults
+      .filter((result) => result.status === "success" && result.geojson && !result.saved);
+    if (!imports.length) {
+      return;
+    }
+
+    sitesPlanningOsmImportRunning = true;
+    updateSitesPlanningOsmActions();
+    let saved = 0;
+    let failed = 0;
+
+    for (const [index, result] of imports.entries()) {
+      setSitesPlanningOsmStatus(`Enregistrement ${index + 1}/${imports.length} : ${result.site_name || result.code || result.site_id}`);
+      try {
+        const payload = await saveSingleSitesPlanningOsmImport(result);
+        saved += Number(payload.result?.saved || 0);
+        result.saved = true;
+      } catch (error) {
+        failed += 1;
+        result.save_error = error.message;
+      }
+    }
+
+    sitesPlanningOsmImportRunning = false;
+    updateSitesPlanningOsmActions();
+    setSitesPlanningOsmStatus(
+      failed
+        ? `${saved} emprise(s) enregistrée(s), ${failed} échec(s) d'enregistrement.`
+        : `${saved} emprise(s) enregistrée(s).`,
+      failed ? "is-error" : "is-success"
+    );
+    if (saved > 0) {
+      loadSitesPlanning();
+    }
+  }
+
+  function saveSingleSitesPlanningOsmImport(result) {
+    return fetch("/api/sites/buildings/osm-save", {
+      method: "POST",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        imports: [{
+          site_id: result.site_id,
+          geojson: result.geojson
+        }]
+      })
+    })
+      .then((response) => response.json().then((payload) => ({ ok: response.ok, payload })))
+      .then(({ ok, payload }) => {
+        if (!ok || !payload.ok) {
+          throw new Error(payload.error || "sites_planning_osm_save_failed");
+        }
+        return payload;
+      });
+  }
+
+  function setSitesPlanningFeedback(message, className) {
+    const feedback = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-feedback");
+    if (!feedback) {
+      return;
+    }
+    feedback.textContent = message || "";
+    feedback.className = `sites-planning-feedback ${className || ""}`.trim();
+  }
+
+  function renderSitesPlanningStats() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    if (!layer) {
+      return;
+    }
+    const total = sitesPlanningData.length;
+    const done = sitesPlanningData.filter((site) => site.statut === "done").length;
+    const missing = sitesPlanningData.filter((site) => site.schedule_gap_days === null).length;
+    const rate = total ? Math.round((done / total) * 1000) / 10 : 0;
+    layer.content.querySelector("#sig-sites-planning-total").textContent = String(total);
+    layer.content.querySelector("#sig-sites-planning-rate").textContent = `${rate.toLocaleString(locale)}%`;
+    layer.content.querySelector("#sig-sites-planning-done").textContent = String(done);
+    layer.content.querySelector("#sig-sites-planning-missing").textContent = String(missing);
+  }
+
+  function renderSitesPlanningTree() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    const host = layer?.content.querySelector("#sig-sites-planning-tree");
+    if (!host || !window.BootstrapTreeViewLite) {
+      return;
+    }
+    if (!sitesPlanningTree) {
+      sitesPlanningTree = new BootstrapTreeViewLite(host, {
+        onSelect(node) {
+          sitesPlanningSelection = node.criteria?.length ? node : null;
+          renderSitesPlanningTable();
+        }
+      });
+    }
+    const rootNode = {
+      key: "all",
+      label: "Tous les sites",
+      count: sitesPlanningData.length,
+      criteria: [],
+      expanded: true,
+      children: buildSitesPlanningTree(sitesPlanningData, sitesPlanningOrder())
+    };
+    sitesPlanningTree.setData([rootNode]);
+  }
+
+  function sitesPlanningOrder() {
+    const value = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sig-sites-planning-order")?.value;
+    return value === "ministere-region-localite"
+      ? ["ministere", "region", "localite"]
+      : ["region", "ministere", "localite"];
+  }
+
+  function buildSitesPlanningTree(sites, order) {
+    const root = { key: "root", criteria: [], children: [] };
+    sites.forEach((site) => {
+      let current = root;
+      order.forEach((field) => {
+        const label = site[field] || "Non renseigne";
+        let child = current.children.find((candidate) => candidate.field === field && candidate.label === label);
+        if (!child) {
+          child = {
+            key: `${current.key}|${field}:${label}`,
+            label,
+            field,
+            count: 0,
+            criteria: current.criteria.concat({ field, value: label }),
+            children: []
+          };
+          current.children.push(child);
+          current.children.sort((left, right) => left.label.localeCompare(right.label, locale, { sensitivity: "base" }));
+        }
+        child.count += 1;
+        current = child;
+      });
+    });
+    return root.children;
+  }
+
+  function sitesPlanningFilteredRows() {
+    if (!sitesPlanningSelection?.criteria?.length) {
+      return sitesPlanningData;
+    }
+    return sitesPlanningData.filter((site) => sitesPlanningSelection.criteria.every((entry) => {
+      const value = site[entry.field] || "Non renseigne";
+      return value === entry.value;
+    }));
+  }
+
+  function setupSitesPlanningColumnControls(container) {
+    const menu = container.querySelector("#sig-sites-planning-column-menu");
+    if (!menu) {
+      return;
+    }
+    const visibleFields = loadSitesPlanningVisibleColumns();
+    menu.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+      input.checked = visibleFields.includes(input.value);
+      input.addEventListener("change", function () {
+        const checkedFields = Array.from(menu.querySelectorAll('input[type="checkbox"]:checked'))
+          .map((checkbox) => checkbox.value);
+        if (!checkedFields.length) {
+          input.checked = true;
+          return;
+        }
+        saveSitesPlanningVisibleColumns(checkedFields);
+        applySitesPlanningColumnVisibility();
+        refreshPalLayout();
+      });
+    });
+  }
+
+  function loadSitesPlanningVisibleColumns() {
+    const defaults = sitesPlanningTableColumns.map((column) => column.field);
+    try {
+      const stored = JSON.parse(localStorage.getItem(sitesPlanningColumnPrefsKey));
+      const validFields = Array.isArray(stored)
+        ? stored.filter((field) => defaults.includes(field))
+        : [];
+      return validFields.length ? validFields : defaults;
+    } catch (error) {
+      return defaults;
+    }
+  }
+
+  function saveSitesPlanningVisibleColumns(fields) {
+    try {
+      localStorage.setItem(sitesPlanningColumnPrefsKey, JSON.stringify(fields));
+    } catch (error) {
+      // Column visibility remains usable even if browser storage is blocked.
+    }
+  }
+
+  function applySitesPlanningColumnVisibility() {
+    if (!sitesPlanningTable) {
+      return;
+    }
+    const visibleFields = loadSitesPlanningVisibleColumns();
+    sitesPlanningTableColumns.forEach((column) => {
+      if (visibleFields.includes(column.field)) {
+        sitesPlanningTable.showColumn(column.field);
+      } else {
+        sitesPlanningTable.hideColumn(column.field);
+      }
+    });
+  }
+
+  function renderSitesPlanningTable() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    const host = layer?.content.querySelector("#sig-sites-planning-table");
+    if (!host) {
+      return;
+    }
+    const rows = sitesPlanningFilteredRows();
+    const selectionLabel = layer.content.querySelector("#sig-sites-planning-selection");
+    const countsLabel = layer.content.querySelector("#sig-sites-planning-counts");
+    if (selectionLabel) {
+      selectionLabel.textContent = sitesPlanningSelection?.criteria?.length
+        ? sitesPlanningSelection.criteria.map((entry) => entry.value).join(" / ")
+        : "Tous les sites";
+    }
+    if (countsLabel) {
+      const geolocated = rows.filter((site) => isPlanningSiteGeolocated(site)).length;
+      countsLabel.textContent = `${rows.length.toLocaleString(locale)} filtres / ${geolocated.toLocaleString(locale)} geolocalises`;
+    }
+    if (!sitesPlanningTable) {
+      sitesPlanningTable = new Tabulator(host, {
+        data: rows,
+        height: "100%",
+        layout: "fitColumns",
+        placeholder: "Aucun site.",
+        rowFormatter(row) {
+          applySitesPlanningRowClasses(row);
+        },
+        columns: sitesPlanningTableColumns
+      });
+      sitesPlanningTable.on("rowClick", function (event, row) {
+        selectPlanningSite(row.getData());
+      });
+      applySitesPlanningColumnVisibility();
+    } else {
+      sitesPlanningTable.replaceData(rows);
+      applySitesPlanningColumnVisibility();
+    }
+    refreshPalLayout();
+  }
+
+  function isPlanningSiteGeolocated(site) {
+    return site?.polygon_geo?.type === "Polygon" || site?.point_geo?.type === "Point";
+  }
+
+  function applySitesPlanningRowClasses(row) {
+    const data = row.getData();
+    const element = row.getElement();
+    const hasContour = data.polygon_geo?.type === "Polygon";
+    const hasPointOnly = !hasContour && data.point_geo?.type === "Point";
+    element.classList.toggle("is-selected-planning-site", data.id === selectedPlanningSite?.id);
+    element.classList.toggle("has-planning-contour", hasContour);
+    element.classList.toggle("has-planning-reference-point", hasPointOnly);
+  }
+
+  function refreshSitesPlanningRowStyles() {
+    if (!sitesPlanningTable) {
+      return;
+    }
+    sitesPlanningTable.getRows().forEach((row) => {
+      applySitesPlanningRowClasses(row);
+    });
+  }
+
+  function sitesPlanningStatusFormatter(cell) {
+    const value = String(cell.getValue() || "");
+    const labels = { planned: "Planifie", ongoing: "En cours", done: "Realise" };
+    return `<span class="sites-planning-status sites-planning-status-${escapeHtml(value)}">${escapeHtml(labels[value] || value || "-")}</span>`;
+  }
+
+  function sitesPlanningDateFormatter(cell) {
+    const value = cell.getValue();
+    return escapeHtml(formatPlanningDate(value) || "non renseigne");
+  }
+
+  function formatPlanningDate(value) {
+    if (!value) {
+      return "";
+    }
+    const parts = String(value).split("-");
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value);
+  }
+
+  function selectPlanningSite(site) {
+    if (!site) {
+      return;
+    }
+    selectedPlanningSite = site;
+    renderSelectedPlanningSiteGeometry();
+    updatePlanningLocationActions();
+    refreshSitesPlanningRowStyles();
+    const matchingPoint = findSubmissionPointForPlanningSite(site);
+    if (hasPlanningSiteMapGeometry(site)) {
+      zoomToPlanningSiteGeometry(site);
+    } else if (matchingPoint) {
+      selectSite(matchingPoint);
+      flyToSubmission(matchingPoint);
+    } else {
+      zoomToPlanningSiteGeometry(site);
+    }
+  }
+
+  function updatePlanningLocationActions() {
+    const layer = layerBoxManager.getLayer("sites-planning");
+    if (!layer) {
+      return;
+    }
+    const selectedLabel = layer.content.querySelector("#sig-sites-planning-selected-site");
+    const pointAddButton = layer.content.querySelector("#sig-sites-planning-point-add");
+    const pointEditButton = layer.content.querySelector("#sig-sites-planning-point-edit");
+    const polygonAddButton = layer.content.querySelector("#sig-sites-planning-polygon-add");
+    const polygonEditButton = layer.content.querySelector("#sig-sites-planning-polygon-edit");
+    const cancelButton = layer.content.querySelector("#sig-sites-planning-cancel-edit");
+    const saveButton = layer.content.querySelector("#sig-sites-planning-save-edit");
+    const planButton = layer.content.querySelector("#sig-sites-planning-plan-open");
+    const planForm = layer.content.querySelector("#sites-planning-plan-form");
+    const hint = layer.content.querySelector("#sig-sites-planning-location-hint");
+    const hasSite = Boolean(selectedPlanningSite);
+    const hasPoint = Boolean(selectedPlanningSite?.point_geo);
+    const hasPolygon = Boolean(selectedPlanningSite?.polygon_geo);
+    const osmBuildingCount = planningOsmBuildingCount(selectedPlanningSite);
+    const isEditing = Boolean(planningLocationMode);
+    const canSaveDraft = Boolean(currentPlanningDraftPayload());
+
+    if (selectedLabel) {
+      selectedLabel.textContent = hasSite
+        ? [selectedPlanningSite.code, selectedPlanningSite.site_name || `Site #${selectedPlanningSite.id}`].filter(Boolean).join(" - ")
+        : "Aucun site selectionne";
+    }
+    if (pointAddButton) {
+      pointAddButton.hidden = isEditing || !hasSite || hasPoint;
+      pointAddButton.disabled = !hasSite;
+    }
+    if (pointEditButton) {
+      pointEditButton.hidden = isEditing || !hasSite || !hasPoint;
+      pointEditButton.disabled = !hasSite;
+    }
+    if (polygonAddButton) {
+      polygonAddButton.hidden = isEditing || !hasSite || hasPolygon;
+      polygonAddButton.disabled = !hasSite;
+    }
+    if (polygonEditButton) {
+      polygonEditButton.hidden = isEditing || !hasSite || !hasPolygon;
+      polygonEditButton.disabled = !hasSite;
+    }
+    if (cancelButton) {
+      cancelButton.hidden = !isEditing;
+    }
+    if (saveButton) {
+      saveButton.hidden = !isEditing;
+      saveButton.disabled = !canSaveDraft;
+    }
+    if (planButton) {
+      planButton.hidden = isEditing || !hasSite || osmBuildingCount <= 0;
+      planButton.disabled = !hasSite || osmBuildingCount <= 0;
+    }
+    if (planForm && (!hasSite || isEditing || osmBuildingCount <= 0)) {
+      planForm.hidden = true;
+    }
+    if (hint) {
+      hint.textContent = isEditing
+        ? planningLocationMode === "point"
+          ? "Cliquez sur la carte pour positionner le point, puis enregistrez."
+          : "Cliquez pour tracer le contour. Le bouton Enregistrer apparait quand au moins 3 sommets sont saisis."
+        : hasSite && osmBuildingCount > 0
+        ? `${osmBuildingCount.toLocaleString(locale)} bâtiment(s) OSM affiché(s) pour ce site.`
+        : hasSite
+        ? "Utilisez les boutons pour definir les donnees de localisation sur la carte."
+        : "Selectionnez un site dans la liste filtree.";
+    }
+  }
+
+  function planningOsmBuildingCount(site) {
+    return Array.isArray(site?.emprise_bat_osm?.features)
+      ? site.emprise_bat_osm.features.length
+      : 0;
+  }
+
+  function openSelectedPlanningSitePlanPanel() {
+    const form = layerBoxManager.getLayer("sites-planning")?.content.querySelector("#sites-planning-plan-form");
+    if (!form || !selectedPlanningSite || planningOsmBuildingCount(selectedPlanningSite) <= 0) {
+      return;
+    }
+    form.hidden = !form.hidden;
+    if (!form.hidden) {
+      activePrintExtentForm = form;
+      updatePrintPlanButtons(form);
+      updatePrintExtentStatus(form, "Tracer et valider un cadre d'impression pour activer l'aperçu et l'impression.");
+    }
+  }
+
+  async function openSelectedPlanningSitePrintPlan(form, options = {}) {
+    const feedback = form?.querySelector("[data-sites-planning-plan-feedback]");
+    if (!selectedPlanningSite) {
+      setSelectedPlanningSitePlanFeedback(feedback, "Sélectionner un site.", "is-error");
+      return;
+    }
+    if (!printExtentValidated || !printExtentBounds?.isValid()) {
+      setSelectedPlanningSitePlanFeedback(feedback, "Définir et valider l'emprise d'impression avant de générer un plan.", "is-error");
+      return;
+    }
+    let planData = null;
+    try {
+      setSelectedPlanningSitePlanFeedback(feedback, "Chargement des bâtiments du site...", "");
+      planData = await fetchSelectedPlanningSitePlanData(selectedPlanningSite.id);
+      selectedPlanningSite.emprise_bat_osm = planData.buildings;
+    } catch (error) {
+      setSelectedPlanningSitePlanFeedback(feedback, error.message || "Chargement du plan impossible.", "is-error");
+      return;
+    }
+    const payload = buildSelectedPlanningSitePlanPayload(form, options, planData);
+    if (!payload.featureCollection.features.length) {
+      setSelectedPlanningSitePlanFeedback(feedback, "Aucun bâtiment importé n'est inclus dans l'emprise d'impression validée.", "is-error");
+      return;
+    }
+    const planWindow = window.open("", "_blank", "width=1200,height=850");
+    if (!planWindow) {
+      setSelectedPlanningSitePlanFeedback(feedback, "Autoriser les fenêtres pop-up pour ouvrir le plan imprimable.", "is-error");
+      return;
+    }
+    try {
+      planWindow.document.open();
+      planWindow.document.write(renderPreparedBuildingsPrintHtml(payload));
+      planWindow.document.close();
+      planWindow.focus();
+      setSelectedPlanningSitePlanFeedback(
+        feedback,
+        options.autoPrint
+          ? "Plan imprimable ouvert. Utiliser l'impression navigateur pour exporter en PDF."
+          : "Aperçu imprimable ouvert.",
+        "is-success"
+      );
+    } catch (error) {
+      planWindow.document.body.innerHTML = "<p>Impossible de générer le plan imprimable depuis cette fenêtre.</p>";
+      setSelectedPlanningSitePlanFeedback(feedback, "Impossible de générer le plan imprimable.", "is-error");
+    }
+  }
+
+  function fetchSelectedPlanningSitePlanData(siteId) {
+    return fetch(`/api/sites/${encodeURIComponent(siteId)}/buildings/plan`, {
+      headers: { "Accept": "application/json" }
+    })
+      .then((response) => response.json().then((payload) => ({ ok: response.ok, payload })))
+      .then(({ ok, payload }) => {
+        if (!ok || !payload.ok) {
+          throw new Error(payload.error || "sites_planning_plan_load_failed");
+        }
+        return payload;
+      });
+  }
+
+  function buildSelectedPlanningSitePlanPayload(form, options = {}, planData = {}) {
+    const planType = form.elements.plan_type?.value || "satellite";
+    const numberingMode = form.elements.numbering_mode?.value || "auto";
+    const site = planData.site || selectedPlanningSite;
+    const buildings = planData.buildings || selectedPlanningSite.emprise_bat_osm || { type: "FeatureCollection", features: [] };
+    const features = numberedPreparedBuildingFeatures(
+      preparedBuildingsFeaturesInPrintExtent(buildings.features || []),
+      numberingMode
+    );
+    return {
+      autoPrint: Boolean(options.autoPrint),
+      planType,
+      numberingMode,
+      generatedAt: new Date().toLocaleString(locale),
+      metadata: {
+        siteName: site.site_name || site.code || "-",
+        siteCode: site.code || "-",
+        mission: planData.mission?.name || "Mission courante",
+        region: site.region || "-"
+      },
+      style: {
+        strokeColor: planningOsmBuildingStylePrefs.strokeColor,
+        strokeWeight: planningOsmBuildingStylePrefs.strokeWeight,
+        dashStyle: planningOsmBuildingStylePrefs.dashStyle,
+        dashArray: dashArrayForStyle(planningOsmBuildingStylePrefs.dashStyle),
+        fillOpacity: planningOsmBuildingStylePrefs.fillOpacity
+      },
+      labels: {
+        size: normalizedPlanLabelSize(form.elements.label_size?.value),
+        opacity: normalizedPlanLabelOpacity(form.elements.label_opacity?.value)
+      },
+      page: resolvePreparedBuildingsPrintPage(form),
+      printBounds: {
+        south: printExtentBounds.getSouth(),
+        west: printExtentBounds.getWest(),
+        north: printExtentBounds.getNorth(),
+        east: printExtentBounds.getEast()
+      },
+      featureCollection: {
+        type: "FeatureCollection",
+        features
+      },
+      buildings: features.map((feature) => ({
+        number: feature.properties.plan_number,
+        koboBuildingNumber: "",
+        fieldSituation: feature.properties.field_situation || feature.properties.situation_terrain || "",
+        supervisorNote: "",
+        cartographyAction: feature.properties.cartography_action || feature.properties.action_carto || "",
+        source: feature.properties.source || "-"
+      }))
+    };
+  }
+
+  function setSelectedPlanningSitePlanFeedback(feedback, message, className = "") {
+    if (!feedback) {
+      return;
+    }
+    feedback.textContent = message;
+    feedback.className = `sites-planning-plan-feedback ${className}`.trim();
+  }
+
+  function renderSelectedPlanningSiteGeometry() {
+    sitesPlanningGeometryLayer.clearLayers();
+    planningReferenceMarker = null;
+    planningContourLayer = null;
+    planningOsmBuildingsLayer = null;
+    planningDraftLayer = null;
+    if (!selectedPlanningSite) {
+      return;
+    }
+    if (selectedPlanningSite.point_geo?.type === "Point") {
+      const latlng = geoJsonPointToLatLng(selectedPlanningSite.point_geo);
+      planningReferenceMarker = L.marker(latlng, {
+        title: selectedPlanningSite.site_name || "Reference site"
+      }).addTo(sitesPlanningGeometryLayer);
+    }
+    if (selectedPlanningSite.polygon_geo?.type === "Polygon") {
+      planningContourLayer = L.geoJSON(selectedPlanningSite.polygon_geo, {
+        style: planningSiteContourStyle
+      }).addTo(sitesPlanningGeometryLayer);
+    }
+    if (selectedPlanningSite.emprise_bat_osm?.type === "FeatureCollection") {
+      planningOsmBuildingsLayer = L.geoJSON(selectedPlanningSite.emprise_bat_osm, {
+        style: planningOsmBuildingStyle,
+        onEachFeature: bindPlanningOsmBuildingPopup
+      }).addTo(sitesPlanningGeometryLayer);
+    }
+  }
+
+  function zoomToPlanningSiteGeometry(site) {
+    if (site.polygon_geo?.type === "Polygon" && planningContourLayer?.getBounds?.().isValid()) {
+      map.fitBounds(planningContourLayer.getBounds(), { padding: [30, 30], maxZoom: 18 });
+      return;
+    }
+    if (site.emprise_bat_osm?.type === "FeatureCollection" && planningOsmBuildingsLayer?.getBounds?.().isValid()) {
+      map.fitBounds(planningOsmBuildingsLayer.getBounds(), { padding: [30, 30], maxZoom: 18 });
+      return;
+    }
+    if (site.point_geo?.type === "Point") {
+      map.flyTo(geoJsonPointToLatLng(site.point_geo), Math.max(map.getZoom(), 16), { animate: true, duration: 0.8 });
+    }
+  }
+
+  function hasPlanningSiteMapGeometry(site) {
+    return site?.polygon_geo?.type === "Polygon"
+      || site?.point_geo?.type === "Point"
+      || site?.emprise_bat_osm?.type === "FeatureCollection";
+  }
+
+  function planningOsmBuildingStyle() {
+    return mapFeatureStyle(planningOsmBuildingStylePrefs);
+  }
+
+  function planningSiteContourStyle() {
+    return mapFeatureStyle(siteContourStylePrefs);
+  }
+
+  function bindPlanningOsmBuildingPopup(feature, layer) {
+    const props = feature.properties || {};
+    layer.bindPopup([
+      `<strong>${escapeHtml(props.building_code || props.name || "Bâtiment OSM")}</strong>`,
+      props.source_reference ? `Source : ${escapeHtml(props.source_reference)}` : "",
+      selectedPlanningSite?.site_name ? `Site : ${escapeHtml(selectedPlanningSite.site_name)}` : ""
+    ].filter(Boolean).join("<br>"));
+  }
+
+  function geoJsonPointToLatLng(point) {
+    return L.latLng(Number(point.coordinates[1]), Number(point.coordinates[0]));
+  }
+
+  function startPlanningPointCapture() {
+    if (!selectedPlanningSite) {
+      return;
+    }
+    planningLocationMode = "point";
+    planningContourPoints = [];
+    planningDraftPointGeo = null;
+    planningDraftPolygonGeo = null;
+    clearPlanningDraftLayer();
+    setSitesPlanningFeedback("Cliquez sur la carte pour placer le point de reference.");
+    map.getContainer().classList.add("is-planning-location-capture");
+    updatePlanningLocationActions();
+  }
+
+  function startPlanningContourCapture() {
+    if (!selectedPlanningSite) {
+      return;
+    }
+    planningLocationMode = "polygon";
+    planningContourPoints = [];
+    planningDraftPointGeo = null;
+    planningDraftPolygonGeo = null;
+    clearPlanningDraftLayer();
+    setSitesPlanningFeedback("Cliquez pour tracer le contour. Double-cliquez pour terminer.");
+    map.getContainer().classList.add("is-planning-location-capture");
+    updatePlanningLocationActions();
+  }
+
+  function handlePlanningLocationClick(event) {
+    if (!planningLocationMode || !selectedPlanningSite) {
+      return false;
+    }
+    if (planningLocationMode === "point") {
+      planningDraftPointGeo = {
+        type: "Point",
+        coordinates: [event.latlng.lng, event.latlng.lat]
+      };
+      renderPlanningDraftPoint(event.latlng);
+      setSitesPlanningFeedback("Point de reference saisi. Cliquez sur Enregistrer pour valider.");
+      updatePlanningLocationActions();
+      return true;
+    }
+    if (planningLocationMode === "polygon") {
+      planningContourPoints.push(event.latlng);
+      renderPlanningDraftPolygon();
+      if (planningContourPoints.length >= 3) {
+        planningDraftPolygonGeo = buildPlanningDraftPolygonGeoJson();
+        setSitesPlanningFeedback("Contour valide. Cliquez sur Enregistrer pour valider.");
+      }
+      updatePlanningLocationActions();
+      return true;
+    }
+    return false;
+  }
+
+  function finishPlanningContourCapture(event) {
+    if (planningLocationMode !== "polygon" || !selectedPlanningSite) {
+      return false;
+    }
+    event?.originalEvent?.preventDefault();
+    if (planningContourPoints.length < 3) {
+      setSitesPlanningFeedback("Le contour doit contenir au moins 3 points.", "is-error");
+      updatePlanningLocationActions();
+      return true;
+    }
+    planningDraftPolygonGeo = buildPlanningDraftPolygonGeoJson();
+    renderPlanningDraftPolygon();
+    setSitesPlanningFeedback("Contour valide. Cliquez sur Enregistrer pour valider.");
+    updatePlanningLocationActions();
+    return true;
+  }
+
+  function buildPlanningDraftPolygonGeoJson() {
+    if (planningContourPoints.length < 3) {
+      return null;
+    }
+    const ring = planningContourPoints.map((latlng) => [latlng.lng, latlng.lat]);
+    ring.push(ring[0]);
+    return {
+      type: "Polygon",
+      coordinates: [ring]
+    };
+  }
+
+  function renderPlanningDraftPoint(latlng) {
+    clearPlanningDraftLayer();
+    planningDraftLayer = L.circleMarker(latlng, {
+      color: "#a93636",
+      fillColor: "#fff",
+      fillOpacity: 1,
+      radius: 6,
+      weight: 2
+    }).addTo(sitesPlanningGeometryLayer);
+  }
+
+  function renderPlanningDraftPolygon() {
+    clearPlanningDraftLayer();
+    planningDraftLayer = planningContourPoints.length > 1
+      ? L.polyline(planningContourPoints, { color: "#a93636", dashArray: "5 5", weight: 2 }).addTo(sitesPlanningGeometryLayer)
+      : L.circleMarker(planningContourPoints[0], { color: "#a93636", radius: 5 }).addTo(sitesPlanningGeometryLayer);
+  }
+
+  function clearPlanningDraftLayer() {
+    if (planningDraftLayer) {
+      sitesPlanningGeometryLayer.removeLayer(planningDraftLayer);
+      planningDraftLayer = null;
+    }
+  }
+
+  function currentPlanningDraftPayload() {
+    if (planningLocationMode === "point" && planningDraftPointGeo) {
+      return { point_geo: planningDraftPointGeo };
+    }
+    if (planningLocationMode === "polygon" && planningDraftPolygonGeo) {
+      return { polygon_geo: planningDraftPolygonGeo };
+    }
+    return null;
+  }
+
+  function cancelPlanningLocationEdit(options = {}) {
+    planningLocationMode = null;
+    planningContourPoints = [];
+    planningDraftPointGeo = null;
+    planningDraftPolygonGeo = null;
+    clearPlanningDraftLayer();
+    map.getContainer().classList.remove("is-planning-location-capture");
+    if (!options.silent) {
+      setSitesPlanningFeedback("Edition annulee.");
+    }
+    updatePlanningLocationActions();
+  }
+
+  function savePlanningSiteLocation(payload) {
+    const siteId = selectedPlanningSite?.id;
+    if (!siteId || !payload) {
+      return;
+    }
+    setSitesPlanningFeedback("Enregistrement de la localisation...");
+    fetch(`/api/sites/${encodeURIComponent(siteId)}/location`, {
+      method: "PATCH",
+      headers: {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("site_location_save_failed");
+        }
+        return response.json();
+      })
+      .then((responsePayload) => {
+        const updatedSite = responsePayload.site;
+        sitesPlanningData = sitesPlanningData.map((site) => site.id === updatedSite.id ? updatedSite : site);
+        selectedPlanningSite = updatedSite;
+        planningLocationMode = null;
+        planningContourPoints = [];
+        planningDraftPointGeo = null;
+        planningDraftPolygonGeo = null;
+        map.getContainer().classList.remove("is-planning-location-capture");
+        setSitesPlanningFeedback("Localisation enregistree.", "is-success");
+        renderSelectedPlanningSiteGeometry();
+        updatePlanningLocationActions();
+        renderSitesPlanningTable();
+      })
+      .catch(() => {
+        setSitesPlanningFeedback("Impossible d'enregistrer la localisation.", "is-error");
+      });
+  }
+
+  function findSubmissionPointForPlanningSite(site) {
+    const siteName = normalizeLookup(site.site_name);
+    if (!siteName) {
+      return null;
+    }
+    return points.find((point) => {
+      const raw = rawData(point);
+      const officialName = rawValue(raw, "modB.nom_officiel") || rawValue(raw, "modB/nom_officiel") || point.display_submission_id;
+      return normalizeLookup(officialName) === siteName;
+    }) || null;
+  }
+
+  function normalizeLookup(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function setupSitesPlanningPaneResize(container) {
+    const explorer = container.querySelector("#sig-sites-planning-explorer");
+    const resizerNode = container.querySelector("#sig-sites-planning-pane-resizer");
+    if (!explorer || !resizerNode) {
+      return;
+    }
+    resizerNode.addEventListener("pointerdown", function (event) {
+      event.preventDefault();
+      resizerNode.setPointerCapture(event.pointerId);
+      explorer.classList.add("is-resizing");
+      const onMove = function (moveEvent) {
+        const rect = explorer.getBoundingClientRect();
+        const minLeft = 210;
+        const minRight = 300;
+        const requestedWidth = moveEvent.clientX - rect.left;
+        const maxLeft = Math.max(minLeft, rect.width - minRight);
+        const nextWidth = Math.min(Math.max(requestedWidth, minLeft), maxLeft);
+        explorer.style.setProperty("--sites-tree-width", `${Math.round(nextWidth)}px`);
+        if (sitesPlanningTable) {
+          sitesPlanningTable.redraw();
+        }
+      };
+      const onUp = function (upEvent) {
+        explorer.classList.remove("is-resizing");
+        resizerNode.releasePointerCapture(upEvent.pointerId);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    });
+  }
 
   const table = new Tabulator("#sig-table", {
     data: [],
@@ -483,6 +2101,9 @@
       palLayoutFrame = null;
       if (table && typeof table.redraw === "function") {
         table.redraw(true);
+      }
+      if (sitesPlanningTable && typeof sitesPlanningTable.redraw === "function") {
+        sitesPlanningTable.redraw();
       }
       map.invalidateSize();
     });
@@ -1050,10 +2671,14 @@
   function highlightImportedGeometry(id) {
     importedGeometryLayer.eachLayer((layer) => {
       const featureId = layer.feature?.properties?.id;
-      if (featureId !== id || typeof layer.setStyle !== "function") {
+      if (featureId !== id) {
         return;
       }
-      layer.setStyle(importedGeometryStyle({ highlighted: true }));
+      if (typeof layer.setStyle === "function") {
+        layer.setStyle(importedGeometryStyle({ highlighted: true }));
+      } else if (typeof layer.setIcon === "function") {
+        layer.setIcon(importedGeometryPointIcon({ highlighted: true }));
+      }
       if (layer.getBounds && layer.getBounds().isValid()) {
         map.fitBounds(layer.getBounds(), { padding: [30, 30], maxZoom: 19 });
       } else if (layer.getLatLng) {
@@ -1062,6 +2687,8 @@
       window.setTimeout(() => {
         if (typeof layer.setStyle === "function") {
           layer.setStyle(importedGeometryStyle());
+        } else if (typeof layer.setIcon === "function") {
+          layer.setIcon(importedGeometryPointIcon());
         }
       }, 3000);
     });
@@ -1608,11 +3235,13 @@
             </select>
           </label>
           <label>Code site
-            <input name="site_code" placeholder="Ex. SITE023">
+            <input name="site_code" list="prepared-buildings-site-code-options" placeholder="Ex. SITE023" autocomplete="off">
           </label>
           <label>Nom du site
-            <input name="site_name" placeholder="Nom officiel du site">
+            <input name="site_name" list="prepared-buildings-site-name-options" placeholder="Nom officiel du site" autocomplete="off">
           </label>
+          <datalist id="prepared-buildings-site-code-options"></datalist>
+          <datalist id="prepared-buildings-site-name-options"></datalist>
           <label>Source
             <select name="source">
               <option value="import">Import</option>
@@ -1681,6 +3310,47 @@
                 <button class="button" type="button" data-buildings-status-apply disabled>Appliquer</button>
               </div>`
             : ""}
+          <div class="prepared-buildings-plan prepared-buildings-wide">
+            <label>Type de plan
+              <select name="plan_type">
+                <option value="satellite">Plan satellite</option>
+                <option value="line">Plan filaire</option>
+                <option value="mixed">Plan mixte</option>
+              </select>
+            </label>
+            <label>Num&eacute;rotation
+              <select name="numbering_mode">
+                <option value="auto">Automatique</option>
+                <option value="manual">Manuelle / codes existants</option>
+              </select>
+            </label>
+            <label>Orientation
+              <select name="page_orientation">
+                <option value="auto">Automatique</option>
+                <option value="landscape">Paysage</option>
+                <option value="portrait">Portrait</option>
+              </select>
+            </label>
+            <label>Taille des &eacute;tiquettes
+              <input name="label_size" type="number" min="16" max="48" step="1" value="24">
+            </label>
+            <label>Opacit&eacute; des &eacute;tiquettes
+              <input name="label_opacity" type="range" min="0.2" max="1" step="0.05" value="1">
+            </label>
+            <div class="prepared-buildings-print-extent">
+              <strong>Emprise d'impression</strong>
+              <div class="prepared-buildings-plan-actions">
+                <button class="button" type="button" data-print-extent-draw>D&eacute;finir sur la carte</button>
+                <button class="button" type="button" data-print-extent-validate disabled>Valider l'emprise</button>
+                <button class="button" type="button" data-print-extent-clear disabled>Effacer</button>
+              </div>
+              <p class="form-hint" data-print-extent-status>Tracer et valider un cadre d'impression pour activer l'aper&ccedil;u et l'impression.</p>
+            </div>
+            <div class="prepared-buildings-plan-actions">
+              <button class="button" type="button" data-buildings-plan-preview disabled>Aper&ccedil;u imprimable</button>
+              <button class="button button-primary" type="button" data-buildings-plan-print disabled>Imprimer / PDF</button>
+            </div>
+          </div>
         </form>
         <div class="prepared-buildings-feedback" role="status" aria-live="polite"></div>
         <div id="prepared-buildings-table" class="prepared-buildings-table"></div>
@@ -1714,6 +3384,9 @@
       missionSelect.value = activeMission;
     }
     ensurePreparedBuildingsTable(shell.querySelector("#prepared-buildings-table"));
+    missionSelect.addEventListener("change", async function () {
+      await refreshPreparedBuildingSiteSuggestions(form);
+    });
     form.querySelector("[data-buildings-refresh]").addEventListener("click", async function () {
       await loadPreparedBuildings(form, feedback);
     });
@@ -1732,11 +3405,27 @@
     form.querySelector("[data-osm-import]")?.addEventListener("click", async function () {
       await importPreparedBuildingsFromOsm(form, feedback);
     });
+    form.querySelector("[data-print-extent-draw]")?.addEventListener("click", function () {
+      startPrintExtentSelection(form);
+    });
+    form.querySelector("[data-print-extent-validate]")?.addEventListener("click", function () {
+      validatePrintExtent(form);
+    });
+    form.querySelector("[data-print-extent-clear]")?.addEventListener("click", function () {
+      clearPrintExtent(form);
+    });
+    form.querySelector("[data-buildings-plan-preview]")?.addEventListener("click", function () {
+      openPreparedBuildingsPrintPlan(form, feedback, { autoPrint: false });
+    });
+    form.querySelector("[data-buildings-plan-print]")?.addEventListener("click", function () {
+      openPreparedBuildingsPrintPlan(form, feedback, { autoPrint: true });
+    });
     form.addEventListener("submit", async function (event) {
       event.preventDefault();
       await submitPreparedBuildingsImport(form, feedback);
     });
     if (missionSelect.value) {
+      refreshPreparedBuildingSiteSuggestions(form);
       loadPreparedBuildings(form, feedback);
     }
   }
@@ -1753,13 +3442,18 @@
     const sectionFilters = preparedBuildingsSection("[2. Filtres d'affichage]");
     const sectionLoad = preparedBuildingsSection("[3. Charger]");
     const sectionSelection = preparedBuildingsSection("[5. Actions sur la s&eacute;lection]");
+    const sectionPlans = preparedBuildingsSection("[6. Plans]");
     const gridContext = preparedBuildingsGrid();
     const gridFilters = preparedBuildingsGrid();
     const gridLoad = preparedBuildingsGrid();
+    const gridPlans = preparedBuildingsGrid();
     const actions = form.querySelector(".prepared-buildings-actions");
     const refreshButton = form.querySelector("[data-buildings-refresh]");
     const osmBlock = form.querySelector(".prepared-buildings-osm");
     const statusBlock = form.querySelector(".prepared-buildings-status");
+    const planBlock = form.querySelector(".prepared-buildings-plan");
+    const siteCodeOptions = form.querySelector("#prepared-buildings-site-code-options");
+    const siteNameOptions = form.querySelector("#prepared-buildings-site-name-options");
 
     appendField(gridContext, form.elements.mission_id);
     appendField(gridContext, form.elements.site_code);
@@ -1785,6 +3479,22 @@
     if (osmBlock) {
       sectionLoad.append(osmBlock);
     }
+    if (planBlock) {
+      appendField(gridPlans, form.elements.plan_type);
+      appendField(gridPlans, form.elements.numbering_mode);
+      appendField(gridPlans, form.elements.page_orientation);
+      appendField(gridPlans, form.elements.label_size);
+      appendField(gridPlans, form.elements.label_opacity);
+      const extentBlock = planBlock.querySelector(".prepared-buildings-print-extent");
+      if (extentBlock) {
+        gridPlans.append(extentBlock);
+      }
+      const planActions = planBlock.querySelector("[data-buildings-plan-preview]")?.closest(".prepared-buildings-plan-actions");
+      if (planActions) {
+        gridPlans.append(planActions);
+      }
+      sectionPlans.append(gridPlans);
+    }
 
     form.innerHTML = "";
     form.append(sectionContext, sectionFilters, sectionLoad);
@@ -1798,10 +3508,17 @@
       { id: "context", title: "1. Contexte", panel: sectionContext },
       { id: "filters", title: "2. Filtres", panel: sectionFilters },
       { id: "load", title: "3. Charger", panel: sectionLoad },
-      ...(statusBlock ? [{ id: "selection", title: "5. S&eacute;lection", panel: sectionSelection }] : [])
+      ...(statusBlock ? [{ id: "selection", title: "5. S&eacute;lection", panel: sectionSelection }] : []),
+      { id: "plans", title: "6. Plans", panel: sectionPlans }
     ]);
 
     form.append(tabs);
+    if (siteCodeOptions) {
+      form.append(siteCodeOptions);
+    }
+    if (siteNameOptions) {
+      form.append(siteNameOptions);
+    }
 
     if (table && !shell.querySelector(".prepared-buildings-list")) {
       const listSection = document.createElement("section");
@@ -1959,11 +3676,67 @@
       feedback.className = "prepared-buildings-feedback is-success";
       feedback.textContent = `${result.result.imported} bâtiment(s) importé(s).`;
       form.elements.geojson_file.value = "";
+      await refreshPreparedBuildingSiteSuggestions(form, { force: true });
       await loadPreparedBuildings(form, feedback, { keepMessage: true });
     } catch (error) {
       feedback.className = "prepared-buildings-feedback is-error";
       feedback.textContent = error.message;
     }
+  }
+
+  async function refreshPreparedBuildingSiteSuggestions(form, options = {}) {
+    const missionId = form?.elements.mission_id?.value || "";
+    if (!missionId) {
+      preparedBuildingSiteSuggestions = { missionId: null, siteCodes: [], siteNames: [] };
+      renderPreparedBuildingSiteSuggestions(form);
+      return;
+    }
+    if (!options.force && preparedBuildingSiteSuggestions.missionId === String(missionId)) {
+      renderPreparedBuildingSiteSuggestions(form);
+      return;
+    }
+    try {
+      const params = new URLSearchParams({ mission_id: missionId });
+      const response = await fetch(`/cartographie/buildings?${params.toString()}`, {
+        headers: { Accept: "application/json" }
+      });
+      const featureCollection = await response.json();
+      if (!response.ok) {
+        throw new Error(featureCollection.error || "Chargement impossible.");
+      }
+      const features = featureCollection.features || [];
+      preparedBuildingSiteSuggestions = {
+        missionId: String(missionId),
+        siteCodes: uniqueSortedPreparedBuildingValues(features, "site_code"),
+        siteNames: uniqueSortedPreparedBuildingValues(features, "site_name")
+      };
+      renderPreparedBuildingSiteSuggestions(form);
+    } catch (error) {
+      console.warn("Suggestions sites bÃ¢timents indisponibles", error);
+    }
+  }
+
+  function uniqueSortedPreparedBuildingValues(features, propertyName) {
+    return Array.from(new Set(
+      features
+        .map((feature) => String(feature.properties?.[propertyName] || "").trim())
+        .filter(Boolean)
+    )).sort((first, second) => first.localeCompare(second, locale, { sensitivity: "base" }));
+  }
+
+  function renderPreparedBuildingSiteSuggestions(form) {
+    renderDatalistOptions(form?.querySelector("#prepared-buildings-site-code-options"), preparedBuildingSiteSuggestions.siteCodes);
+    renderDatalistOptions(form?.querySelector("#prepared-buildings-site-name-options"), preparedBuildingSiteSuggestions.siteNames);
+  }
+
+  function renderDatalistOptions(datalist, values) {
+    if (!datalist) {
+      return;
+    }
+    datalist.innerHTML = values
+      .slice(0, 300)
+      .map((value) => `<option value="${escapeHtml(value)}"></option>`)
+      .join("");
   }
 
   async function loadPreparedBuildings(form, feedback, options = {}) {
@@ -1990,6 +3763,7 @@
     if (!response.ok) {
       throw new Error(featureCollection.error || "Chargement impossible.");
     }
+    preparedBuildingsFeatureCollection = featureCollection;
     preparedBuildingsLayer.clearLayers();
     preparedBuildingsLayer.addData(featureCollection);
     preparedBuildingsData = (featureCollection.features || []).map((feature) => ({
@@ -2017,6 +3791,579 @@
     if (preparedBuildingsLayer.getBounds && preparedBuildingsLayer.getBounds().isValid()) {
       map.fitBounds(preparedBuildingsLayer.getBounds(), { padding: [28, 28], maxZoom: 19 });
     }
+  }
+
+  function openPreparedBuildingsPrintPlan(form, feedback, options = {}) {
+    const features = preparedBuildingsFeatureCollection.features || [];
+    if (!features.length) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Charger des bâtiments préparés avant de générer un plan.";
+      return;
+    }
+    if (!printExtentValidated || !printExtentBounds?.isValid()) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Définir et valider l'emprise d'impression avant de générer un plan.";
+      return;
+    }
+
+    const planPayload = buildPreparedBuildingsPlanPayload(form, options);
+    if (!planPayload.featureCollection.features.length) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Aucun bÃ¢timent chargÃ© n'est inclus dans l'emprise d'impression validÃ©e.";
+      return;
+    }
+
+    const planWindow = window.open("", "_blank", "width=1200,height=850");
+    if (!planWindow) {
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Autoriser les fenêtres pop-up pour ouvrir le plan imprimable.";
+      return;
+    }
+
+    try {
+      planWindow.document.open();
+      planWindow.document.write(renderPreparedBuildingsPrintHtml(planPayload));
+      planWindow.document.close();
+      planWindow.focus();
+      feedback.className = "prepared-buildings-feedback is-success";
+      feedback.textContent = options.autoPrint
+        ? "Plan imprimable ouvert. Utiliser l'impression navigateur pour exporter en PDF."
+        : "Aperçu imprimable ouvert.";
+    } catch (error) {
+      planWindow.document.body.innerHTML = "<p>Impossible de générer le plan imprimable depuis cette fenêtre.</p>";
+      feedback.className = "prepared-buildings-feedback is-error";
+      feedback.textContent = "Impossible de générer le plan imprimable.";
+    }
+  }
+
+  function buildPreparedBuildingsPlanPayload(form, options = {}) {
+    const planType = form.elements.plan_type?.value || "satellite";
+    const numberingMode = form.elements.numbering_mode?.value || "auto";
+    const features = numberedPreparedBuildingFeatures(
+      preparedBuildingsFeaturesInPrintExtent(preparedBuildingsFeatureCollection.features || []),
+      numberingMode
+    );
+    const missionOption = form.elements.mission_id?.selectedOptions?.[0];
+    const siteCode = form.elements.site_code.value.trim() || firstPreparedBuildingProperty("site_code") || "-";
+    const siteName = form.elements.site_name.value.trim() || firstPreparedBuildingProperty("site_name") || siteCode;
+    return {
+      autoPrint: Boolean(options.autoPrint),
+      planType,
+      numberingMode,
+      generatedAt: new Date().toLocaleString(locale),
+      metadata: {
+        siteName,
+        siteCode,
+        mission: missionOption?.textContent?.trim() || "-",
+        region: preparedBuildingsPlanRegion(form, siteCode, siteName)
+      },
+      style: {
+        strokeColor: preparedBuildingStylePrefs.strokeColor,
+        strokeWeight: preparedBuildingStylePrefs.strokeWeight,
+        dashStyle: preparedBuildingStylePrefs.dashStyle,
+        dashArray: dashArrayForStyle(preparedBuildingStylePrefs.dashStyle),
+        fillOpacity: 0.12
+      },
+      labels: {
+        size: normalizedPlanLabelSize(form.elements.label_size?.value),
+        opacity: normalizedPlanLabelOpacity(form.elements.label_opacity?.value)
+      },
+      page: resolvePreparedBuildingsPrintPage(form),
+      printBounds: {
+        south: printExtentBounds.getSouth(),
+        west: printExtentBounds.getWest(),
+        north: printExtentBounds.getNorth(),
+        east: printExtentBounds.getEast()
+      },
+      featureCollection: {
+        type: "FeatureCollection",
+        features
+      },
+      buildings: features.map((feature) => ({
+        number: feature.properties.plan_number,
+        koboBuildingNumber: "",
+        fieldSituation: feature.properties.field_situation || feature.properties.situation_terrain || "",
+        supervisorNote: "",
+        cartographyAction: feature.properties.cartography_action || feature.properties.action_carto || "",
+        source: feature.properties.source || "-"
+      }))
+    };
+  }
+
+  function startPrintExtentSelection(form) {
+    activePrintExtentForm = form;
+    clearPrintExtent(form, { silent: true });
+    osmSelectionMode = null;
+    printExtentMode = true;
+    printExtentPoints = [];
+    map.getContainer().classList.add("is-print-extent-selecting");
+    updatePrintExtentStatus(form, "Cliquer deux coins opposés du cadre d'impression sur la carte.");
+    updatePrintPlanButtons(form);
+  }
+
+  function handlePrintExtentClick(event) {
+    if (!printExtentMode) {
+      return false;
+    }
+    printExtentPoints.push(event.latlng);
+    if (printExtentPoints.length === 2) {
+      setPrintExtentBounds(L.latLngBounds(printExtentPoints[0], printExtentPoints[1]));
+      printExtentMode = false;
+      map.getContainer().classList.remove("is-print-extent-selecting");
+      const form = currentPrintExtentForm();
+      updatePrintExtentStatus(form, "Cadre tracé. Ajuster les poignées si nécessaire, puis valider l'emprise.");
+      updatePrintPlanButtons(form);
+    }
+    return true;
+  }
+
+  function setPrintExtentBounds(bounds) {
+    printExtentBounds = bounds;
+    printExtentValidated = false;
+    renderPrintExtent();
+  }
+
+  function renderPrintExtent() {
+    printExtentLayer.clearLayers();
+    printExtentHandles = [];
+    if (!printExtentBounds?.isValid()) {
+      printExtentRectangle = null;
+      return;
+    }
+    printExtentRectangle = L.rectangle(printExtentBounds, {
+      color: "#111827",
+      dashArray: "8,4",
+      fillColor: "#2563eb",
+      fillOpacity: 0.06,
+      opacity: 1,
+      weight: 2
+    }).addTo(printExtentLayer);
+
+    printExtentCornerLatLngs(printExtentBounds).forEach((latlng, index) => {
+      const handle = L.marker(latlng, {
+        draggable: true,
+        icon: L.divIcon({
+          className: "print-extent-handle",
+          html: "",
+          iconSize: [14, 14],
+          iconAnchor: [7, 7]
+        }),
+        zIndexOffset: 1200
+      }).addTo(printExtentLayer);
+      handle.on("drag", function (event) {
+        printExtentValidated = false;
+        resizePrintExtentFromHandle(index, event.target.getLatLng());
+        updatePrintPlanButtons(currentPrintExtentForm());
+      });
+      handle.on("dragend", function () {
+        const form = currentPrintExtentForm();
+        printExtentValidated = false;
+        updatePrintExtentStatus(form, "Cadre ajusté. Valider l'emprise pour verrouiller l'échelle.");
+        updatePrintPlanButtons(form);
+      });
+      printExtentHandles.push(handle);
+    });
+  }
+
+  function printExtentCornerLatLngs(bounds) {
+    const north = bounds.getNorth();
+    const south = bounds.getSouth();
+    const east = bounds.getEast();
+    const west = bounds.getWest();
+    return [
+      L.latLng(north, west),
+      L.latLng(north, east),
+      L.latLng(south, east),
+      L.latLng(south, west)
+    ];
+  }
+
+  function resizePrintExtentFromHandle(index, latlng) {
+    const corners = printExtentCornerLatLngs(printExtentBounds);
+    const opposite = corners[(index + 2) % 4];
+    printExtentBounds = L.latLngBounds(opposite, latlng);
+    if (printExtentRectangle) {
+      printExtentRectangle.setBounds(printExtentBounds);
+    }
+    printExtentCornerLatLngs(printExtentBounds).forEach((corner, cornerIndex) => {
+      if (cornerIndex !== index && printExtentHandles[cornerIndex]) {
+        printExtentHandles[cornerIndex].setLatLng(corner);
+      }
+    });
+  }
+
+  function validatePrintExtent(form) {
+    if (!printExtentBounds?.isValid()) {
+      updatePrintExtentStatus(form, "Tracer un cadre d'impression avant validation.");
+      return;
+    }
+    printExtentValidated = true;
+    updatePrintExtentStatus(form, "Emprise validée. L'échelle du plan sera verrouillée sur ce cadre.");
+    updatePrintPlanButtons(form);
+  }
+
+  function clearPrintExtent(form, options = {}) {
+    printExtentMode = false;
+    printExtentPoints = [];
+    printExtentBounds = null;
+    printExtentValidated = false;
+    printExtentRectangle = null;
+    printExtentHandles = [];
+    printExtentLayer.clearLayers();
+    map.getContainer().classList.remove("is-print-extent-selecting");
+    if (!options.silent) {
+      updatePrintExtentStatus(form, "Tracer et valider un cadre d'impression pour activer l'aperçu et l'impression.");
+    }
+    updatePrintPlanButtons(form);
+  }
+
+  function currentPrintExtentForm() {
+    return activePrintExtentForm
+      || document.getElementById("prepared-buildings-form")
+      || document.getElementById("sites-planning-plan-form");
+  }
+
+  function updatePrintExtentStatus(form, message) {
+    const status = form?.querySelector("[data-print-extent-status]");
+    if (status) {
+      status.textContent = message;
+    }
+  }
+
+  function updatePrintPlanButtons(form) {
+    const canPrint = Boolean(printExtentValidated && printExtentBounds?.isValid());
+    form?.querySelector("[data-buildings-plan-preview]")?.toggleAttribute("disabled", !canPrint);
+    form?.querySelector("[data-buildings-plan-print]")?.toggleAttribute("disabled", !canPrint);
+    form?.querySelector("[data-print-extent-validate]")?.toggleAttribute("disabled", !printExtentBounds?.isValid());
+    form?.querySelector("[data-print-extent-clear]")?.toggleAttribute("disabled", !printExtentBounds?.isValid() && !printExtentMode);
+  }
+
+  function firstPreparedBuildingProperty(name) {
+    const feature = (preparedBuildingsFeatureCollection.features || []).find((candidate) => candidate.properties?.[name]);
+    return feature?.properties?.[name] || "";
+  }
+
+  function normalizedPlanLabelSize(value) {
+    return Math.max(16, Math.min(48, Number.parseInt(value, 10) || 24));
+  }
+
+  function normalizedPlanLabelOpacity(value) {
+    const opacity = Number.parseFloat(value);
+    if (!Number.isFinite(opacity)) {
+      return 1;
+    }
+    return Math.max(0.2, Math.min(1, opacity));
+  }
+
+  function resolvePreparedBuildingsPrintPage(form) {
+    const requested = form.elements.page_orientation?.value || "auto";
+    const orientation = requested === "portrait" || requested === "landscape"
+      ? requested
+      : automaticPrintOrientation(printExtentBounds);
+    return {
+      requestedOrientation: requested,
+      orientation
+    };
+  }
+
+  function automaticPrintOrientation(bounds) {
+    if (!bounds?.isValid()) {
+      return "landscape";
+    }
+    const center = bounds.getCenter();
+    const widthMeters = map.distance(
+      L.latLng(center.lat, bounds.getWest()),
+      L.latLng(center.lat, bounds.getEast())
+    );
+    const heightMeters = map.distance(
+      L.latLng(bounds.getSouth(), center.lng),
+      L.latLng(bounds.getNorth(), center.lng)
+    );
+    return widthMeters >= heightMeters ? "landscape" : "portrait";
+  }
+
+  function preparedBuildingsFeaturesInPrintExtent(features) {
+    if (!printExtentBounds?.isValid()) {
+      return [];
+    }
+    return features
+      .filter((feature) => featureGeometryWithinBounds(feature.geometry, printExtentBounds))
+      .map((feature) => ({
+        feature,
+        sortPoint: featureSortPoint(feature)
+      }))
+      .sort((first, second) => {
+        const latDelta = second.sortPoint.lat - first.sortPoint.lat;
+        if (Math.abs(latDelta) > 1e-9) {
+          return latDelta;
+        }
+        return first.sortPoint.lng - second.sortPoint.lng;
+      })
+      .map((entry) => entry.feature);
+  }
+
+  function featureGeometryWithinBounds(geometry, bounds) {
+    const coordinates = flattenGeometryCoordinates(geometry);
+    return coordinates.length > 0 && coordinates.every((coordinate) => bounds.contains(L.latLng(coordinate[1], coordinate[0])));
+  }
+
+  function flattenGeometryCoordinates(geometry) {
+    if (!geometry || !Array.isArray(geometry.coordinates)) {
+      return [];
+    }
+    if (geometry.type === "Polygon") {
+      return geometry.coordinates.flat();
+    }
+    if (geometry.type === "MultiPolygon") {
+      return geometry.coordinates.flat(2);
+    }
+    return [];
+  }
+
+  function featureSortPoint(feature) {
+    const coordinates = flattenGeometryCoordinates(feature.geometry);
+    if (!coordinates.length) {
+      return L.latLng(0, 0);
+    }
+    const totals = coordinates.reduce((accumulator, coordinate) => ({
+      lng: accumulator.lng + coordinate[0],
+      lat: accumulator.lat + coordinate[1]
+    }), { lng: 0, lat: 0 });
+    return L.latLng(totals.lat / coordinates.length, totals.lng / coordinates.length);
+  }
+
+  function numberedPreparedBuildingFeatures(features, numberingMode) {
+    return features.map((feature, index) => {
+      const properties = { ...(feature.properties || {}) };
+      properties.plan_number = numberingMode === "manual"
+        ? (properties.building_code || `B${String(index + 1).padStart(2, "0")}`)
+        : `B${String(index + 1).padStart(2, "0")}`;
+      return {
+        ...feature,
+        properties
+      };
+    });
+  }
+
+  function preparedBuildingsPlanRegion(form, siteCode, siteName) {
+    const missionId = form.elements.mission_id?.value || "";
+    const normalizedSiteCode = normalizeCategory(siteCode);
+    const normalizedSiteName = normalizeCategory(siteName);
+    const match = points.find((point) => {
+      if (missionId && String(point.mission_id) !== String(missionId)) {
+        return false;
+      }
+      const raw = rawData(point);
+      const pointCode = normalizeCategory(rawValue(raw, "modA.id_entite") || rawValue(raw, "modA/id_entite"));
+      const pointName = normalizeCategory(rawValue(raw, "modB.nom_officiel") || rawValue(raw, "modB/nom_officiel"));
+      return (normalizedSiteCode && pointCode === normalizedSiteCode)
+        || (normalizedSiteName && pointName === normalizedSiteName);
+    });
+    return match?.nom_region || "-";
+  }
+
+  function renderFieldSituationChecklist(value) {
+    const normalizedValue = String(value || "")
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "");
+    const options = [
+      ["conforme", "Conforme"],
+      ["inexistant", "Inexistant"],
+      ["omis", "Omis"],
+      ["regroupe", "Regroupé"],
+      ["fractionne", "Fractionné"],
+      ["mal positionne", "Mal positionné"]
+    ];
+    return `<div class="plan-situation-options">${options.map(([key, label]) => {
+      const checked = normalizedValue === key ? " checked" : "";
+      return `<label><input type="checkbox"${checked} disabled><span>${escapeHtml(label)}</span></label>`;
+    }).join("")}</div>`;
+  }
+
+  function renderPreparedBuildingsPrintHtml(payload) {
+    const encodedPayload = JSON.stringify(payload).replace(/</g, "\\u003c");
+    const pageOrientation = payload.page?.orientation === "portrait" ? "portrait" : "landscape";
+    return `<!doctype html>
+<html lang="${escapeHtml(locale)}">
+<head>
+  <meta charset="utf-8">
+  <title>Plan de situation - ${escapeHtml(payload.metadata.siteName)}</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <style>
+    * { box-sizing: border-box; }
+    body { color: #182b37; font: 12px/1.35 Arial, sans-serif; margin: 0; }
+    .plan-page { display: grid; gap: 10px; min-height: 100vh; padding: 14px; }
+    .plan-page-1 { grid-template-rows: auto minmax(0, 1fr) auto; }
+    .plan-building-page { align-content: start; page-break-before: always; break-before: page; }
+    .plan-header { align-items: start; border-bottom: 2px solid #182b37; display: grid; gap: 10px; grid-template-columns: 1fr auto; padding-bottom: 10px; }
+    h1 { font-size: 22px; margin: 0 0 6px; }
+    .plan-meta { display: grid; gap: 4px 18px; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; }
+    .plan-meta div { display: grid; grid-template-columns: 110px 1fr; }
+    .plan-meta dt { color: #5f7280; font-weight: 700; }
+    .plan-meta dd { margin: 0; }
+    .plan-north { border: 1px solid #182b37; border-radius: 999px; display: grid; height: 58px; place-items: center; width: 58px; }
+    .plan-north strong { font-size: 18px; }
+    .plan-map { border: 1px solid #182b37; height: 62vh; min-height: 460px; width: 100%; }
+    .plan-line .plan-map { background: #fff; }
+    .plan-legend { display: grid; gap: 8px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .plan-card { border: 1px solid #d9e2e8; border-radius: 4px; padding: 9px; }
+    .plan-card h2 { font-size: 13px; margin: 0 0 8px; text-transform: uppercase; }
+    .legend-row { align-items: center; display: flex; gap: 8px; margin: 6px 0; }
+    .legend-symbol { background: rgba(31, 78, 121, 0.12); border: ${payload.style.strokeWeight}px ${cssBorderStyle(payload.style.dashStyle)} ${escapeHtml(payload.style.strokeColor)}; display: inline-block; height: 18px; width: 28px; }
+    .plan-building-list { border-collapse: collapse; width: 100%; }
+    .plan-building-list th, .plan-building-list td { border-bottom: 1px solid #d9e2e8; padding: 4px 5px; text-align: left; vertical-align: top; }
+    .plan-building-list th { background: #f4f7f8; font-size: 10px; text-transform: uppercase; }
+    .plan-building-list td.plan-note-cell { min-width: 34mm; }
+    .plan-building-list td.plan-situation-cell { min-width: 32mm; }
+    .plan-situation-options { display: grid; font-size: 65%; gap: 2px; line-height: 1.15; }
+    .plan-situation-options label { align-items: center; display: grid; gap: 4px; grid-template-columns: 10px 1fr; }
+    .plan-situation-options input { height: 9px; margin: 0; width: 9px; }
+    .plan-label { align-items: center; background: #fff; border: 1px solid #182b37; border-radius: 999px; color: #182b37; display: flex; font: 700 max(9px, calc(var(--plan-label-size) * 0.42))/1 Arial, sans-serif; height: var(--plan-label-size); justify-content: center; opacity: var(--plan-label-opacity); width: var(--plan-label-size); }
+    .leaflet-control-attribution { font-size: 9px; }
+    @media print {
+      @page { margin: 10mm; size: A4 ${pageOrientation}; }
+      body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      .plan-page { min-height: auto; padding: 0; }
+      .plan-page-1 { height: ${pageOrientation === "portrait" ? "277mm" : "190mm"}; }
+      .plan-map { height: ${pageOrientation === "portrait" ? "188mm" : "105mm"}; min-height: 0; }
+      .plan-building-page { padding-top: 0; }
+    }
+  </style>
+</head>
+<body class="plan-${escapeHtml(payload.planType)} plan-orientation-${pageOrientation}">
+  <main class="plan-page plan-page-1">
+    <header class="plan-header">
+      <div>
+        <h1>Plan de situation des bâtiments à vérifier</h1>
+        <dl class="plan-meta">
+          <div><dt>Site</dt><dd>${escapeHtml(payload.metadata.siteName)}</dd></div>
+          <div><dt>Code site</dt><dd>${escapeHtml(payload.metadata.siteCode)}</dd></div>
+          <div><dt>Mission</dt><dd>${escapeHtml(payload.metadata.mission)}</dd></div>
+          <div><dt>Région</dt><dd>${escapeHtml(payload.metadata.region)}</dd></div>
+          <div><dt>Type de plan</dt><dd>${escapeHtml(planTypeLabel(payload.planType))}</dd></div>
+          <div><dt>Généré le</dt><dd>${escapeHtml(payload.generatedAt)}</dd></div>
+        </dl>
+      </div>
+      <div class="plan-north" aria-label="Nord"><strong>↑ N</strong></div>
+    </header>
+    <section id="prepared-buildings-print-map" class="plan-map" aria-label="Carte imprimable"></section>
+    <section class="plan-card plan-legend">
+      <div>
+        <h2>Légende</h2>
+        <p class="legend-row"><span class="legend-symbol"></span><span>Bâtiments à vérifier</span></p>
+      </div>
+      <div>
+        <h2>Échelle</h2>
+        <p>Échelle approximative : voir barre d'échelle sur la carte.</p>
+      </div>
+      <div>
+        <h2>Limites</h2>
+        <p>Limites du site : non disponibles si aucune emprise de site n'est chargée dans G2M.</p>
+      </div>
+    </section>
+  </main>
+  <main class="plan-page plan-building-page">
+    <section class="plan-card">
+      <h2>Bâtiments à vérifier</h2>
+      <table class="plan-building-list">
+        <thead>
+          <tr>
+            <th>N° plan</th>
+            <th>N° Bâtiment KOBO</th>
+            <th>Situation terrain</th>
+            <th>Contrôle superviseur</th>
+            <th>Traitement spécialiste Carto</th>
+            <th>Source</th>
+          </tr>
+        </thead>
+        <tbody>${payload.buildings.map((building) => `
+          <tr>
+            <td>${escapeHtml(building.number)}</td>
+            <td class="plan-note-cell">${escapeHtml(building.koboBuildingNumber || "")}</td>
+            <td class="plan-situation-cell">${renderFieldSituationChecklist(building.fieldSituation)}</td>
+            <td class="plan-note-cell">${escapeHtml(building.supervisorNote || "")}</td>
+            <td class="plan-note-cell">${escapeHtml(building.cartographyAction || "Maintenir / supprimer / créer / découper / fusionner / repositionner")}</td>
+            <td>${escapeHtml(building.source)}</td>
+          </tr>`).join("")}</tbody>
+      </table>
+    </section>
+  </main>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"><\/script>
+  <script>
+    const planPayload = ${encodedPayload};
+    const labelSize = Number(planPayload.labels && planPayload.labels.size) || 24;
+    const map = L.map("prepared-buildings-print-map", { zoomControl: false, attributionControl: true });
+    const printBounds = L.latLngBounds(
+      [planPayload.printBounds.south, planPayload.printBounds.west],
+      [planPayload.printBounds.north, planPayload.printBounds.east]
+    );
+    const baseLayers = {
+      satellite: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Tiles &copy; Esri" }),
+      mixed: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", { maxZoom: 19, attribution: "Tiles &copy; Esri" })
+    };
+    if (planPayload.planType !== "line") {
+      baseLayers[planPayload.planType === "mixed" ? "mixed" : "satellite"].addTo(map);
+    }
+    const dashArray = planPayload.style.dashArray || null;
+    const buildingLayer = L.geoJSON(planPayload.featureCollection, {
+      style: function () {
+        return {
+          color: planPayload.style.strokeColor,
+          dashArray,
+          fill: true,
+          fillColor: planPayload.style.strokeColor,
+          fillOpacity: planPayload.planType === "line" ? Math.min(0.08, Number(planPayload.style.fillOpacity) || 0.04) : Number(planPayload.style.fillOpacity) || 0.12,
+          opacity: 1,
+          weight: planPayload.style.strokeWeight
+        };
+      },
+      onEachFeature: function (feature, layer) {
+        const center = layer.getBounds ? layer.getBounds().getCenter() : layer.getLatLng();
+        L.marker(center, {
+          icon: L.divIcon({
+            className: "",
+            html: '<span class="plan-label" style="--plan-label-size: ' + labelSize + 'px; --plan-label-opacity: ' + (Number(planPayload.labels && planPayload.labels.opacity) || 1) + ';">' + String(feature.properties.plan_number || "") + '</span>',
+            iconSize: [labelSize, labelSize],
+            iconAnchor: [labelSize / 2, labelSize / 2]
+          }),
+          interactive: false
+        }).addTo(map);
+      }
+    }).addTo(map);
+    L.control.scale({ imperial: false, metric: true }).addTo(map);
+    if (printBounds.isValid()) {
+      map.fitBounds(printBounds, { animate: false, padding: [0, 0], maxZoom: 19 });
+    } else if (buildingLayer.getBounds().isValid()) {
+      map.fitBounds(buildingLayer.getBounds(), { animate: false, padding: [28, 28], maxZoom: 19 });
+    }
+    window.setTimeout(function () {
+      map.invalidateSize();
+      if (planPayload.autoPrint) {
+        window.print();
+      }
+    }, 900);
+  <\/script>
+</body>
+</html>`;
+  }
+
+  function planTypeLabel(planType) {
+    return {
+      satellite: "Plan satellite",
+      line: "Plan filaire",
+      mixed: "Plan mixte"
+    }[planType] || "Plan satellite";
+  }
+
+  function cssBorderStyle(dashStyle) {
+    return {
+      solid: "solid",
+      dashed: "dashed",
+      dotted: "dotted",
+      dashdot: "dashed"
+    }[dashStyle] || "dashed";
   }
 
   async function updatePreparedBuildingStatus(form, feedback) {
@@ -2514,9 +4861,7 @@
     setClustering(layout.clusterEnabled !== false);
     const legendCollapsed = layout.legendCollapsed !== false;
     const layerControlCollapsed = layout.layerControlCollapsed !== false;
-    mapLegend.classList.toggle("is-collapsed", legendCollapsed);
-    mapLegendToggle.setAttribute("aria-expanded", String(!legendCollapsed));
-    mapLegendToggle.setAttribute("aria-label", legendCollapsed ? t("legendExpand") : t("legendCollapse"));
+    setLegendCollapsed(legendCollapsed, { saveState: false });
     setMapControlCollapsed(layerControlCollapsed, { saveState: false });
   }
 
@@ -2649,6 +4994,11 @@
       openPreparedBuildingsLayer();
     });
   }
+  if (sitesPlanningOpen) {
+    sitesPlanningOpen.addEventListener("click", function () {
+      openSitesPlanningLayer();
+    });
+  }
   if (geometryOverlay && geometryOverlayHandle) {
     let overlayDrag = null;
     geometryOverlayHandle.addEventListener("pointerdown", function (event) {
@@ -2701,17 +5051,35 @@
     });
   });
   mapLegendToggle.addEventListener("click", function () {
-    const isCollapsed = mapLegend.classList.toggle("is-collapsed");
-    mapLegendToggle.setAttribute("aria-expanded", String(!isCollapsed));
-    mapLegendToggle.setAttribute(
-      "aria-label",
-      isCollapsed ? t("legendExpand") : t("legendCollapse")
-    );
-    saveCurrentCartographyContext();
+    setLegendCollapsed(!mapLegend.classList.contains("is-collapsed"));
+  });
+  mapLegend.addEventListener("mouseleave", function () {
+    if (!mapLegend.classList.contains("is-collapsed")) {
+      setLegendCollapsed(true);
+    }
+  });
+  mapLegend.addEventListener("focusout", function (event) {
+    if (!mapLegend.contains(event.relatedTarget)) {
+      setLegendCollapsed(true);
+    }
   });
   map.on("moveend zoomend", saveCurrentCartographyContext);
-  map.on("click", handleOsmSelectionClick);
+  map.on("click", function (event) {
+    if (handleMeasureClick(event)) {
+      return;
+    }
+    if (handlePrintExtentClick(event)) {
+      return;
+    }
+    if (handlePlanningLocationClick(event)) {
+      return;
+    }
+    handleOsmSelectionClick(event);
+  });
   map.on("dblclick", function (event) {
+    if (finishPlanningContourCapture(event)) {
+      return;
+    }
     if (osmSelectionMode === "polygon") {
       event.originalEvent?.preventDefault();
       finishOsmSelectionPolygon();

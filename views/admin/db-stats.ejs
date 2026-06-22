@@ -1,160 +1,271 @@
-<%- include("../partials/header", { title }) %>
-<section class="page-heading">
-  <div>
-    <p class="eyebrow"><%= t("admin.eyebrow") %></p>
-    <h1><%= t("admin.dbStats.title") %></h1>
-    <p class="muted"><%= t("admin.dbStats.description") %></p>
-  </div>
-  <div class="heading-actions">
-    <%- include("../partials/admin-close-button") %>
-    <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
-  </div>
-</section>
-
-<section class="stats" aria-label="<%= t("admin.dbStats.indicators") %>">
-  <div>
-    <span><%= t("admin.dbStats.totalTables") %></span>
-    <strong><%= stats.totalTables %></strong>
-  </div>
-  <div>
-    <span><%= t("admin.dbStats.totalSubmissions") %></span>
-    <strong><%= stats.metrics ? stats.metrics.submissionCount : 0 %></strong>
-  </div>
-  <div>
-    <span><%= t("admin.dbStats.lastSubmission") %></span>
-    <strong><%= stats.metrics && stats.metrics.lastSubmittedAt ? stats.metrics.lastSubmittedAt : "-" %></strong>
-  </div>
-  <div>
-    <span><%= t("admin.dbStats.lastSync") %></span>
-    <strong><%= stats.metrics && stats.metrics.lastSyncedAt ? stats.metrics.lastSyncedAt : "-" %></strong>
-  </div>
-</section>
-
-<% Object.entries(stats.groupedTables).forEach(([category, tables]) => { %>
-  <section class="panel admin-db-category">
-    <div class="panel-header">
-      <h2><%= categoryLabels[category] || category %></h2>
-      <span class="muted"><%= tables.length %> table(s)</span>
+<%
+  const requestedTable = stats.tables.find((table) => table.name === selectedTable) || null;
+  const invalidSelectedTable = Boolean(selectedTable && !requestedTable);
+  const activeTable = requestedTable || stats.tables[0] || null;
+  const effectiveSelectedTable = activeTable ? activeTable.name : "";
+  const preview = tablePreview && tablePreview.tableName === effectiveSelectedTable ? tablePreview : null;
+  const initialMode = preview ? "data" : "structure";
+  const jsonPayload = JSON.stringify({
+    selectedTable: effectiveSelectedTable,
+    initialMode,
+    tableRows: stats.tables.map((table) => ({
+      name: table.name
+    })),
+    rows: preview ? preview.rows : [],
+    columns: preview ? preview.columns.map((column) => column.name) : []
+  }).replace(/</g, "\\u003c");
+%>
+<%- include("../partials/header", { title, wideLayout: true, tabulatorAssets: true }) %>
+<div class="admin-db-workspace">
+  <section class="admin-db-vh" aria-label="<%= t("admin.dbStats.indicators") %>">
+    <div class="admin-db-heading">
+      <div>
+        <p class="eyebrow"><%= t("admin.eyebrow") %></p>
+        <h1><%= t("admin.dbStats.title") %></h1>
+        <p class="muted"><%= t("admin.dbStats.description") %></p>
+      </div>
+      <div class="heading-actions">
+        <%- include("../partials/admin-close-button") %>
+        <a class="button" href="/admin"><%= t("admin.actions.back") %></a>
+      </div>
     </div>
-    <% tables.forEach((table) => { %>
-      <details class="admin-db-table">
-        <summary>
-          <strong><%= table.name %></strong>
-          <span><%= t("admin.dbStats.records", { count: table.recordCount ?? "-" }) %></span>
-          <span><%= t("admin.dbStats.fields", { count: table.columnCount }) %></span>
-          <a class="button admin-db-preview-link" href="/admin/db-stats?table=<%= encodeURIComponent(table.name) %>"><%= t("admin.dbStats.actions.preview") %></a>
-        </summary>
-        <table class="simple-table">
-          <thead>
-            <tr>
-              <th><%= t("admin.dbStats.field.name") %></th>
-              <th><%= t("admin.dbStats.field.type") %></th>
-              <th><%= t("admin.dbStats.field.required") %></th>
-              <th><%= t("admin.dbStats.field.default") %></th>
-              <th><%= t("admin.dbStats.field.pk") %></th>
-            </tr>
-          </thead>
-          <tbody>
-            <% table.columns.forEach((column) => { %>
-              <tr>
-                <td><code><%= column.name %></code></td>
-                <td><%= column.type || "-" %></td>
-                <td><%= column.notnull ? "yes" : "no" %></td>
-                <td><%= column.dflt_value || "-" %></td>
-                <td><%= column.pk ? "yes" : "no" %></td>
-              </tr>
-            <% }) %>
-          </tbody>
-        </table>
-        <% if (table.foreignKeys.length) { %>
-          <p class="form-hint"><%= t("admin.dbStats.foreignKeys") %></p>
-          <ul class="admin-inline-list">
-            <% table.foreignKeys.forEach((foreignKey) => { %>
-              <li><code><%= foreignKey.from %></code> -> <code><%= foreignKey.table %>.<%= foreignKey.to %></code></li>
-            <% }) %>
-          </ul>
-        <% } %>
-      </details>
-    <% }) %>
+    <div class="stats admin-db-stats">
+      <div>
+        <span><%= t("admin.dbStats.totalTables") %></span>
+        <strong><%= stats.totalTables %></strong>
+      </div>
+      <div>
+        <span><%= t("admin.dbStats.totalSubmissions") %></span>
+        <strong><%= stats.metrics ? stats.metrics.submissionCount : 0 %></strong>
+      </div>
+      <div>
+        <span><%= t("admin.dbStats.lastSubmission") %></span>
+        <strong><%= stats.metrics && stats.metrics.lastSubmittedAt ? stats.metrics.lastSubmittedAt : "-" %></strong>
+      </div>
+      <div>
+        <span><%= t("admin.dbStats.lastSync") %></span>
+        <strong><%= stats.metrics && stats.metrics.lastSyncedAt ? stats.metrics.lastSyncedAt : "-" %></strong>
+      </div>
+    </div>
   </section>
-<% }) %>
 
-<section class="panel admin-db-preview" id="table-data">
-  <div class="panel-header">
-    <div>
-      <h2><%= t("admin.dbStats.preview.title") %></h2>
-      <p class="muted"><%= t("admin.dbStats.preview.description") %></p>
-    </div>
-  </div>
+  <section class="admin-db-vb" id="admin-db-vb">
+    <aside class="admin-db-vbg" id="admin-db-vbg" aria-label="Tables de la base de donnees">
+      <div class="admin-db-sidebar-header">
+        <h2>Tables applicatives</h2>
+        <span class="muted"><%= stats.totalTables %> table(s)</span>
+      </div>
+      <div class="admin-db-table-list" id="admin-db-table-list"></div>
+    </aside>
 
-  <form class="admin-db-preview-form" method="get" action="/admin/db-stats#table-data">
-    <label>
-      <%= t("admin.dbStats.preview.table") %>
-      <select name="table">
-        <option value=""><%= t("admin.dbStats.preview.selectTable") %></option>
-        <% stats.tables.forEach((table) => { %>
-          <option value="<%= table.name %>" <%= selectedTable === table.name ? "selected" : "" %>><%= table.name %></option>
-        <% }) %>
-      </select>
-    </label>
-    <label>
-      <%= t("admin.dbStats.preview.limit") %>
-      <select name="limit">
-        <% [10, 25, 50, 100].forEach((limit) => { %>
-          <option value="<%= limit %>" <%= tablePreview && tablePreview.limit === limit ? "selected" : "" %>><%= limit %></option>
-        <% }) %>
-      </select>
-    </label>
-    <button class="button button-primary" type="submit"><%= t("admin.dbStats.actions.preview") %></button>
-  </form>
+    <div class="admin-db-splitter" id="admin-db-splitter" role="separator" aria-orientation="vertical" aria-label="Redimensionner les volets"></div>
 
-  <% if (selectedTable && !tablePreview) { %>
-    <p class="alert"><%= t("admin.dbStats.preview.invalidTable") %></p>
-  <% } %>
+    <section class="admin-db-vbd" aria-label="Detail de la table selectionnee">
+      <% if (invalidSelectedTable) { %>
+        <p class="alert"><%= t("admin.dbStats.preview.invalidTable") %></p>
+      <% } %>
 
-  <% if (tablePreview) { %>
-    <div class="panel-header admin-db-preview-header">
-      <h3><%= tablePreview.tableName %></h3>
-      <span class="muted"><%= t("admin.dbStats.preview.pageInfo", {
-        page: tablePreview.page,
-        pages: tablePreview.totalPages,
-        total: tablePreview.totalRows
-      }) %></span>
-    </div>
-    <div class="admin-db-preview-scroll">
-      <table class="simple-table admin-db-preview-table">
-        <thead>
-          <tr>
-            <% tablePreview.columns.forEach((column) => { %>
-              <th><code><%= column.name %></code></th>
-            <% }) %>
-          </tr>
-        </thead>
-        <tbody>
-          <% if (tablePreview.rows.length) { %>
-            <% tablePreview.rows.forEach((row) => { %>
-              <tr>
-                <% tablePreview.columns.forEach((column) => { %>
-                  <td><%= row[column.name] %></td>
+      <% if (activeTable) { %>
+        <header class="admin-db-detail-header">
+          <div>
+            <h2><%= activeTable.name %></h2>
+            <p class="muted">
+              <%= t("admin.dbStats.records", { count: activeTable.recordCount ?? "-" }) %>
+              ·
+              <%= t("admin.dbStats.fields", { count: activeTable.columnCount }) %>
+            </p>
+          </div>
+          <div class="admin-db-view-mode" role="group" aria-label="Mode d'affichage">
+            <label>
+              <input type="radio" name="admin_db_view_mode" value="structure" <%= initialMode === "structure" ? "checked" : "" %>>
+              <span>Voir la STRUCTURE de la table</span>
+            </label>
+            <label>
+              <input type="radio" name="admin_db_view_mode" value="data" <%= initialMode === "data" ? "checked" : "" %>>
+              <span>Voir les DONNEES de la table</span>
+            </label>
+          </div>
+        </header>
+
+        <div class="admin-db-detail-panel" data-admin-db-panel="structure" <%= initialMode === "structure" ? "" : "hidden" %>>
+          <div class="admin-db-structure-scroll">
+            <table class="simple-table admin-db-structure-table">
+              <thead>
+                <tr>
+                  <th><%= t("admin.dbStats.field.name") %></th>
+                  <th><%= t("admin.dbStats.field.type") %></th>
+                  <th><%= t("admin.dbStats.field.required") %></th>
+                  <th><%= t("admin.dbStats.field.default") %></th>
+                  <th><%= t("admin.dbStats.field.pk") %></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% activeTable.columns.forEach((column) => { %>
+                  <tr>
+                    <td><code><%= column.name %></code></td>
+                    <td><%= column.type || "-" %></td>
+                    <td><%= column.notnull ? "yes" : "no" %></td>
+                    <td><%= column.dflt_value || "-" %></td>
+                    <td><%= column.pk ? "yes" : "no" %></td>
+                  </tr>
                 <% }) %>
-              </tr>
-            <% }) %>
-          <% } else { %>
-            <tr>
-              <td colspan="<%= tablePreview.columns.length || 1 %>"><%= t("admin.dbStats.preview.empty") %></td>
-            </tr>
+              </tbody>
+            </table>
+          </div>
+          <% if (activeTable.foreignKeys.length) { %>
+            <p class="form-hint"><%= t("admin.dbStats.foreignKeys") %></p>
+            <ul class="admin-inline-list">
+              <% activeTable.foreignKeys.forEach((foreignKey) => { %>
+                <li><code><%= foreignKey.from %></code> -> <code><%= foreignKey.table %>.<%= foreignKey.to %></code></li>
+              <% }) %>
+            </ul>
           <% } %>
-        </tbody>
-      </table>
-    </div>
-    <nav class="admin-db-preview-pagination" aria-label="<%= t("admin.dbStats.preview.pagination") %>">
-      <% if (tablePreview.hasPrevious) { %>
-        <a class="button" href="/admin/db-stats?table=<%= encodeURIComponent(tablePreview.tableName) %>&limit=<%= tablePreview.limit %>&page=<%= tablePreview.page - 1 %>#table-data"><%= t("admin.dbStats.preview.previous") %></a>
+        </div>
+
+        <div class="admin-db-detail-panel" data-admin-db-panel="data" <%= initialMode === "data" ? "" : "hidden" %>>
+          <form class="admin-db-data-toolbar" method="get" action="/admin/db-stats">
+            <input type="hidden" name="table" value="<%= activeTable.name %>">
+            <label>
+              <%= t("admin.dbStats.preview.limit") %>
+              <select name="limit">
+                <% [10, 25, 50, 100].forEach((limit) => { %>
+                  <option value="<%= limit %>" <%= preview && preview.limit === limit ? "selected" : "" %>><%= limit %></option>
+                <% }) %>
+              </select>
+            </label>
+            <button class="button button-primary" type="submit"><%= t("admin.dbStats.actions.preview") %></button>
+            <% if (!preview) { %>
+              <a class="button" href="/admin/db-stats?table=<%= encodeURIComponent(activeTable.name) %>&limit=25">Voir les donnees</a>
+            <% } %>
+          </form>
+
+          <% if (preview) { %>
+            <div class="admin-db-preview-header">
+              <span class="muted"><%= t("admin.dbStats.preview.pageInfo", {
+                page: preview.page,
+                pages: preview.totalPages,
+                total: preview.totalRows
+              }) %></span>
+            </div>
+            <div class="admin-db-tabulator" id="admin-db-tabulator"></div>
+            <nav class="admin-db-preview-pagination" aria-label="<%= t("admin.dbStats.preview.pagination") %>">
+              <% if (preview.hasPrevious) { %>
+                <a class="button" href="/admin/db-stats?table=<%= encodeURIComponent(preview.tableName) %>&limit=<%= preview.limit %>&page=<%= preview.page - 1 %>"><%= t("admin.dbStats.preview.previous") %></a>
+              <% } %>
+              <% if (preview.hasNext) { %>
+                <a class="button" href="/admin/db-stats?table=<%= encodeURIComponent(preview.tableName) %>&limit=<%= preview.limit %>&page=<%= preview.page + 1 %>"><%= t("admin.dbStats.preview.next") %></a>
+              <% } %>
+            </nav>
+          <% } else { %>
+            <p class="empty"><%= t("admin.dbStats.preview.selectTable") %></p>
+          <% } %>
+        </div>
       <% } %>
-      <% if (tablePreview.hasNext) { %>
-        <a class="button" href="/admin/db-stats?table=<%= encodeURIComponent(tablePreview.tableName) %>&limit=<%= tablePreview.limit %>&page=<%= tablePreview.page + 1 %>#table-data"><%= t("admin.dbStats.preview.next") %></a>
-      <% } %>
-    </nav>
-  <% } %>
-</section>
+    </section>
+  </section>
+</div>
+
+<script id="admin-db-stats-data" type="application/json"><%- jsonPayload %></script>
+<script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+<script>
+  (function () {
+    const payloadNode = document.getElementById("admin-db-stats-data");
+    const payload = payloadNode ? JSON.parse(payloadNode.textContent) : { rows: [], columns: [] };
+    const panels = document.querySelectorAll("[data-admin-db-panel]");
+    const modeInputs = document.querySelectorAll('input[name="admin_db_view_mode"]');
+    let table = null;
+    let tableList = null;
+
+    function setMode(mode) {
+      panels.forEach((panel) => {
+        panel.hidden = panel.dataset.adminDbPanel !== mode;
+      });
+      if (mode === "data") {
+        ensureTabulator();
+      }
+    }
+
+    function ensureTabulator() {
+      const host = document.getElementById("admin-db-tabulator");
+      if (!host || table || typeof Tabulator === "undefined") {
+        return;
+      }
+      table = new Tabulator(host, {
+        data: payload.rows || [],
+        height: "100%",
+        layout: "fitDataStretch",
+        placeholder: "<%= t("admin.dbStats.preview.empty") %>",
+        columns: (payload.columns || []).map((column) => ({
+          title: column,
+          field: column,
+          minWidth: 120,
+          formatter: "textarea"
+        }))
+      });
+    }
+
+    function ensureTableList() {
+      const host = document.getElementById("admin-db-table-list");
+      if (!host || tableList || typeof Tabulator === "undefined") {
+        return;
+      }
+      tableList = new Tabulator(host, {
+        data: payload.tableRows || [],
+        height: "100%",
+        layout: "fitColumns",
+        selectableRows: 1,
+        initialSort: [{ column: "name", dir: "asc" }],
+        columns: [
+          {
+            title: "Nom de la Table",
+            field: "name",
+            formatter: "plaintext"
+          }
+        ],
+        rowFormatter(row) {
+          if (row.getData().name === payload.selectedTable) {
+            row.getElement().classList.add("is-active-admin-db-table");
+          }
+        }
+      });
+      tableList.on("rowClick", (event, row) => {
+        const name = row.getData().name;
+        if (name) {
+          window.location.href = `/admin/db-stats?table=${encodeURIComponent(name)}&limit=25`;
+        }
+      });
+    }
+
+    modeInputs.forEach((input) => {
+      input.addEventListener("change", () => setMode(input.value));
+    });
+    ensureTableList();
+    setMode(document.querySelector('input[name="admin_db_view_mode"]:checked')?.value || "structure");
+
+    const container = document.getElementById("admin-db-vb");
+    const leftPane = document.getElementById("admin-db-vbg");
+    const splitter = document.getElementById("admin-db-splitter");
+    if (!container || !leftPane || !splitter) {
+      return;
+    }
+    splitter.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+      splitter.setPointerCapture(event.pointerId);
+      const move = (moveEvent) => {
+        const rect = container.getBoundingClientRect();
+        const rawPercent = ((moveEvent.clientX - rect.left) / rect.width) * 100;
+        const widthPercent = Math.max(15, Math.min(40, rawPercent));
+        leftPane.style.flexBasis = `${widthPercent}%`;
+      };
+      const stop = () => {
+        splitter.removeEventListener("pointermove", move);
+        splitter.removeEventListener("pointerup", stop);
+        splitter.removeEventListener("pointercancel", stop);
+      };
+      splitter.addEventListener("pointermove", move);
+      splitter.addEventListener("pointerup", stop);
+      splitter.addEventListener("pointercancel", stop);
+    });
+  }());
+</script>
 <%- include("../partials/footer") %>

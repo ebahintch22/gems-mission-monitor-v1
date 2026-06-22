@@ -11,6 +11,7 @@
     "territories:import": "node scripts/import-territories.js",
     "roles:import": "node scripts/import-roles.js",
     "agents:import": "node scripts/import-agents.js",
+    "sites-planning:import": "node scripts/import-sites-planning.js",
     "submissions:seed": "node scripts/seed-submissions.js",
     "kobo:sync": "node scripts/sync-kobo.js"
   },

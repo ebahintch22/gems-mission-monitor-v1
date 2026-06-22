@@ -21,12 +21,14 @@
     <link rel="icon" type="image/png" href="<%= faviconPngPath %>" sizes="32x32">
     <link rel="stylesheet" href="/css/app.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <% if ((typeof mapAssets !== "undefined" && mapAssets) || (typeof tabulatorAssets !== "undefined" && tabulatorAssets)) { %>
+      <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css">
+    <% } %>
     <% if (typeof mapAssets !== "undefined" && mapAssets) { %>
       <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
       <link rel="stylesheet" href="https://unpkg.com/leaflet-extra-markers@1.2.2/dist/css/leaflet.extra-markers.min.css">
       <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
       <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
-      <link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator.min.css">
     <% } %>
     </head>
   <body>
@@ -35,7 +37,8 @@
       const can = (permission) => permissionSet.has(permission);
       const showInfographicsNav = can("infographics.read");
       const showSiteSearch = currentUser && can("infographics.read");
-      const showVisualizationNav = can("sig.read") || showInfographicsNav;
+      const showSitesPlanningNav = can("sites.planning.read");
+      const showVisualizationNav = can("sig.read") || showInfographicsNav || showSitesPlanningNav;
       const showSettingsNav = can("missions.read")
         || can("teams.read")
         || can("agents.read")
@@ -111,6 +114,12 @@
                 <a href="/cartographie" role="menuitem">
                   <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
                   <span><%= t("nav.cartography") %></span>
+                </a>
+              <% } %>
+              <% if (showSitesPlanningNav) { %>
+                <a href="/sites" role="menuitem">
+                  <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+                  <span><%= t("nav.sitesPlanning") %></span>
                 </a>
               <% } %>
               <% if (showInfographicsNav) { %>

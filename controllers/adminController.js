@@ -41,6 +41,12 @@ exports.updateSettings = (req, res) => {
           ? req.t("admin.settings.errors.invalidSearchLimit")
         : error.message === "invalid_geometry_import_results_target"
           ? "Mode d'affichage des resultats d'import invalide."
+        : error.message === "invalid_color"
+          ? "Couleur cartographique invalide."
+        : error.message === "invalid_dash_style"
+          ? "Type de trace cartographique invalide."
+        : error.message === "invalid_opacity"
+          ? "Opacite cartographique invalide."
         : sanitizeError(error)
     }, 400);
   }
@@ -58,7 +64,9 @@ exports.databaseStats = (req, res) => {
     stats,
     tablePreview,
     selectedTable: req.query.table || "",
-    categoryLabels: categoryLabels(req)
+    categoryLabels: categoryLabels(req),
+    wideLayout: true,
+    tabulatorAssets: true
   });
 };
 

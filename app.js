@@ -15,6 +15,8 @@ const infographieRoutes = require("./routes/infographieRoutes");
 const submissionRoutes = require("./routes/submissionRoutes");
 const koboAdminRoutes = require("./routes/koboAdminRoutes");
 const siteSearchRoutes = require("./routes/siteSearchRoutes");
+const sitesPlanningRoutes = require("./routes/sitesPlanningRoutes");
+const sitesPlanningApiRoutes = require("./routes/sitesPlanningApiRoutes");
 const { currentUser } = require("./middlewares/authMiddleware");
 const { i18nMiddleware } = require("./services/i18nService");
 const Mission = require("./models/Mission");
@@ -50,9 +52,11 @@ app.use("/users", userRoutes);
 app.use("/equipes", equipeRoutes);
 app.use("/agents", agentCollecteRoutes);
 app.use("/cartographie", sigRoutes);
+app.use("/sites", sitesPlanningRoutes);
 app.use("/infographies", infographieRoutes);
 app.use("/soumissions", submissionRoutes);
 app.use("/parametrages/kobo", koboAdminRoutes);
+app.use("/api/sites", sitesPlanningApiRoutes);
 app.use("/api", siteSearchRoutes);
 
 app.use((req, res) => {

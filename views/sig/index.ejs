@@ -125,12 +125,31 @@
       </button>
       <button
         class="sig-map-tool"
+        id="sig-sites-planning-open"
+        type="button"
+        title="Sites &agrave; visiter"
+        aria-label="Sites &agrave; visiter"
+      >
+        <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+      </button>
+      <button
+        class="sig-map-tool"
         id="sig-geometry-import-open"
         type="button"
         title="Importer des géométries"
         aria-label="Importer des géométries"
       >
         <i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>
+      </button>
+      <button
+        class="sig-map-tool"
+        id="sig-measure-toggle"
+        type="button"
+        aria-pressed="false"
+        title="Afficher les outils de mesure"
+        aria-label="Afficher les outils de mesure"
+      >
+        <i class="fa-solid fa-ruler" aria-hidden="true"></i>
       </button>
       <input
         id="sig-geometry-import-input"
@@ -148,21 +167,24 @@
       </div>
       <div id="sig-geometry-results-body" class="sig-geometry-results-body"></div>
     </div>
-    <div class="sig-map-legend is-collapsed" id="sig-map-legend">
-      <button
-        class="sig-map-legend-toggle"
-        id="sig-map-legend-toggle"
-        type="button"
-        aria-expanded="false"
-        aria-controls="sig-map-legend-items"
-        aria-label="<%= t("sig.legend.expand") %>"
-      >
-        <i class="fa-solid fa-list" aria-hidden="true"></i>
-        <span><%= t("sig.legend.title") %></span>
-        <i class="fa-solid fa-chevron-up sig-map-legend-chevron" aria-hidden="true"></i>
-      </button>
-      <div class="sig-map-legend-items" id="sig-map-legend-items">
+    <div class="sig-map-footer-band" id="sig-map-footer-band">
+      <div class="sig-map-legend is-collapsed" id="sig-map-legend">
+        <button
+          class="sig-map-legend-toggle"
+          id="sig-map-legend-toggle"
+          type="button"
+          aria-expanded="false"
+          aria-controls="sig-map-legend-items"
+          aria-label="<%= t("sig.legend.expand") %>"
+        >
+          <i class="fa-solid fa-list" aria-hidden="true"></i>
+          <span><%= t("sig.legend.title") %></span>
+          <i class="fa-solid fa-chevron-up sig-map-legend-chevron" aria-hidden="true"></i>
+        </button>
+        <div class="sig-map-legend-items" id="sig-map-legend-items">
+        </div>
       </div>
+      <div class="sig-coordinate-control" id="sig-coordinate-control">Longitude - Latitude : --</div>
     </div>
     <div id="sig-map" aria-label="<%= t("sig.map.aria") %>"></div>
     <div class="g2m-loading-overlay is-active" id="sig-loading-overlay" role="status" aria-live="polite">
@@ -281,5 +303,6 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
 <script src="/js/layer-box-manager.js"></script>
+<script src="/js/bootstrap5-treeview-lite.js"></script>
 <script src="/js/cartographie.js"></script>
 <%- include("../partials/footer") %>
