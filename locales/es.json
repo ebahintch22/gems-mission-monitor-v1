@@ -635,5 +635,9 @@
   "siteSearch.message.minLength": "Escriba al menos 2 caracteres.",
   "siteSearch.message.loading": "Buscando...",
   "siteSearch.message.empty": "No se encontró ningún sitio.",
-  "siteSearch.message.error": "La búsqueda no está disponible temporalmente."
+  "siteSearch.message.error": "La búsqueda no está disponible temporalmente.",
+  "siteSearch.coordinate.title": "Coordenadas detectadas",
+  "siteSearch.coordinate.body": "¿Centrar el mapa en este punto?",
+  "siteSearch.coordinate.confirm": "Centrar mapa",
+  "siteSearch.coordinate.permuted": "Las coordenadas se intercambiaron para mantener el punto en Costa de Marfil."
 }

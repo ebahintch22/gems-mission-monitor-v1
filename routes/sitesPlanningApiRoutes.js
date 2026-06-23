@@ -13,5 +13,6 @@ router.post("/buildings/osm-preview", requirePermission("sites.planning.manage")
 router.post("/buildings/osm-save", requirePermission("sites.planning.manage"), sitesPlanningController.saveOsmBuildingExtents);
 router.get("/:id/buildings/plan", requirePermission("sites.planning.read"), sitesPlanningController.buildingsPlan);
 router.patch("/:id/location", requirePermission("sites.planning.manage"), sitesPlanningController.updateLocation);
+router.patch("/:id/georeferencing", requirePermission("sites.planning.manage"), sitesPlanningController.updateGeoreferencing);
 
 module.exports = router;

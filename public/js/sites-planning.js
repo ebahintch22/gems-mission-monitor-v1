@@ -27,13 +27,24 @@
   const missingNode = layerHost.querySelector("#sites-planning-missing");
   const explorer = layerHost.querySelector("#sites-planning-explorer");
   const paneResizer = layerHost.querySelector("#sites-planning-pane-resizer");
+  let exportButton = null;
   const statusLabels = {
     planned: app.dataset.statusPlanned || "planned",
     ongoing: app.dataset.statusOngoing || "ongoing",
     done: app.dataset.statusDone || "done"
   };
+  const georeferencingAbandonReasonLabels = {
+    SITE_INTROUVABLE_SUR_BASEMAP: "Site introuvable sur basemap",
+    IMAGERIE_INSUFFISANTE: "Imagerie insuffisante",
+    COUVERTURE_BASEMAP_ABSENTE: "Couverture basemap absente",
+    SITE_MASQUE_OU_OBSTRUE: "Site masque ou obstrue",
+    CONTOUR_NON_DISCERNABLE: "Contour non discernable",
+    SITE_CONFONDU_AVEC_ENVIRONNEMENT: "Site confondu avec l'environnement",
+    LOCALISATION_INITIALE_TROP_INCERTAINE: "Localisation initiale trop incertaine"
+  };
   let allSites = [];
   let currentSelection = null;
+  let selectedSite = null;
 
   function selectedStatuses() {
     return statusInputs
@@ -87,14 +98,20 @@
     ])
       .then(([sitesPayload, stats]) => {
         allSites = Array.isArray(sitesPayload.sites) ? sitesPayload.sites : [];
+        selectedSite = selectedSite
+          ? allSites.find((site) => site.id === selectedSite.id) || null
+          : null;
         renderStats(stats);
         renderTree();
         renderCurrentTable();
+        updateExportCommand();
       })
       .catch(() => {
         allSites = [];
         currentSelection = null;
+        selectedSite = null;
         renderMessage(app.dataset.labelEmpty || "Aucune donnee.");
+        updateExportCommand();
       });
   }
 
@@ -231,6 +248,8 @@
 
   function renderTable(sites) {
     tableContainer.innerHTML = "";
+    ensureExportCommand();
+    updateExportCommand();
     if (!sites.length) {
       const empty = document.createElement("p");
       empty.className = "sites-planning-empty";
@@ -248,6 +267,8 @@
           <th>MINISTERE</th>
           <th>LOCALITE</th>
           <th>Statut</th>
+          <th>Georef.</th>
+          <th>Motif d'abandon</th>
           <th>Date prevue</th>
           <th>Date reelle</th>
           <th>Ecart</th>
@@ -259,6 +280,18 @@
     sites.forEach((site) => {
       const row = document.createElement("tr");
       const gapLabel = site.actual_visit_date ? "" : "non renseigne";
+      row.tabIndex = 0;
+      row.classList.toggle("is-selected-planning-site", site.id === selectedSite?.id);
+      row.classList.toggle("has-georeferencing-abandoned", isGeoreferencingAbandoned(site));
+      row.addEventListener("click", function () {
+        selectSiteForExport(site);
+      });
+      row.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          selectSiteForExport(site);
+        }
+      });
       row.innerHTML = `
         <td></td>
         <td></td>
@@ -266,6 +299,8 @@
         <td></td>
         <td></td>
         <td><span class="sites-planning-status sites-planning-status-${site.statut}"></span></td>
+        <td></td>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -277,12 +312,171 @@
       cells[3].textContent = site.ministere || "";
       cells[4].textContent = site.localite || "";
       cells[5].querySelector("span").textContent = statusLabels[site.statut] || site.statut || "";
-      cells[6].textContent = formatDate(site.planned_visit_date);
-      cells[7].textContent = formatDate(site.actual_visit_date) || "non renseigne";
-      cells[8].textContent = site.schedule_gap_label || gapLabel || "non renseigne";
+      cells[6].textContent = isGeoreferencingAbandoned(site) ? "Impossible" : "";
+      cells[7].textContent = georeferencingAbandonReasonLabel(site);
+      cells[8].textContent = formatDate(site.planned_visit_date);
+      cells[9].textContent = formatDate(site.actual_visit_date) || "non renseigne";
+      cells[10].textContent = site.schedule_gap_label || gapLabel || "non renseigne";
       body.append(row);
     });
     tableContainer.append(table);
+  }
+
+  function ensureExportCommand() {
+    if (exportButton || !selectionNode?.parentElement) {
+      return;
+    }
+    exportButton = document.createElement("button");
+    exportButton.className = "button";
+    exportButton.type = "button";
+    exportButton.id = "sites-planning-export-geojson";
+    exportButton.innerHTML = '<i class="fa-solid fa-file-export" aria-hidden="true"></i><span>Exporter GeoJSON</span>';
+    exportButton.addEventListener("click", exportSelectedSiteGeoJson);
+    selectionNode.parentElement.append(exportButton);
+  }
+
+  function selectSiteForExport(site) {
+    selectedSite = site;
+    renderCurrentTable();
+    updateExportCommand();
+  }
+
+  function updateExportCommand() {
+    if (!exportButton) {
+      return;
+    }
+    const hasBuildings = planningBuildingCount(selectedSite) > 0;
+    exportButton.disabled = !selectedSite || !hasBuildings;
+    exportButton.title = !selectedSite
+      ? "Selectionnez un site."
+      : hasBuildings
+      ? "Exporter le contour du site et les emprises batiments."
+      : "Export impossible : aucune emprise de batiment importee pour ce site.";
+  }
+
+  function planningBuildingCount(site) {
+    return Array.isArray(site?.emprise_bat_osm?.features) ? site.emprise_bat_osm.features.length : 0;
+  }
+
+  function exportSelectedSiteGeoJson() {
+    if (!selectedSite) {
+      setFeedback("Selectionnez un site a exporter.", "is-error");
+      return;
+    }
+    if (planningBuildingCount(selectedSite) <= 0) {
+      setFeedback("Export impossible : aucune emprise de batiment importee pour ce site.", "is-error");
+      updateExportCommand();
+      return;
+    }
+    fetch(`/api/sites/${encodeURIComponent(selectedSite.id)}/buildings/plan`, {
+      headers: { "Accept": "application/json" }
+    })
+      .then((response) => response.json().then((payload) => ({ ok: response.ok, payload })))
+      .then(({ ok, payload }) => {
+        if (!ok || !payload.ok) {
+          throw new Error(payload.error || "sites_planning_export_failed");
+        }
+        const geojson = buildSelectedSiteExportGeoJson(payload);
+        if (!geojson.features.some((feature) => feature.properties?.feature_role === "building_extent")) {
+          throw new Error("missing_building_extents");
+        }
+        downloadGeoJson(geojson, selectedSiteExportFilename(payload.site || selectedSite));
+        setFeedback("Export GeoJSON genere.", "is-success");
+      })
+      .catch((error) => {
+        const message = error.message === "missing_building_extents"
+          ? "Export impossible : aucune emprise de batiment importee pour ce site."
+          : "Export GeoJSON impossible.";
+        setFeedback(message, "is-error");
+      });
+  }
+
+  function buildSelectedSiteExportGeoJson(payload) {
+    const site = payload.site || selectedSite;
+    const buildings = payload.buildings?.type === "FeatureCollection"
+      ? payload.buildings.features || []
+      : selectedSite.emprise_bat_osm?.features || [];
+    const features = [];
+    if (site?.polygon_geo?.type === "Polygon") {
+      features.push({
+        type: "Feature",
+        properties: siteExportProperties(site, "site_contour"),
+        geometry: site.polygon_geo
+      });
+    }
+    buildings.forEach((feature, index) => {
+      if (!feature?.geometry) {
+        return;
+      }
+      features.push({
+        type: "Feature",
+        properties: {
+          ...(feature.properties || {}),
+          ...siteExportProperties(site, "building_extent"),
+          building_export_index: index + 1
+        },
+        geometry: feature.geometry
+      });
+    });
+    return {
+      type: "FeatureCollection",
+      name: selectedSiteExportName(site),
+      features
+    };
+  }
+
+  function siteExportProperties(site, role) {
+    return {
+      feature_role: role,
+      site_id: site?.id || selectedSite.id,
+      site_code: site?.code || selectedSite.code || "",
+      site_name: site?.site_name || selectedSite.site_name || "",
+      region: site?.region || selectedSite.region || "",
+      ministere: site?.ministere || selectedSite.ministere || "",
+      localite: site?.localite || selectedSite.localite || ""
+    };
+  }
+
+  function selectedSiteExportName(site) {
+    return `site_${slugify([site?.code, site?.site_name].filter(Boolean).join("_") || site?.id || "selection")}`;
+  }
+
+  function selectedSiteExportFilename(site) {
+    return `${selectedSiteExportName(site)}_contour_batiments.geojson`;
+  }
+
+  function downloadGeoJson(geojson, filename) {
+    const blob = new Blob([JSON.stringify(geojson, null, 2)], { type: "application/geo+json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(function () {
+      URL.revokeObjectURL(url);
+    }, 0);
+  }
+
+  function slugify(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      || "site";
+  }
+
+  function isGeoreferencingAbandoned(site) {
+    return site?.georeferencing_status === "abandoned";
+  }
+
+  function georeferencingAbandonReasonLabel(site) {
+    return site?.georeferencing_abandon_reason_label
+      || georeferencingAbandonReasonLabels[site?.georeferencing_abandon_reason]
+      || "";
   }
 
   function formatDate(value) {

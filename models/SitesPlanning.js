@@ -4,10 +4,24 @@ const BuildingFeatureV2 = require("./BuildingFeatureV2");
 
 const VALID_STATUSES = new Set(["planned", "ongoing", "done"]);
 const DEFAULT_STATUSES = Array.from(VALID_STATUSES);
+const GEOREFERENCING_ABANDON_REASONS = {
+  SITE_INTROUVABLE_SUR_BASEMAP: "Site introuvable sur basemap",
+  IMAGERIE_INSUFFISANTE: "Imagerie insuffisante",
+  COUVERTURE_BASEMAP_ABSENTE: "Couverture basemap absente",
+  SITE_MASQUE_OU_OBSTRUE: "Site masque ou obstrue",
+  CONTOUR_NON_DISCERNABLE: "Contour non discernable",
+  SITE_CONFONDU_AVEC_ENVIRONNEMENT: "Site confondu avec l'environnement",
+  LOCALISATION_INITIALE_TROP_INCERTAINE: "Localisation initiale trop incertaine"
+};
+const VALID_GEOREFERENCING_ABANDON_REASONS = new Set(Object.keys(GEOREFERENCING_ABANDON_REASONS));
 
 class SitesPlanning {
   static validStatuses() {
     return DEFAULT_STATUSES;
+  }
+
+  static georeferencingAbandonReasons() {
+    return GEOREFERENCING_ABANDON_REASONS;
   }
 
   static all(filters = {}) {
@@ -38,6 +52,9 @@ class SitesPlanning {
       statut: record.statut,
       planned_visit_date: record.planned_visit_date,
       actual_visit_date: record.actual_visit_date,
+      georeferencing_status: record.georeferencing_status,
+      georeferencing_abandon_reason: record.georeferencing_abandon_reason,
+      georeferencing_abandon_reason_label: record.georeferencing_abandon_reason_label,
       schedule_gap_days: scheduleGapDays(record),
       schedule_gap_label: scheduleGapLabel(record)
     }));
@@ -58,10 +75,12 @@ class SitesPlanning {
       INSERT INTO sites_planning (
         code, source_ord, localite, site_name, ministere, region, phase,
         planned_visit_date, actual_visit_date, point_geo, polygon_geo, statut_old, statut,
+        georeferencing_status, georeferencing_abandon_reason,
         source_hash, raw_json, imported_at, updated_at
       ) VALUES (
         @code, @source_ord, @localite, @site_name, @ministere, @region, @phase,
         @planned_visit_date, @actual_visit_date, @point_geo, @polygon_geo, @statut_old, @statut,
+        @georeferencing_status, @georeferencing_abandon_reason,
         @source_hash, @raw_json, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
       )
       ON CONFLICT(source_hash) DO UPDATE SET
@@ -78,6 +97,8 @@ class SitesPlanning {
         polygon_geo = COALESCE(excluded.polygon_geo, sites_planning.polygon_geo),
         statut_old = excluded.statut_old,
         statut = excluded.statut,
+        georeferencing_status = excluded.georeferencing_status,
+        georeferencing_abandon_reason = excluded.georeferencing_abandon_reason,
         raw_json = excluded.raw_json,
         imported_at = CURRENT_TIMESTAMP,
         updated_at = CURRENT_TIMESTAMP
@@ -116,6 +137,14 @@ class SitesPlanning {
       SET
         point_geo = CASE WHEN @hasPoint = 1 THEN @pointGeo ELSE point_geo END,
         polygon_geo = CASE WHEN @hasPolygon = 1 THEN @polygonGeo ELSE polygon_geo END,
+        georeferencing_status = CASE
+          WHEN @hasPoint = 1 OR @hasPolygon = 1 THEN ''
+          ELSE georeferencing_status
+        END,
+        georeferencing_abandon_reason = CASE
+          WHEN @hasPoint = 1 OR @hasPolygon = 1 THEN ''
+          ELSE georeferencing_abandon_reason
+        END,
         updated_at = CURRENT_TIMESTAMP
       WHERE id = @id
     `).run({
@@ -124,6 +153,40 @@ class SitesPlanning {
       pointGeo: pointGeo === null ? null : JSON.stringify(pointGeo),
       hasPolygon: polygonGeo === undefined ? 0 : 1,
       polygonGeo: polygonGeo === null ? null : JSON.stringify(polygonGeo)
+    });
+
+    return this.findById(record.id);
+  }
+
+  static updateGeoreferencing(id, payload = {}) {
+    const record = this.findById(id);
+    if (!record) {
+      throw new Error("site_planning_not_found");
+    }
+
+    const reason = normalizeGeoreferencingAbandonReason(
+      payload.reason || payload.georeferencing_abandon_reason || payload.georeferencingAbandonReason
+    );
+    const status = normalizeGeoreferencingStatus(
+      payload.status || payload.georeferencing_status || payload.georeferencingStatus,
+      reason
+    );
+
+    if (status === "abandoned" && !reason) {
+      throw new Error("georeferencing_abandon_reason_required");
+    }
+
+    db.prepare(`
+      UPDATE sites_planning
+      SET
+        georeferencing_status = @status,
+        georeferencing_abandon_reason = @reason,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = @id
+    `).run({
+      id: record.id,
+      status,
+      reason: status === "abandoned" ? reason : ""
     });
 
     return this.findById(record.id);
@@ -222,6 +285,21 @@ function normalizeRow(row) {
   const polygonGeo = normalizeOptionalGeoJson(readColumn(row, ["POLYGON_GEO", "polygon_geo", "polygonGeo"]));
   const statut = normalizeStatus(readColumn(row, ["STATUT", "statut"]));
   const statutOld = readColumn(row, ["STATUT_OLD", "statut_old"]);
+  const georeferencingReason = normalizeGeoreferencingAbandonReason(readColumn(row, [
+    "RAISON_ABANDON_GEOREFERENCEMENT",
+    "MOTIF_ABANDON_GEOREFERENCEMENT",
+    "GEOREFERENCING_ABANDON_REASON",
+    "georeferencing_abandon_reason"
+  ]));
+  const rawGeoreferencingStatus = normalizeGeoreferencingStatus(readColumn(row, [
+    "GEOREFERENCEMENT",
+    "STATUT_GEOREFERENCEMENT",
+    "GEOREFERENCING_STATUS",
+    "georeferencing_status"
+  ]), georeferencingReason);
+  const georeferencingStatus = rawGeoreferencingStatus === "abandoned" && !georeferencingReason
+    ? ""
+    : rawGeoreferencingStatus;
 
   if (!siteName && !localite && !region) {
     return null;
@@ -252,6 +330,8 @@ function normalizeRow(row) {
     polygon_geo: polygonGeo ? JSON.stringify(polygonGeo) : null,
     statut_old: statutOld,
     statut,
+    georeferencing_status: georeferencingStatus,
+    georeferencing_abandon_reason: georeferencingStatus === "abandoned" ? georeferencingReason : "",
     source_hash: crypto.createHash("sha256").update(naturalKey).digest("hex"),
     raw_json: JSON.stringify(row)
   };
@@ -319,6 +399,31 @@ function readColumn(row, names) {
 function normalizeStatus(value) {
   const status = String(value || "planned").trim().toLowerCase();
   return VALID_STATUSES.has(status) ? status : "planned";
+}
+
+function normalizeGeoreferencingStatus(value, reason = "") {
+  const status = String(value || "").trim().toLowerCase();
+  if (reason) {
+    return "abandoned";
+  }
+  if (["abandoned", "abandonne", "abandonné", "impossible", "non", "no", "false", "0"].includes(status)) {
+    return "abandoned";
+  }
+  return "";
+}
+
+function normalizeGeoreferencingAbandonReason(value) {
+  const reason = String(value || "").trim();
+  if (!reason) {
+    return "";
+  }
+  const normalized = reason
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return VALID_GEOREFERENCING_ABANDON_REASONS.has(normalized) ? normalized : "";
 }
 
 function normalizeDate(value) {
@@ -390,6 +495,9 @@ function hydrate(row) {
     point_geo: parseJsonOrNull(row.point_geo),
     polygon_geo: parseJsonOrNull(row.polygon_geo),
     emprise_bat_osm: parseJsonOrNull(row.emprise_bat_osm),
+    georeferencing_status: row.georeferencing_status || "",
+    georeferencing_abandon_reason: row.georeferencing_abandon_reason || "",
+    georeferencing_abandon_reason_label: GEOREFERENCING_ABANDON_REASONS[row.georeferencing_abandon_reason] || "",
     schedule_gap_days: scheduleGapDays(row),
     schedule_gap_label: scheduleGapLabel(row),
     raw: parseJson(row.raw_json)

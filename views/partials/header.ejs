@@ -293,6 +293,10 @@
           data-message-loading="<%= t("siteSearch.message.loading") %>"
           data-message-empty="<%= t("siteSearch.message.empty") %>"
           data-message-error="<%= t("siteSearch.message.error") %>"
+          data-message-coordinate-title="<%= t("siteSearch.coordinate.title") %>"
+          data-message-coordinate-body="<%= t("siteSearch.coordinate.body") %>"
+          data-message-coordinate-confirm="<%= t("siteSearch.coordinate.confirm") %>"
+          data-message-coordinate-permuted="<%= t("siteSearch.coordinate.permuted") %>"
         >
           <div class="site-search-backdrop" data-site-search-close></div>
           <section class="site-search-dialog">
@@ -314,6 +318,7 @@
               >
             </label>
             <p class="form-hint" id="site-search-hint"><%= t("siteSearch.hint") %></p>
+            <div class="site-search-coordinate-suggestion" id="site-search-coordinate-suggestion" hidden></div>
             <div class="site-search-results" id="site-search-results" role="listbox" aria-live="polite"></div>
           </section>
         </div>

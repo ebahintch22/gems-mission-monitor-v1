@@ -1228,6 +1228,45 @@ h2 {
   text-transform: uppercase;
 }
 
+.sites-planning-table tr {
+  cursor: pointer;
+}
+
+.sites-planning-table tr.is-selected-planning-site {
+  background: #0f766e;
+  color: #fff;
+  font-weight: 700;
+  box-shadow:
+    inset 6px 0 0 #f59e0b,
+    inset 0 0 0 1px #0b5f59;
+}
+
+.sites-planning-table tr.is-selected-planning-site:hover {
+  background: #0b5f59;
+}
+
+.sites-planning-table tr.is-selected-planning-site td {
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+.sites-planning-table tr.has-georeferencing-abandoned,
+.sites-planning-table .tabulator-row.has-georeferencing-abandoned {
+  background: #343a40 !important;
+  color: #d6d8db !important;
+}
+
+.sites-planning-table tr.has-georeferencing-abandoned:hover,
+.sites-planning-table .tabulator-row.has-georeferencing-abandoned:hover {
+  background: #2b3035 !important;
+  color: #f1f3f5 !important;
+}
+
+.sites-planning-table tr.has-georeferencing-abandoned td,
+.sites-planning-table .tabulator-row.has-georeferencing-abandoned .tabulator-cell {
+  border-color: rgba(255, 255, 255, 0.16) !important;
+  color: inherit !important;
+}
+
 .sites-planning-status {
   border-radius: 999px;
   display: inline-block;
@@ -1665,6 +1704,32 @@ h2 {
   max-height: 360px;
   min-height: 54px;
   overflow-y: auto;
+}
+
+.site-search-coordinate-suggestion {
+  background: rgba(47, 132, 146, 0.08);
+  border: 1px solid rgba(47, 132, 146, 0.3);
+  border-radius: 7px;
+  display: grid;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.site-search-coordinate-suggestion[hidden] {
+  display: none;
+}
+
+.site-search-coordinate-suggestion strong {
+  color: var(--ink);
+}
+
+.site-search-coordinate-suggestion p {
+  color: var(--muted);
+  margin: 0;
+}
+
+.site-search-coordinate-suggestion button {
+  justify-self: start;
 }
 
 .site-search-result {

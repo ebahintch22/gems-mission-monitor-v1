@@ -18,7 +18,8 @@ exports.index = (req, res) => {
   res.json({
     sites,
     count: sites.length,
-    statuses: SitesPlanning.validStatuses()
+    statuses: SitesPlanning.validStatuses(),
+    georeferencing_abandon_reasons: SitesPlanning.georeferencingAbandonReasons()
   });
 };
 
@@ -43,6 +44,16 @@ exports.updateLocation = (req, res) => {
       point_geo: req.body.point_geo,
       polygon_geo: req.body.polygon_geo
     });
+    res.json({ ok: true, site });
+  } catch (error) {
+    const statusCode = error.message === "site_planning_not_found" ? 404 : 400;
+    res.status(statusCode).json({ ok: false, error: error.message });
+  }
+};
+
+exports.updateGeoreferencing = (req, res) => {
+  try {
+    const site = SitesPlanning.updateGeoreferencing(req.params.id, req.body || {});
     res.json({ ok: true, site });
   } catch (error) {
     const statusCode = error.message === "site_planning_not_found" ? 404 : 400;

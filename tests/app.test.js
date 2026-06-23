@@ -301,6 +301,11 @@ test("GET / affiche le tableau de bord", async () => {
   assert.match(navigationScriptResponse.text, /\/cartographie\?submission_id=\$\{encodeURIComponent\(site\.id\)\}/);
   assert.match(navigationScriptResponse.text, /window\.setTimeout\(function \(\) \{[\s\S]*\}, 600\)/);
   assert.match(navigationScriptResponse.text, /AbortController/);
+  assert.match(navigationScriptResponse.text, /siteSearchCoordinateSuggestion/);
+  assert.match(navigationScriptResponse.text, /function parseSearchCoordinateCandidate\(/);
+  assert.match(navigationScriptResponse.text, /function renderCoordinateSuggestion\(/);
+  assert.match(navigationScriptResponse.text, /g2m:site-search-center-map/);
+  assert.match(navigationScriptResponse.text, /parseCoordinateNumber\(/);
   assert.match(navigationScriptResponse.text, /event\.key === "Escape"/);
   assert.match(navigationScriptResponse.text, /siteHeader\.classList\.toggle\("is-nav-open"\)/);
   assert.match(navigationScriptResponse.text, /closeSiteNav/);
@@ -349,6 +354,8 @@ test("la navigation affiche seulement les liens autorises", async () => {
   assert.doesNotMatch(adminNavigation, /nav-menu-language-row/);
   assert.match(adminNavigation, /action="\/logout" method="post"/);
   assert.match(adminResponse.text, /id="personalization-modal"/);
+  assert.match(adminResponse.text, /id="site-search-coordinate-suggestion"/);
+  assert.match(adminResponse.text, /data-message-coordinate-title=/);
   assert.match(adminResponse.text, /data-display-size-value="small"/);
   assert.match(adminResponse.text, /personalization-language-options/);
   assert.match(adminNavigation, /Déconnexion/);
@@ -2315,6 +2322,7 @@ test("GET /api/sites/search recherche les sites avec debounce cote client", asyn
   assert.equal(homeResponse.status, 200);
   assert.match(homeResponse.text, /id="site-search-open"/);
   assert.match(homeResponse.text, /id="site-search-modal"/);
+  assert.match(homeResponse.text, /id="site-search-coordinate-suggestion"/);
   assert.match(homeResponse.text, /data-result-limit="5"/);
   assert.equal(apiResponse.status, 200);
   assert.equal(Array.isArray(apiResponse.body.results), true);
@@ -2330,10 +2338,10 @@ test("GET /api/sites/search recherche les sites avec debounce cote client", asyn
 test("le module sites a visiter importe le CSV et expose l'arborescence", async () => {
   const csvPath = path.join(os.tmpdir(), `g2m-sites-planning-${Date.now()}.csv`);
   fs.writeFileSync(csvPath, [
-    "ord;CODE;LOCALITE;NOM ETABLISSEMENT;MINISTERE;REGION;PHASE;SURVEY_DATE_PREV;STATUT_OLD;STATUT;SURVEY_DATE_REAL;POINT_GEO;POLYGON_GEO",
-    "1;g2m-test-001;COCODY;CHU de Cocody;MSHPCMU;DISTRICT D'ABIDJAN;Phase 1;09/06/2026;OK;done;10/06/2026;;",
-    "2;g2m-test-002;PLATEAU;College Moderne du Plateau;MENAET;DISTRICT D'ABIDJAN;Phase 1;12/06/2026;NOK;planned;;;",
-    "3;g2m-test-003;DALOA;Centre Social Daloa;MFFE;HAUT-SASSANDRA;Phase 2;14/06/2026;OK;ongoing;;;"
+    "ord;CODE;LOCALITE;NOM ETABLISSEMENT;MINISTERE;REGION;PHASE;SURVEY_DATE_PREV;STATUT_OLD;STATUT;SURVEY_DATE_REAL;POINT_GEO;POLYGON_GEO;STATUT_GEOREFERENCEMENT;RAISON_ABANDON_GEOREFERENCEMENT",
+    "1;g2m-test-001;COCODY;CHU de Cocody;MSHPCMU;DISTRICT D'ABIDJAN;Phase 1;09/06/2026;OK;done;10/06/2026;;;;",
+    "2;g2m-test-002;PLATEAU;College Moderne du Plateau;MENAET;DISTRICT D'ABIDJAN;Phase 1;12/06/2026;NOK;planned;;;;abandoned;CONTOUR_NON_DISCERNABLE",
+    "3;g2m-test-003;DALOA;Centre Social Daloa;MFFE;HAUT-SASSANDRA;Phase 2;14/06/2026;OK;ongoing;;;;;"
   ].join("\n"));
 
   const importResult = importSitesPlanningFromCsv(csvPath);
@@ -2392,6 +2400,12 @@ test("le module sites a visiter importe le CSV et expose l'arborescence", async 
   assert.match(scriptResponse.text, /new LayerBoxManager\(layerHost/);
   assert.match(scriptResponse.text, /rootTitle: "Explorateur des sites a visiter"/);
   assert.match(scriptResponse.text, /function filteredSitesForSelection\(\)/);
+  assert.match(scriptResponse.text, /Motif d'abandon/);
+  assert.match(scriptResponse.text, /has-georeferencing-abandoned/);
+  assert.match(scriptResponse.text, /id = "sites-planning-export-geojson"/);
+  assert.match(scriptResponse.text, /function exportSelectedSiteGeoJson\(\)/);
+  assert.match(scriptResponse.text, /missing_building_extents/);
+  assert.match(scriptResponse.text, /_contour_batiments\.geojson/);
   assert.match(scriptResponse.text, /paneResizer\.addEventListener\("pointerdown"/);
   assert.match(scriptResponse.text, /--sites-tree-width/);
   assert.match(styleResponse.text, /\.sites-planning-layer-host \.layer-box\s*\{[\s\S]*right: 0/);
@@ -2410,12 +2424,18 @@ test("le module sites a visiter importe le CSV et expose l'arborescence", async 
   assert.match(styleResponse.text, /\.sites-planning-osm-report\s*\{[\s\S]*max-height: 220px/);
   assert.match(styleResponse.text, /\.sites-planning-table \.tabulator-row\.has-planning-contour\s*\{[\s\S]*background: rgb\(0, 176, 80\)/);
   assert.match(styleResponse.text, /\.sites-planning-table \.tabulator-row\.has-planning-reference-point\s*\{[\s\S]*background: rgb\(197, 255, 223\)/);
+  assert.match(styleResponse.text, /\.sites-planning-table tr\.has-georeferencing-abandoned/);
+  assert.match(styleResponse.text, /\.sites-planning-table tr\.is-selected-planning-site\s*\{[\s\S]*background: #0f766e/);
+  assert.match(styleResponse.text, /\.sites-planning-table \.tabulator-row\.has-georeferencing-abandoned\s*\{[\s\S]*background: #343a40/);
   assert.match(styleResponse.text, /\.sites-planning-table \.tabulator-row\.is-selected-planning-site\s*\{[\s\S]*box-shadow:/);
   assert.equal(sitesResponse.status, 200);
   assert.equal(sitesResponse.body.count, 2);
   assert.deepEqual(sitesResponse.body.sites.map((site) => site.code).sort(), ["g2m-test-002", "g2m-test-003"]);
   assert.deepEqual(sitesResponse.body.sites.map((site) => site.statut).sort(), ["ongoing", "planned"]);
   assert.equal(sitesResponse.body.sites.some((site) => site.phase === "Phase 1" || site.phase === "Phase 2"), true);
+  assert.equal(sitesResponse.body.sites.find((site) => site.code === "g2m-test-002").georeferencing_status, "abandoned");
+  assert.equal(sitesResponse.body.sites.find((site) => site.code === "g2m-test-002").georeferencing_abandon_reason, "CONTOUR_NON_DISCERNABLE");
+  assert.equal(sitesResponse.body.georeferencing_abandon_reasons.CONTOUR_NON_DISCERNABLE, "Contour non discernable");
   assert.equal(statsResponse.status, 200);
   assert.equal(statsResponse.body.total, 3);
   assert.equal(statsResponse.body.done, 1);
@@ -2640,8 +2660,13 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /id="sig-sites-planning-osm-open"/);
   assert.match(scriptResponse.text, /id="sig-sites-planning-osm-dialog" hidden/);
   assert.match(scriptResponse.text, /id="sig-sites-planning-plan-open" hidden disabled/);
+  assert.match(scriptResponse.text, /id="sig-sites-planning-export-geojson" hidden disabled/);
   assert.match(scriptResponse.text, /id="sites-planning-plan-form" hidden/);
   assert.match(scriptResponse.text, /async function openSelectedPlanningSitePrintPlan\(form, options = \{\}\)/);
+  assert.match(scriptResponse.text, /async function exportSelectedPlanningSiteGeoJson\(\)/);
+  assert.match(scriptResponse.text, /function buildSelectedPlanningSiteExportGeoJson/);
+  assert.match(scriptResponse.text, /downloadPlanningSiteGeoJson\(geojson, selectedPlanningSiteExportFilename/);
+  assert.match(scriptResponse.text, /Export impossible : aucune emprise de batiment importee pour ce site\./);
   assert.match(scriptResponse.text, /\/api\/sites\/\$\{encodeURIComponent\(siteId\)\}\/buildings\/plan/);
   assert.match(scriptResponse.text, /function setupSitesPlanningColumnControls\(container\)/);
   assert.match(scriptResponse.text, /function openSitesPlanningOsmDialog\(\)/);
@@ -2703,6 +2728,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function handleMeasureClick\(event\)/);
   assert.match(scriptResponse.text, /formatDistanceMeters\(value\)/);
   assert.match(scriptResponse.text, /map\.distance\(previous, latlng\)/);
+  assert.match(scriptResponse.text, /g2m:site-search-center-map/);
+  assert.match(scriptResponse.text, /map\.flyTo\(\[latitude, longitude\], Math\.max\(map\.getZoom\(\), 16\)/);
   assert.match(scriptResponse.text, /title: t\("tableAgent"\), field: "code_agent"[\s\S]*formatter: agentTeamFormatter/);
   assert.match(scriptResponse.text, /title: t\("tableSite"\), field: "display_submission_id"[\s\S]*formatter: siteNameFormatter/);
   assert.match(scriptResponse.text, /title: t\("status"\), field: "statut_validation"/);
@@ -3006,10 +3033,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /#sig-map\.is-measuring\s*\{[\s\S]*cursor: crosshair/);
   assert.match(styleResponse.text, /#sig-map\.is-planning-location-capture\s*\{[\s\S]*cursor: crosshair/);
   assert.match(styleResponse.text, /#sig-map\.is-planning-location-capture \*\s*\{[\s\S]*cursor: crosshair !important/);
-  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*grid-template-columns: minmax\(220px, 360px\) minmax\(220px, 1fr\) minmax\(220px, 310px\)/);
-  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*background: #262626/);
-  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*border: 1px solid #fff/);
-  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*opacity: 0\.5/);
+  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*grid-template-columns: minmax\(180px, 300px\) minmax\(220px, 1fr\) minmax\(220px, 310px\)/);
+  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*background: transparent/);
+  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*border: 0/);
+  assert.match(styleResponse.text, /\.sig-map-footer-band\s*\{[\s\S]*opacity: 1/);
   assert.match(styleResponse.text, /\.sig-map-footer-band:hover,\s*\.sig-map-footer-band:focus-within\s*\{[\s\S]*opacity: 1/);
   assert.match(styleResponse.text, /\.sig-coordinate-control,\s*\.sig-measure-control\s*\{[\s\S]*background: rgba\(255, 255, 255, 0\.94\)/);
   assert.match(styleResponse.text, /\.sig-coordinate-control,\s*\.sig-measure-control\s*\{[\s\S]*padding: 4px 8px/);

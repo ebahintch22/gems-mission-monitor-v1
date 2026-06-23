@@ -714,10 +714,15 @@ addColumnIfMissing(sitesPlanningColumns, "sites_planning", "phase", "TEXT NOT NU
 addColumnIfMissing(sitesPlanningColumns, "sites_planning", "point_geo", "TEXT");
 addColumnIfMissing(sitesPlanningColumns, "sites_planning", "polygon_geo", "TEXT");
 addColumnIfMissing(sitesPlanningColumns, "sites_planning", "emprise_bat_osm", "TEXT");
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "georeferencing_status", "TEXT NOT NULL DEFAULT ''");
+addColumnIfMissing(sitesPlanningColumns, "sites_planning", "georeferencing_abandon_reason", "TEXT NOT NULL DEFAULT ''");
 db.exec(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_sites_planning_code_unique
     ON sites_planning(code)
     WHERE code IS NOT NULL AND code <> '';
+
+  CREATE INDEX IF NOT EXISTS idx_sites_planning_georeferencing_status
+    ON sites_planning(georeferencing_status);
 `);
 
 const missionColumns = db.prepare("PRAGMA table_info('missions')").all()
