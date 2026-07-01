@@ -1179,6 +1179,7 @@ function seedDefaultPermissions() {
     });
 
     seedDefaultRoleMatrix(insertDefaultRolePermission);
+    revokeRestrictedModulePermissions();
   })();
 }
 
@@ -1194,9 +1195,6 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "users.invite.read",
       "monitoring.read",
       "sig.read",
-      "buildings.manage",
-      "sites.planning.read",
-      "sites.planning.manage",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -1214,9 +1212,6 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "users.invite.read",
       "monitoring.read",
       "sig.read",
-      "buildings.manage",
-      "sites.planning.read",
-      "sites.planning.manage",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -1230,8 +1225,6 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "agents.read",
       "agents.manage",
       "sig.read",
-      "buildings.manage",
-      "sites.planning.read",
       "infographics.read",
       "quality.read"
     ],
@@ -1242,7 +1235,6 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "teams.read",
       "agents.read",
       "sig.read",
-      "sites.planning.read",
       "infographics.read",
       "quality.read",
       "quality.manage",
@@ -1270,7 +1262,6 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       "agents.read",
       "monitoring.read",
       "sig.read",
-      "sites.planning.read",
       "infographics.read",
       "quality.read",
       "exports.manage"
@@ -1292,4 +1283,31 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
       });
     });
   });
+}
+
+function revokeRestrictedModulePermissions() {
+  const restrictedRoles = [
+    "directeur_mission",
+    "coordinateur",
+    "superviseur",
+    "controleur",
+    "specialiste_analyste_donnees",
+    "partenaire",
+    "agent"
+  ];
+  const restrictedPermissions = [
+    "buildings.manage",
+    "sites.planning.read",
+    "sites.planning.manage"
+  ];
+  db.prepare(`
+    DELETE FROM role_permissions
+    WHERE locked = 0
+      AND role IN (${restrictedRoles.map(() => "?").join(", ")})
+      AND permission_id IN (
+        SELECT id
+        FROM permissions
+        WHERE code_permission IN (${restrictedPermissions.map(() => "?").join(", ")})
+      )
+  `).run(...restrictedRoles, ...restrictedPermissions);
 }

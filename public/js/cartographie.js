@@ -3868,6 +3868,9 @@
   }
 
   function openPreparedBuildingsLayer(options = {}) {
+    if (!buildingsOpen) {
+      return;
+    }
     activeLayerContext = { id: "prepared-buildings", submissionId: null };
     layerBoxManager.renderToLayer("prepared-buildings", function (container) {
       const shell = document.createElement("section");

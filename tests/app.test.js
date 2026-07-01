@@ -795,15 +795,22 @@ test("la matrice fonctionnelle par defaut est initialisee sans verrouillage syst
   assert.equal(byRole.coordinateur.has("missions.manage"), true);
   assert.equal(byRole.coordinateur.has("dashboard.mission.read"), true);
   assert.equal(byRole.coordinateur.has("agents.manage"), true);
-  assert.equal(byRole.coordinateur.has("buildings.manage"), true);
+  assert.equal(byRole.coordinateur.has("buildings.manage"), false);
+  assert.equal(byRole.coordinateur.has("sites.planning.read"), false);
   assert.equal(byRole.directeur_mission.has("exports.manage"), true);
-  assert.equal(byRole.directeur_mission.has("buildings.manage"), true);
+  assert.equal(byRole.directeur_mission.has("buildings.manage"), false);
+  assert.equal(byRole.directeur_mission.has("sites.planning.read"), false);
   assert.equal(byRole.superviseur.has("teams.manage"), true);
-  assert.equal(byRole.superviseur.has("buildings.manage"), true);
+  assert.equal(byRole.superviseur.has("buildings.manage"), false);
+  assert.equal(byRole.superviseur.has("sites.planning.read"), false);
   assert.equal(byRole.controleur.has("quality.manage"), true);
+  assert.equal(byRole.controleur.has("sites.planning.read"), false);
   assert.equal(byRole.specialiste_gis.has("sig.manage"), true);
   assert.equal(byRole.specialiste_gis.has("buildings.manage"), true);
+  assert.equal(byRole.specialiste_gis.has("sites.planning.read"), true);
+  assert.equal(byRole.specialiste_gis.has("sites.planning.manage"), true);
   assert.equal(byRole.specialiste_analyste_donnees.has("monitoring.read"), true);
+  assert.equal(byRole.specialiste_analyste_donnees.has("sites.planning.read"), false);
   assert.equal(byRole.partenaire.has("infographics.read"), true);
   assert.equal(byRole.partenaire.has("dashboard.mission.read"), true);
   assert.equal(Boolean(byRole.agent), false);
@@ -2347,8 +2354,8 @@ test("le module sites a visiter importe le CSV et expose l'arborescence", async 
   const importResult = importSitesPlanningFromCsv(csvPath);
   const secondImportResult = importSitesPlanningFromCsv(csvPath);
   const cookie = await loginTestUser({
-    email: "coordinateur.sites-planning@g2m.test",
-    role: "coordinateur"
+    email: "gis.sites-planning@g2m.test",
+    role: "specialiste_gis"
   });
   const pageResponse = await request(app).get("/sites").set("Cookie", cookie);
   const scriptResponse = await request(app).get("/js/sites-planning.js");
@@ -2383,6 +2390,11 @@ test("le module sites a visiter importe le CSV et expose l'arborescence", async 
     role: "agent"
   });
   const deniedResponse = await request(app).get("/sites").set("Cookie", deniedCookie);
+  const coordinatorDeniedCookie = await loginTestUser({
+    email: "coordinateur.sites-planning-denied@g2m.test",
+    role: "coordinateur"
+  });
+  const coordinatorDeniedResponse = await request(app).get("/sites").set("Cookie", coordinatorDeniedCookie);
 
   assert.equal(importResult.imported, 3);
   assert.equal(secondImportResult.imported, 3);
@@ -2454,6 +2466,7 @@ test("le module sites a visiter importe le CSV et expose l'arborescence", async 
   assert.equal(updateLocationResponse.body.site.point_geo.type, "Point");
   assert.equal(updateLocationResponse.body.site.polygon_geo.type, "Polygon");
   assert.equal(deniedResponse.status, 403);
+  assert.equal(coordinatorDeniedResponse.status, 403);
 });
 
 test("le module sites a visiter importe par lot les emprises batiments OSM et les enregistre", async () => {
@@ -2465,8 +2478,8 @@ test("le module sites a visiter importe par lot les emprises batiments OSM et le
   importSitesPlanningFromCsv(csvPath);
   const site = db.prepare("SELECT id FROM sites_planning WHERE code = ?").get("g2m-osm-001");
   const cookie = await loginTestUser({
-    email: "coordinateur.sites-planning-osm@g2m.test",
-    role: "coordinateur"
+    email: "gis.sites-planning-osm@g2m.test",
+    role: "specialiste_gis"
   });
   await request(app)
     .patch(`/api/sites/${site.id}/location`)
@@ -2557,7 +2570,12 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
     email: "gis.cartographie@g2m.test",
     role: "specialiste_gis"
   });
+  const coordinatorCookie = await loginTestUser({
+    email: "coordinateur.cartographie-restricted@g2m.test",
+    role: "coordinateur"
+  });
   const response = await request(app).get("/cartographie").set("Cookie", gisCookie);
+  const coordinatorResponse = await request(app).get("/cartographie").set("Cookie", coordinatorCookie);
   const missionId = db.prepare("SELECT id FROM missions WHERE name = ?").get("Mission pilote").id;
   const optionsResponse = await request(app)
     .get(`/cartographie/options?mission_id=${missionId}`)
@@ -2575,6 +2593,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   const styleResponse = await request(app).get("/css/app.css");
 
   assert.equal(response.status, 200);
+  assert.equal(coordinatorResponse.status, 200);
   assert.equal(optionsResponse.status, 200);
   assert.equal(koboLightStatusResponse.status, 200);
   assert.equal(Array.isArray(koboLightStatusResponse.body.missions), true);
@@ -2623,6 +2642,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-geometry-import-open"/);
   assert.match(response.text, /id="sig-buildings-open"/);
   assert.match(response.text, /id="sig-sites-planning-open"/);
+  assert.doesNotMatch(coordinatorResponse.text, /id="sig-buildings-open"/);
+  assert.doesNotMatch(coordinatorResponse.text, /id="sig-sites-planning-open"/);
   assert.match(response.text, /id="sig-measure-toggle"/);
   assert.match(response.text, /aria-label="Afficher les outils de mesure"/);
   assert.match(response.text, /data-can-import-buildings="true"/);

@@ -113,16 +113,19 @@
         aria-pressed="true"
         title="<%= t("sig.cluster.disable") %>"
       >C</button>
+      <% if (permissions && permissions.has("buildings.manage")) { %>
       <button
         class="sig-map-tool"
         id="sig-buildings-open"
         type="button"
         title="Bâtiments préparés"
         aria-label="Bâtiments préparés"
-        data-can-import-buildings="<%= permissions && permissions.has("buildings.manage") ? "true" : "false" %>"
+        data-can-import-buildings="true"
       >
         <i class="fa-solid fa-building" aria-hidden="true"></i>
       </button>
+      <% } %>
+      <% if (permissions && permissions.has("sites.planning.read")) { %>
       <button
         class="sig-map-tool"
         id="sig-sites-planning-open"
@@ -132,6 +135,7 @@
       >
         <i class="fa-solid fa-list-check" aria-hidden="true"></i>
       </button>
+      <% } %>
       <button
         class="sig-map-tool"
         id="sig-geometry-import-open"

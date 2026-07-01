@@ -10,7 +10,7 @@ router.use(requireAuth);
 
 router.get("/kobo-light/status", requireRole("admin", "superviseur"), sigController.koboLightStatus);
 router.post("/kobo-light/sync", requireRole("admin", "superviseur"), sigController.koboLightSync);
-router.get("/buildings", requirePermission("sig.read"), buildingFeatureController.index);
+router.get("/buildings", requirePermission("buildings.manage"), buildingFeatureController.index);
 router.post("/buildings/import", requirePermission("buildings.manage"), buildingFeatureController.importGeoJson);
 router.post("/buildings/import-osm", requirePermission("buildings.manage"), buildingFeatureController.importFromOsm);
 router.patch("/buildings/:id/status", requirePermission("buildings.manage"), buildingFeatureController.updateStatus);
