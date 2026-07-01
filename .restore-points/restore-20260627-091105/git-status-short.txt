@@ -1,0 +1,9 @@
+﻿ M data/gems.sqlite
+ M data/gems.sqlite-shm
+ M data/gems.sqlite-wal
+ M public/css/app.css
+ M public/js/cartographie.js
+ M tests/app.test.js
+?? .restore-points/
+?? resume_import_osm_emprises_batiments.md
+?? scripts/generate-building-verification-sheet.mjs

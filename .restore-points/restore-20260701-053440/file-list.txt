@@ -1,0 +1,21 @@
+﻿.\KBase-docs\FICHE_VERIFICATION_TERRAIN_BATIMENTS_GUIDE REMPLISSAGE.pdf
+.\KBase-docs\FICHE_VERIFICATION_TERRAIN_BATIMENTS_MODELE_ACCENTS_GUIDE REMPLISSAGE.docx
+.\KBase-docs\FICHE_VERIFICATION_TERRAIN_BATIMENTS_MODELE_ACCENTS_OK.docx
+.\KBase-docs\FICHE_VERIFICATION_TERRAIN_BATIMENTS_V1_26juin2026.pdf
+.\KBase-docs\GUIDE_REMPLISSAGE_FICHE_CONTROLE_TERRAIN_BATIMENTS.md
+.\KBase-docs\kobo-data-sample\kobo-response-2026-06-27T09-05-45_50-analysis-versions.json
+.\KBase-docs\kobo-data-sample\kobo-response-2026-06-27T09-05-45_50-analysis-versions-fr.json
+.\KBase-docs\Note_d'Orientation pour les Scripts d'extration de la géométrie.md
+.\KBase-docs\NOTE_MODULE_EXPLORATEUR_SITES_A_VISITER.md
+data/gems.sqlite
+data/gems.sqlite-shm
+data/gems.sqlite-wal
+locales/en.json
+locales/es.json
+locales/fr.json
+public/css/app.css
+public/js/cartographie.js
+resume_import_osm_emprises_batiments.md
+scripts/generate-building-verification-sheet.mjs
+tests/app.test.js
+views/sig/index.ejs

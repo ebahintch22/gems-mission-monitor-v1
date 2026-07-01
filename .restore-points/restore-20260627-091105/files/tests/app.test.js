@@ -2647,7 +2647,6 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /t\("layerHumanitarian"\)/);
   assert.match(scriptResponse.text, /t\("layerRoad"\)/);
   assert.match(scriptResponse.text, /t\("layerPositron"\)/);
-  assert.match(scriptResponse.text, /t\("layerGoogleSatellite"\)/);
   assert.match(scriptResponse.text, /t\("layerEsriSatellite"\)/);
   assert.match(scriptResponse.text, /L\.markerClusterGroup/);
   assert.match(scriptResponse.text, /disableClusteringAtZoom: 14/);

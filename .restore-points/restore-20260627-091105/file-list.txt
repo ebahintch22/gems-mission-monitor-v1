@@ -1,0 +1,11 @@
+﻿.\KBase-docs\FICHE_VERIFICATION_TERRAIN_BATIMENTS_MODELE_ACCENTS_OK.docx
+.\KBase-docs\FICHE_VERIFICATION_TERRAIN_BATIMENTS_V1_26juin2026.pdf
+data/gems.sqlite
+data/gems.sqlite-shm
+data/gems.sqlite-wal
+KBase-docs\NOTE_MODULE_EXPLORATEUR_SITES_A_VISITER.md
+public/css/app.css
+public/js/cartographie.js
+resume_import_osm_emprises_batiments.md
+scripts/generate-building-verification-sheet.mjs
+tests/app.test.js

@@ -266,11 +266,6 @@
       subdomains: ["mt0", "mt1", "mt2", "mt3"],
       maxZoom: 20
     }),
-    [t("layerGoogleSatellite")]: L.tileLayer("https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}", {
-      attribution: "&copy; Google Satellite",
-      subdomains: ["mt0", "mt1", "mt2", "mt3"],
-      maxZoom: 20
-    }),
     [t("layerEsriSatellite")]: L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
       attribution: "Tiles &copy; Esri",
       maxZoom: 19

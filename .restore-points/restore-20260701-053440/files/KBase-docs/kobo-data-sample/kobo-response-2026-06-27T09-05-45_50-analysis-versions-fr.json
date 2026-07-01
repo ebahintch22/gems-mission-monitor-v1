@@ -1,0 +1,1684 @@
+{
+  "source_file": "KBase-docs/kobo-data-sample/kobo-response-2026-06-27T09-05-45_50.json",
+  "generated_at": "2026-06-27T14:10:48.553Z",
+  "version_field": "__version__",
+  "num_versions": 5,
+  "summary": [
+    {
+      "nom": "Version 1",
+      "numero_ordre": 1,
+      "version_code": "vCdxj9y4NiufyZHpxVJ33f",
+      "start_at": "2026-06-05T17:46:58",
+      "end_at": "2026-06-10T22:00:37",
+      "submissions_count": 12,
+      "batiments_count": 171
+    },
+    {
+      "nom": "Version 2",
+      "numero_ordre": 2,
+      "version_code": "vk3QTsQxWi6dnxcFPhcEWM",
+      "start_at": "2026-06-06T12:07:39",
+      "end_at": "2026-06-08T21:27:53",
+      "submissions_count": 2,
+      "batiments_count": 10
+    },
+    {
+      "nom": "Version 3",
+      "numero_ordre": 3,
+      "version_code": "vCgD2XABFtrurba9VoCFkJ",
+      "start_at": "2026-06-08T20:04:48",
+      "end_at": "2026-06-08T20:04:48",
+      "submissions_count": 1,
+      "batiments_count": 8
+    },
+    {
+      "nom": "Version 4",
+      "numero_ordre": 4,
+      "version_code": "vGYwptaw8LRM2Ug9CtGAhd",
+      "start_at": "2026-06-10T20:36:15",
+      "end_at": "2026-06-23T18:04:05",
+      "submissions_count": 7,
+      "batiments_count": 160
+    },
+    {
+      "nom": "Version 5",
+      "numero_ordre": 5,
+      "version_code": "vD3CxGyFeWTzSdQ3ARwkrS",
+      "start_at": "2026-06-15T17:15:58",
+      "end_at": "2026-06-26T23:22:59",
+      "submissions_count": 28,
+      "batiments_count": 230
+    }
+  ],
+  "version_list": [
+    {
+      "version_code": "vCdxj9y4NiufyZHpxVJ33f",
+      "nom": "Version 1",
+      "numero_ordre": 1,
+      "start_at": "2026-06-05T17:46:58",
+      "end_at": "2026-06-10T22:00:37",
+      "soumissions": [
+        {
+          "site_reference": "Collège moderne de cocody lycée technique/mena/Cocody",
+          "send_at": "2026-06-05T17:46:58"
+        },
+        {
+          "site_reference": "Tribunal de première instance de Bingerville/mjdh/Bingerville",
+          "send_at": "2026-06-05T22:33:04"
+        },
+        {
+          "site_reference": "COLLÈGE MODERNE DE BIETRY/mena/Marcory",
+          "send_at": "2026-06-06T09:30:16"
+        },
+        {
+          "site_reference": "Lycée moderne 1 Nangui-Abrogoua/mena/Adjame/Abidjan",
+          "send_at": "2026-06-08T19:07:03"
+        },
+        {
+          "site_reference": "Collège Moderne Cocody Cité des Arts/mena/Cocody",
+          "send_at": "2026-06-08T19:31:10"
+        },
+        {
+          "site_reference": "Collège moderne de port bouet aéroport/mena/Port bouet",
+          "send_at": "2026-06-09T09:46:12"
+        },
+        {
+          "site_reference": "Établissement Public hospitalier départemental d’Anyama/mshpcmu/Anyama",
+          "send_at": "2026-06-09T16:23:50"
+        },
+        {
+          "site_reference": "C.N.P.T.E Abidjan/mena/Adjame / Abidjan",
+          "send_at": "2026-06-09T19:29:14"
+        },
+        {
+          "site_reference": "Établissement public hospitalier départemental de Koumassi (EPHD )/mshpcmu/Koumassi",
+          "send_at": "2026-06-10T09:43:37"
+        },
+        {
+          "site_reference": "HOPITAL GÉNÉRAL YOPOUGON ATTIE/mshpcmu/YOPOUGON",
+          "send_at": "2026-06-10T14:46:07"
+        },
+        {
+          "site_reference": "Lycée sainte marie de cocody/mena/Cocody",
+          "send_at": "2026-06-10T18:54:42"
+        },
+        {
+          "site_reference": "Établissement public hospitalier départemental d’adjame/mshpcmu/Adjame/Abidjan",
+          "send_at": "2026-06-10T22:00:37"
+        }
+      ]
+    },
+    {
+      "version_code": "vk3QTsQxWi6dnxcFPhcEWM",
+      "nom": "Version 2",
+      "numero_ordre": 2,
+      "start_at": "2026-06-06T12:07:39",
+      "end_at": "2026-06-08T21:27:53",
+      "soumissions": [
+        {
+          "site_reference": "Collègue moderne de Plateau devenu lycee moderne du Plateau/mena/Plateau/Abidjan",
+          "send_at": "2026-06-06T12:07:39"
+        },
+        {
+          "site_reference": "lycée moderne 2 Nangui-Abrogoua/mena/Adjamé/Abidjan",
+          "send_at": "2026-06-08T21:27:53"
+        }
+      ]
+    },
+    {
+      "version_code": "vCgD2XABFtrurba9VoCFkJ",
+      "nom": "Version 3",
+      "numero_ordre": 3,
+      "start_at": "2026-06-08T20:04:48",
+      "end_at": "2026-06-08T20:04:48",
+      "soumissions": [
+        {
+          "site_reference": "Hopital psychiatrique de BINGERVILLE/mshpcmu/Bingerville",
+          "send_at": "2026-06-08T20:04:48"
+        }
+      ]
+    },
+    {
+      "version_code": "vGYwptaw8LRM2Ug9CtGAhd",
+      "nom": "Version 4",
+      "numero_ordre": 4,
+      "start_at": "2026-06-10T20:36:15",
+      "end_at": "2026-06-23T18:04:05",
+      "soumissions": [
+        {
+          "site_reference": "ÉTABLISSEMENT PUBLIC HOSPITALIER DÉPARTEMENTAL DE TREICHEVILLE/mshpcmu/Treichville",
+          "send_at": "2026-06-10T20:36:15"
+        },
+        {
+          "site_reference": "Établissement public hospitalier départemental de Marcory (EPHD)/mshpcmu/Marcory",
+          "send_at": "2026-06-11T13:20:19"
+        },
+        {
+          "site_reference": "ÉTABLISSEMENT PUBLIC HOSPITALIER REGIONAL ABOBO (EPHR)/mshpcmu/Abobo",
+          "send_at": "2026-06-11T22:47:05"
+        },
+        {
+          "site_reference": "CENTRE NATIONAL DE TRANSFUSION SANGUINE DE CITE COTE IVOIRE/mshpcmu/Trechville",
+          "send_at": "2026-06-12T18:01:03"
+        },
+        {
+          "site_reference": "Établissement public hospitalier départemental de Port bouet ( EPHD)/mshpcmu/Port Bouet",
+          "send_at": "2026-06-15T13:08:23"
+        },
+        {
+          "site_reference": "Établissement d'application jean piaget/ENS/mena/Cocody",
+          "send_at": "2026-06-15T16:32:30"
+        },
+        {
+          "site_reference": "CHU public de Treichville/mshpcmu/Treichville",
+          "send_at": "2026-06-23T18:04:05"
+        }
+      ]
+    },
+    {
+      "version_code": "vD3CxGyFeWTzSdQ3ARwkrS",
+      "nom": "Version 5",
+      "numero_ordre": 5,
+      "start_at": "2026-06-15T17:15:58",
+      "end_at": "2026-06-26T23:22:59",
+      "soumissions": [
+        {
+          "site_reference": "CENTRE PERFECTIONNEMENT DES FONCTIONNAIRES ET AGENTS DE L'ÉTAT/memfpma/Adjamé",
+          "send_at": "2026-06-15T17:15:58"
+        },
+        {
+          "site_reference": "LABORATOIRE NATIONAL DE LA SANTE PUBLIC/mshpcmu/Treichville / Abidjan",
+          "send_at": "2026-06-17T02:03:02"
+        },
+        {
+          "site_reference": "Tribunal de Première Instance d’Abobo/mjdh/Abobo",
+          "send_at": "2026-06-17T17:45:49"
+        },
+        {
+          "site_reference": "PALAIS DE JUSTICE TPI DE YOPOUGON/mjdh/Yopougon",
+          "send_at": "2026-06-18T18:10:29"
+        },
+        {
+          "site_reference": "Établissement Public Hospitalier Départemental de Bingerville/mshpcmu/BINGERVILLE",
+          "send_at": "2026-06-19T17:02:50"
+        },
+        {
+          "site_reference": "DIRECTION REGIONALE ABIDJAN CENTRE/memfpma/COCODY",
+          "send_at": "2026-06-22T11:21:47"
+        },
+        {
+          "site_reference": "Collège moderne m’pouto/mena/Cocody",
+          "send_at": "2026-06-22T16:48:14"
+        },
+        {
+          "site_reference": "Tribunal de Première instance du Plateau/mjdh/Plateau",
+          "send_at": "2026-06-23T06:42:47"
+        },
+        {
+          "site_reference": "Institut National d’Hygiène Public/mshpcmu/Trechville",
+          "send_at": "2026-06-23T07:51:32"
+        },
+        {
+          "site_reference": "Direction régionale de la fonction publique Abidjan sud/memfpma/Marcory",
+          "send_at": "2026-06-23T19:41:01"
+        },
+        {
+          "site_reference": "DIRECTION REGIONALE DE LA FONCTION PUBLIQUE ABIDJAN NORD/memfpma/ABIDJAN",
+          "send_at": "2026-06-23T22:50:26"
+        },
+        {
+          "site_reference": "DRENAET GRAND BASSAM/mena/Bassam",
+          "send_at": "2026-06-24T19:35:13"
+        },
+        {
+          "site_reference": "Hopital général de Tiapoum/mshpcmu/Tiapoum/ Hôpital Général de Tiapoum /Region sanitaire du Sud-comoe",
+          "send_at": "2026-06-24T22:01:06"
+        },
+        {
+          "site_reference": "Lycée Moderne MIAN KOUAO GERMAIN D’APPROMPRONOU/mena/Voici les vrais inforations : REGION : Indenie Djuablin DEPARTEMENT : Abengourou SOUS-PREFECTURE : Yakasse Feyasse NB : J’ai dû selectionner les fausses informations dans le champ region, departement et sous-prefecture pour puisse finaliser.",
+          "send_at": "2026-06-25T07:42:49"
+        },
+        {
+          "site_reference": "TRIBUNAL DE PREMIÈRE INSTANCE DE GRAND BASSAM/mjdh/GRAND BASSAM",
+          "send_at": "2026-06-25T09:57:21"
+        },
+        {
+          "site_reference": "Collège Moderne de Timbé/mena/Katiola",
+          "send_at": "2026-06-25T19:53:52"
+        },
+        {
+          "site_reference": "ADMINISTRATION DRENAET/mena/KATIOLA",
+          "send_at": "2026-06-25T19:57:58"
+        },
+        {
+          "site_reference": "Lycée Moderne Konan Camille ADIAKE/mena/ADIAKE",
+          "send_at": "2026-06-25T21:52:50"
+        },
+        {
+          "site_reference": "Hopital general Adiake/mshpcmu/HOPITAL GENERAL ADIAKE / ADIAKE",
+          "send_at": "2026-06-25T22:17:15"
+        },
+        {
+          "site_reference": "Direction régionale de l’éducation nationale de l’alphabétisation et de l’enseignement technique d’ABOISSO/mena/Aboisso",
+          "send_at": "2026-06-25T22:56:36"
+        },
+        {
+          "site_reference": "Tribunal de Première Instance d’Aboisso/mjdh/Aboisso",
+          "send_at": "2026-06-25T22:57:00"
+        },
+        {
+          "site_reference": "Direction Regionale de l’Education Nationale de l’alphabetisation et de l’Enseignement Technique/mena/Daloa",
+          "send_at": "2026-06-26T17:45:33"
+        },
+        {
+          "site_reference": "TRIBUNAL DE PREMIER INSTANCE DE DALOA/mjdh/Daloa",
+          "send_at": "2026-06-26T19:49:04"
+        },
+        {
+          "site_reference": "LYCEE MODERNE D’ ASSINIE MAFIA/mena/Assinie Mafia",
+          "send_at": "2026-06-26T21:41:48"
+        },
+        {
+          "site_reference": "Tribunal de Première Instance de Katiola/mjdh/Katiola",
+          "send_at": "2026-06-26T22:53:22"
+        },
+        {
+          "site_reference": "ÉTABLISSEMENT PUBLIC HOSPITALIER DÉPARTEMENTAL DE GRAND BASSAM/mshpcmu/Grand BASSAM",
+          "send_at": "2026-06-26T22:59:50"
+        },
+        {
+          "site_reference": "Lycée moderne de Bonieredougou/mena/BONIEREDOUGOU",
+          "send_at": "2026-06-26T23:12:10"
+        },
+        {
+          "site_reference": "Direction régionale de la fonction publique sud comme aboisso/memfpma/Aboisso",
+          "send_at": "2026-06-26T23:22:59"
+        }
+      ]
+    }
+  ],
+  "specificites_generales": [
+    {
+      "nom": "Versions multiples dans un même export",
+      "description": "Le lot contient 5 versions de formulaire identifiées par le champ __version__. Les périodes de soumission se chevauchent partiellement, ce qui indique que plusieurs versions ont été utilisées pendant la même phase de collecte.",
+      "conseil": "Toujours conserver __version__ dans la base et appliquer les règles de lecture selon la version lors de l'import, du contrôle qualité et des migrations.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "nom": "Noyau commun exploitable",
+      "description": "Les champs d'identification du site, de mission, d'agent, de dates, de ministère et de commune sont présents sur toutes les versions observées. Ils peuvent servir de base commune pour l'indexation et le rapprochement des soumissions.",
+      "conseil": "Définir un mapping canonique pour ces champs communs et traiter les champs sectoriels ou optionnels dans des blocs spécialisés.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "nom": "Champs sectoriels conditionnels",
+      "description": "Certains champs ne sont renseignés que pour des secteurs précis : éducation, santé, justice ou autres administrations. Les différences de présence ne traduisent donc pas toujours une rupture de version.",
+      "conseil": "Interpréter les absences avec le contexte métier, notamment modB/ministere, modB/type_infra et les champs modC associés.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "nom": "Renforcement des photos et pièces jointes",
+      "description": "Les champs de photos et pièces jointes sont surtout visibles dans la dernière version, avec une présence systématique de plusieurs photos de site, d'environnement et de raccordement.",
+      "conseil": "Prévoir un pipeline média distinct : téléchargement, stockage externe, lien avec la soumission et contrôle de complétude par version.",
+      "versions": [
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "nom": "Ajout des emprises manuelles de site",
+      "description": "Le champ modB/emprise_site_manuel apparaît dans les versions récentes. Il complète l'emprise capturée automatiquement et permet de conserver une description manuelle ou textuelle du contour du site.",
+      "conseil": "Lorsqu'il existe, utiliser ce champ comme source de contrôle ou de secours, mais prioriser modB/emprise_site si son format géométrique est valide.",
+      "versions": [
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "nom": "Version isolée à faible effectif",
+      "description": "Une version ne compte qu'une seule soumission dans l'échantillon. Les statistiques de présence de champs pour cette version doivent donc être interprétées avec prudence.",
+      "conseil": "Ne pas généraliser les règles de cette version sans contrôler un échantillon plus large ou le XLSForm correspondant.",
+      "versions": [
+        "vCgD2XABFtrurba9VoCFkJ"
+      ]
+    }
+  ],
+  "specificites_geometriques": [
+    {
+      "name": "Géopoints Kobo standards",
+      "description": "Les champs modA/gps_site, modA/gps_centre, modH/gps_raccord et modH/gps_raccord_manuel utilisent majoritairement des chaînes Kobo de type latitude longitude altitude précision. Ces valeurs sont directement parseables en points.",
+      "conseil": "Découper la chaîne par espaces, lire latitude puis longitude, conserver altitude et précision comme attributs, et rejeter les points dont les coordonnées sont invalides.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "name": "Emprises de site en séquences de coordonnées",
+      "description": "Le champ modB/emprise_site encode les contours comme une séquence de points séparés par des points-virgules. Chaque point reprend le format latitude longitude altitude précision. La disponibilité varie selon les versions et les sites.",
+      "conseil": "Parser chaque segment en point, inverser en longitude-latitude pour GeoJSON, fermer l'anneau si nécessaire et valider qu'au moins trois sommets distincts existent.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "name": "Champs manuels hétérogénes",
+      "description": "Les champs modA/gps_manuel, modB/emprise_site_manuel et modH/gps_raccord_manuel contiennent des formats libres : texte descriptif, coordonnées séparées par virgule, listes de points ou WKT POINT dans la version récente.",
+      "conseil": "Mettre en place un parseur tolérant : détecter WKT, paires lat/lon, listes multilignes et texte annoté. Les valeurs non structurées doivent être conservées en note de contrôle.",
+      "versions": [
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "name": "géométrie des bâtiments dans le repeat batiment",
+      "description": "Les champs batiment/coins_bat et batiment/coins_bat_manuel sont stockés dans chaque objet du tableau répété batiment. Les premières versions utilisent surtout coins_bat automatique ; la dernière version utilise majoritairement coins_bat_manuel.",
+      "conseil": "Lire ces champs dans chaque bâtiment répété, pas au niveau racine. Prioriser coins_bat quand il est valide, sinon tenter coins_bat_manuel avec un parseur manuel documenté.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "name": "Distance de raccordement calculée",
+      "description": "modH/dist_raccord_auto est un attribut numérique stocké sous forme de chaîne. Il accompagne le point de raccordement et représente une distance calculée automatiquement.",
+      "conseil": "Convertir en nombre décimal, conserver l'unité en mêtres si confirmée par le formulaire, et recalculer si les points source changent après correction géométrique.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    },
+    {
+      "name": "Champs géométriques absents dans cet échantillon",
+      "description": "modE/pylone_rep/gps_pylone est absent des 50 soumissions. Les champs batiment/coins_bat et batiment/coins_bat_manuel sont également absents au niveau racine, car ils se trouvent dans le repeat batiment.",
+      "conseil": "Ne pas conclure à une suppression du champ sans vérifier le XLSForm. Pour les bâtiments, parcourir explicitement le tableau batiment lors de l'extraction.",
+      "versions": [
+        "vCdxj9y4NiufyZHpxVJ33f",
+        "vk3QTsQxWi6dnxcFPhcEWM",
+        "vCgD2XABFtrurba9VoCFkJ",
+        "vGYwptaw8LRM2Ug9CtGAhd",
+        "vD3CxGyFeWTzSdQ3ARwkrS"
+      ]
+    }
+  ],
+  "geometry_fields_analyzed": [
+    "modA/gps_site",
+    "modA/gps_centre",
+    "modA/gps_manuel",
+    "modB/emprise_site",
+    "modE/pylone_rep/gps_pylone",
+    "modH/gps_raccord",
+    "modH/dist_raccord_auto",
+    "modH/gps_raccord_manuel",
+    "batiment/coins_bat",
+    "batiment/coins_bat_manuel"
+  ],
+  "geometry_presence_by_version": {
+    "vCdxj9y4NiufyZHpxVJ33f": {
+      "modA/gps_site": {
+        "non_empty_submissions": 12,
+        "total_submissions": 12,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3502118 -4.0066352 67.0999984741211 4.983"
+      },
+      "modA/gps_centre": {
+        "non_empty_submissions": 10,
+        "total_submissions": 12,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3499056 -4.0070233 67.0999984741211 5.0"
+      },
+      "modA/gps_manuel": {
+        "non_empty_submissions": 2,
+        "total_submissions": 12,
+        "encoding_types": [
+          "manual_text_with_coordinates"
+        ],
+        "example": "Entrée  principale  5.35011, -4.00659\nContour du site \n5.35012,-4.00652\n5.35005,-4.00714\n5.34941,-4.00708\n5.34939,-4.00648"
+      },
+      "modB/emprise_site": {
+        "non_empty_submissions": 7,
+        "total_submissions": 12,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3513901 -4.0066128 67.0999984741211 6.783;5.3500712 -4.0071346 111.4 3.933;5.3494114 -4.0071112 72.4000015258789 4.45;5.3498966 -4.0065633 67.0999984741211 4.7;5.349398 -4.0065198 67.0999984741211 3.8;5.3513901 -4.0066128 67.0999984741211 6.783"
+      },
+      "modE/pylone_rep/gps_pylone": {
+        "non_empty_submissions": 0,
+        "total_submissions": 12,
+        "encoding_types": [],
+        "example": null
+      },
+      "modH/gps_raccord": {
+        "non_empty_submissions": 11,
+        "total_submissions": 12,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3501797 -4.0064793 65.9000015258789 3.78"
+      },
+      "modH/dist_raccord_auto": {
+        "non_empty_submissions": 11,
+        "total_submissions": 12,
+        "encoding_types": [
+          "text_or_other"
+        ],
+        "example": "17.644655315361607"
+      },
+      "modH/gps_raccord_manuel": {
+        "non_empty_submissions": 1,
+        "total_submissions": 12,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3501767 -4.0064708 66.4000015258789 1.899999976158142"
+      },
+      "batiment/coins_bat": {
+        "non_empty_buildings": 145,
+        "total_buildings": 171,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3497384 -4.0064932 66.80000305175781 3.116;5.3497501 -4.0069092 66.80000305175781 2.566;5.3495749 -4.0069228 67.9 2.65;5.34954 -4.0065467 66.80000305175781 3.9;5.3497384 -4.0064932 66.80000305175781 3.116",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      },
+      "batiment/coins_bat_manuel": {
+        "non_empty_buildings": 1,
+        "total_buildings": 171,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3468667 -3.8511717 79.4 1.65; 5.3468617 -3.851185 81.8 1.583; 5.3468683 -3.8511667 78.7 1.6; 5.3468917 -3.8511683 79.6 1.6; 5.3468667 -3.8511717 79.4 1.65",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      }
+    },
+    "vk3QTsQxWi6dnxcFPhcEWM": {
+      "modA/gps_site": {
+        "non_empty_submissions": 2,
+        "total_submissions": 2,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3230135 -4.0213277 58.599999999999994 4.583"
+      },
+      "modA/gps_centre": {
+        "non_empty_submissions": 2,
+        "total_submissions": 2,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3230033 -4.0213109 58.7 4.2"
+      },
+      "modA/gps_manuel": {
+        "non_empty_submissions": 2,
+        "total_submissions": 2,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.32270 -4.02133"
+      },
+      "modB/emprise_site": {
+        "non_empty_submissions": 1,
+        "total_submissions": 2,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3221342 -4.0208 131.20001220703125 5.016; 5.321992 -4.021702 51.2 2.516; 5.3230282 -4.0217261 55.3 2.2; 5.3230755 -4.0207675 59.2 2.283; 5.3221342 -4.0208 131.20001220703125 5.016"
+      },
+      "modE/pylone_rep/gps_pylone": {
+        "non_empty_submissions": 0,
+        "total_submissions": 2,
+        "encoding_types": [],
+        "example": null
+      },
+      "modH/gps_raccord": {
+        "non_empty_submissions": 2,
+        "total_submissions": 2,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3230576 -4.0213497 32.8 4.85"
+      },
+      "modH/dist_raccord_auto": {
+        "non_empty_submissions": 2,
+        "total_submissions": 2,
+        "encoding_types": [
+          "text_or_other"
+        ],
+        "example": "5.481161004434086"
+      },
+      "modH/gps_raccord_manuel": {
+        "non_empty_submissions": 1,
+        "total_submissions": 2,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3230104 -4.0211088 32.9 5.050000190734863"
+      },
+      "batiment/coins_bat": {
+        "non_empty_buildings": 9,
+        "total_buildings": 10,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3228819 -4.0211619 48.2 5.566; 5.3227685 -4.020957 54.099999999999994 2.55; 5.3229656 -4.0208914 49.8 2.633; 5.3230141 -4.0211747 56.5 2.45; 5.3228819 -4.0211619 48.2 5.566",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      },
+      "batiment/coins_bat_manuel": {
+        "non_empty_buildings": 0,
+        "total_buildings": 10,
+        "encoding_types": [],
+        "example": null,
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      }
+    },
+    "vCgD2XABFtrurba9VoCFkJ": {
+      "modA/gps_site": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3596586 -3.8839459 113.0999984741211 4.922"
+      },
+      "modA/gps_centre": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.360165 -3.8834124 113.0999984741211 4.132"
+      },
+      "modA/gps_manuel": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "manual_text_with_coordinates"
+        ],
+        "example": "Entrée principale:05.35970 003.88394\nCentre du Site:05.36017 003.88340"
+      },
+      "modB/emprise_site": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3596864 -3.8824878 110.19999694824219 3.339; 5.3594987 -3.882677 106.0 3.942; 5.3594763 -3.88294 109.69999694824219 5.077; 5.3595129 -3.8829687 109.69999694824219 5.339; 5.3593945 -3.8833722 109.69999694824219 6.504; 5.3590574 -3.8837176 106.5999984741211 4.74; 5.3591031 -3.8841764 111.4000015258789 5.793; 5.3594989 -3.8841038 111.4000015258789 6.282; 5.3595074 -3.8839654 111.4000015258789 6.969; 5.3604978 -3.8839984 112.0 5.127; 5.3610735 -3.8829641 115.0 6.369; 5.3611598 -3.8823498 0.0 0.0; 5.3609246 -3.8822395 0.0 0.0; 5.3596864 -3.8824878 110.19999694824219 3.339"
+      },
+      "modE/pylone_rep/gps_pylone": {
+        "non_empty_submissions": 0,
+        "total_submissions": 1,
+        "encoding_types": [],
+        "example": null
+      },
+      "modH/gps_raccord": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3594822 -3.8842682 111.4000015258789 4.976"
+      },
+      "modH/dist_raccord_auto": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "text_or_other"
+        ],
+        "example": "40.762881304108234"
+      },
+      "modH/gps_raccord_manuel": {
+        "non_empty_submissions": 1,
+        "total_submissions": 1,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3590225 -3.8842994 107.19999694824219 4.302"
+      },
+      "batiment/coins_bat": {
+        "non_empty_buildings": 8,
+        "total_buildings": 8,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3603032 -3.8831763 113.0999984741211 5.025; 5.3603963 -3.8832107 113.0999984741211 5.155; 5.360473 -3.8830131 113.19999694824219 5.237; 5.3605671 -3.8830446 113.19999694824219 5.331; 5.3606433 -3.8829363 113.19999694824219 3.0; 5.3603294 -3.8827539 113.19999694824219 4.733; 5.3602761 -3.8828817 113.19999694824219 4.947; 5.3603906 -3.8829527 113.19999694824219 4.993; 5.3603032 -3.8831763 113.0999984741211 5.025",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      },
+      "batiment/coins_bat_manuel": {
+        "non_empty_buildings": 0,
+        "total_buildings": 8,
+        "encoding_types": [],
+        "example": null,
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      }
+    },
+    "vGYwptaw8LRM2Ug9CtGAhd": {
+      "modA/gps_site": {
+        "non_empty_submissions": 7,
+        "total_submissions": 7,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3107117 -4.0078817 21.200000000000003 3.1"
+      },
+      "modA/gps_centre": {
+        "non_empty_submissions": 5,
+        "total_submissions": 7,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3006267 -3.98314 32.900001525878906 4.642"
+      },
+      "modA/gps_manuel": {
+        "non_empty_submissions": 3,
+        "total_submissions": 7,
+        "encoding_types": [
+          "manual_text_with_coordinates",
+          "lat_lon_comma_text",
+          "wkt_point"
+        ],
+        "example": "Point d'entrée \n5.310717, -4.007885"
+      },
+      "modB/emprise_site": {
+        "non_empty_submissions": 4,
+        "total_submissions": 7,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3105639 -4.008239 31.6 2.9; 5.3108551 -4.0074573 25.3 3.0; 5.3116281 -4.00769 25.0 3.476; 5.311339 -4.0085066 25.700000000000003 3.59; 5.3105639 -4.008239 31.6 2.9"
+      },
+      "modE/pylone_rep/gps_pylone": {
+        "non_empty_submissions": 0,
+        "total_submissions": 7,
+        "encoding_types": [],
+        "example": null
+      },
+      "modH/gps_raccord": {
+        "non_empty_submissions": 7,
+        "total_submissions": 7,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3107828 -4.0076568 12.3 4.45"
+      },
+      "modH/dist_raccord_auto": {
+        "non_empty_submissions": 7,
+        "total_submissions": 7,
+        "encoding_types": [
+          "text_or_other"
+        ],
+        "example": "26.154612055141286"
+      },
+      "modH/gps_raccord_manuel": {
+        "non_empty_submissions": 4,
+        "total_submissions": 7,
+        "encoding_types": [
+          "lat_lon_comma_text",
+          "wkt_point"
+        ],
+        "example": "5.310693, -4.007903"
+      },
+      "batiment/coins_bat": {
+        "non_empty_buildings": 140,
+        "total_buildings": 160,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.310575 -4.00822 20.8 3.6; 5.3106667 -4.0081167 13.700000000000001 1.9; 5.3109137 -4.0081875 20.5 3.02; 5.3109138 -4.0083132 25.900000000000002 3.0; 5.310575 -4.00822 20.8 3.6",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      },
+      "batiment/coins_bat_manuel": {
+        "non_empty_buildings": 92,
+        "total_buildings": 160,
+        "encoding_types": [
+          "lat_lon_comma_text",
+          "semicolon_coordinate_sequence",
+          "text_or_other",
+          "wkt_point"
+        ],
+        "example": "5.31045, -4.00772\n5.31086, -4.00758\n5.31101, -4.00826\n5.33336, -3.99648",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      }
+    },
+    "vD3CxGyFeWTzSdQ3ARwkrS": {
+      "modA/gps_site": {
+        "non_empty_submissions": 28,
+        "total_submissions": 28,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3427373 -4.0182129 33.79999923706055 4.089"
+      },
+      "modA/gps_centre": {
+        "non_empty_submissions": 19,
+        "total_submissions": 28,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3426748 -4.0186818 37.099998474121094 4.764"
+      },
+      "modA/gps_manuel": {
+        "non_empty_submissions": 26,
+        "total_submissions": 28,
+        "encoding_types": [
+          "wkt_point",
+          "manual_text_with_coordinates"
+        ],
+        "example": "POINT (-3.99588 5.29112)"
+      },
+      "modB/emprise_site": {
+        "non_empty_submissions": 13,
+        "total_submissions": 28,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.4458196 -4.0194406 150.8000030517578 1.9; 5.4449358 -4.0194278 150.40000915527344 1.7; 5.444925 -4.020585 150.3000030517578 1.6; 5.4458354 -4.0205728 151.00001525878906 1.416; 5.4458196 -4.0194406 150.8000030517578 1.9"
+      },
+      "modE/pylone_rep/gps_pylone": {
+        "non_empty_submissions": 0,
+        "total_submissions": 28,
+        "encoding_types": [],
+        "example": null
+      },
+      "modH/gps_raccord": {
+        "non_empty_submissions": 22,
+        "total_submissions": 28,
+        "encoding_types": [
+          "kobo_geopoint_string"
+        ],
+        "example": "5.3423905 -4.0182177 36.79999923706055 4.971"
+      },
+      "modH/dist_raccord_auto": {
+        "non_empty_submissions": 22,
+        "total_submissions": 28,
+        "encoding_types": [
+          "text_or_other"
+        ],
+        "example": "38.60903431504739"
+      },
+      "modH/gps_raccord_manuel": {
+        "non_empty_submissions": 25,
+        "total_submissions": 28,
+        "encoding_types": [
+          "wkt_point"
+        ],
+        "example": "POINT (-3.99564 5.29218)"
+      },
+      "batiment/coins_bat": {
+        "non_empty_buildings": 16,
+        "total_buildings": 230,
+        "encoding_types": [
+          "semicolon_coordinate_sequence"
+        ],
+        "example": "5.3422181 -4.0185599 36.89999771118164 13.649;5.342203 -4.0183335 36.70000076293945 4.979;5.3425684 -4.018254 33.599998474121094 6.465;5.3425954 -4.0184893 37.099998474121094 5.628;5.3422181 -4.0185599 36.89999771118164 13.649",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      },
+      "batiment/coins_bat_manuel": {
+        "non_empty_buildings": 223,
+        "total_buildings": 230,
+        "encoding_types": [
+          "manual_text_with_coordinates",
+          "semicolon_coordinate_sequence",
+          "wkt_point",
+          "text_or_other"
+        ],
+        "example": "A(5.34257-4,01827) B(5.34262-4.01833) C(5.34267-4.01830) D(5.34267-4.01827)",
+        "note": "Champ lu dans le tableau répété batiment, pas au niveau racine de la soumission."
+      }
+    }
+  },
+  "field_presence_by_version": {
+    "vCdxj9y4NiufyZHpxVJ33f": {
+      "submissions_count": 12,
+      "top_level_non_empty_counts": {
+        "__version__": 12,
+        "_geolocation": 12,
+        "_id": 12,
+        "_status": 12,
+        "_submission_time": 12,
+        "_submitted_by": 12,
+        "_uuid": 12,
+        "_validation_status": 12,
+        "_xform_id_string": 12,
+        "batiment": 12,
+        "deviceid": 12,
+        "end": 12,
+        "formhub/uuid": 12,
+        "meta/instanceID": 12,
+        "meta/rootUuid": 12,
+        "modA/code_agent": 12,
+        "modA/conditions": 12,
+        "modA/enqueteur": 12,
+        "modA/equipe_num": 12,
+        "modA/fiche_id": 12,
+        "modA/gps_centre": 10,
+        "modA/gps_manuel": 2,
+        "modA/gps_site": 12,
+        "modA/pr_email": 6,
+        "modA/pr_fonction": 12,
+        "modA/pr_nom": 12,
+        "modA/pr_tel": 12,
+        "modA/superviseur1": 7,
+        "modA/superviseur2": 5,
+        "modA/tel_agent": 12,
+        "modB/acces_route": 12,
+        "modB/adresse": 12,
+        "modB/annee_creation": 12,
+        "modB/commune": 12,
+        "modB/dec_san": 12,
+        "modB/departement": 12,
+        "modB/dir_regionale": 1,
+        "modB/dir_san": 4,
+        "modB/dist_san": 4,
+        "modB/drena_select": 7,
+        "modB/emprise_site": 7,
+        "modB/milieu": 12,
+        "modB/ministere": 12,
+        "modB/nom_ecole_select": 7,
+        "modB/nom_etab_san": 4,
+        "modB/nom_officiel": 12,
+        "modB/nom_structure": 1,
+        "modB/quartier": 12,
+        "modB/region": 12,
+        "modB/sous_prefecture": 12,
+        "modB/sous_type": 12,
+        "modB/statut_fonct": 12,
+        "modB/superficie_site": 7,
+        "modB/type_infra": 12,
+        "modC/nb_agents_justice": 1,
+        "modC/nb_batiments": 12,
+        "modC/nb_eleves": 7,
+        "modC/nb_lits": 4,
+        "modC/nb_salles": 7,
+        "modC/patients_jour": 4,
+        "modC/personnel": 12,
+        "modC/plages": 12,
+        "modC/population": 10,
+        "modC/services_sante": 4,
+        "modC/services_sante_autres": 4,
+        "modC/utilisateurs_cible": 12,
+        "modD/amperage_cie": 11,
+        "modD/amperage_groupe": 4,
+        "modD/charge_sup": 12,
+        "modD/dispo_jour": 12,
+        "modD/electricite": 12,
+        "modD/freq_coupure": 12,
+        "modD/groupe_etat": 12,
+        "modD/groupe_puissance": 5,
+        "modD/mise_terre": 12,
+        "modD/obs_energie": 12,
+        "modD/qualite_courant": 12,
+        "modD/raccord_type": 12,
+        "modD/solaire_etat": 12,
+        "modD/source_elec": 12,
+        "modE/moov_qual": 12,
+        "modE/moov_tech": 12,
+        "modE/mtn_qual": 12,
+        "modE/mtn_tech": 12,
+        "modE/nb_pylones": 10,
+        "modE/operateurs": 12,
+        "modE/orange_qual": 12,
+        "modE/orange_tech": 12,
+        "modE/pylone": 12,
+        "modE/pylone_rep": 10,
+        "modF/internet": 12,
+        "modF/meilleur_choix_fai": 11,
+        "modF/obs_internet": 11,
+        "modF/operateur_rep": 11,
+        "modF/operateur_rep_count": 12,
+        "modF/operateurs_internet": 11,
+        "modF/redondance": 11,
+        "modG/autocommutateur": 12,
+        "modG/comm_service": 12,
+        "modG/comm_service_autres": 4,
+        "modG/standard_tel": 12,
+        "modG/tel_fixe": 12,
+        "modG/tel_fixe_detail": 5,
+        "modG/tel_type": 5,
+        "modH/autre_site": 12,
+        "modH/ciel": 12,
+        "modH/dist_raccord_auto": 11,
+        "modH/dist_raccord_m": 6,
+        "modH/dist_raccord_manuel": 1,
+        "modH/fibre_proximite": 12,
+        "modH/gps_raccord": 11,
+        "modH/gps_raccord_manuel": 1,
+        "modH/infra_abords": 12,
+        "modH/ligne_vue": 12,
+        "modH/poteaux_elec": 12,
+        "modH/prop_fibre": 12,
+        "modH/prop_rep": 12,
+        "modH/prop_rep_count": 12,
+        "modH/type_poteau": 12,
+        "modH/voirie": 12,
+        "modJ/interco": 12,
+        "modJ/nb_bat_releves": 12,
+        "modJ/nb_principal": 12,
+        "modJ/surface_batie_tot": 12,
+        "modK/appli_loc": 12,
+        "modK/appli_metier": 12,
+        "modK/appli_metier_autres": 5,
+        "modK/besoins_exprimes": 12,
+        "modK/comm_outils": 12,
+        "modK/debit_cible": 12,
+        "modK/freins": 12,
+        "modK/justif_souhait": 12,
+        "modK/profil_usage": 11,
+        "modK/projet_co": 12,
+        "modK/projet_enseign": 6,
+        "modK/qos": 12,
+        "modK/sensibilite": 12,
+        "modK/services_pub": 12,
+        "modK/type_co_souhait": 12,
+        "modL/contraintes_archi": 12,
+        "modL/emplacement_pylone": 11,
+        "modL/mat_possible": 12,
+        "modL/rehab": 12,
+        "modL/rehab_detail": 6,
+        "modL/type_lien_radio": 11,
+        "modL/voirie_int": 12,
+        "modM/obs_environnement": 12,
+        "modM/protection_foudre": 12,
+        "modM/risques_clim": 12,
+        "modM/securite_site": 12,
+        "modM/vol_vandalisme": 12,
+        "modM/zone_inondable": 12,
+        "modN/commentaire": 12,
+        "modN/niveau_co": 12,
+        "modN/priorite": 12,
+        "modN/solutions": 12,
+        "modN/travaux": 12,
+        "modN/valid_responsable": 12,
+        "modN/valid_sup": 12,
+        "start": 12,
+        "today": 12
+      },
+      "repeated_batiment_count": 171
+    },
+    "vk3QTsQxWi6dnxcFPhcEWM": {
+      "submissions_count": 2,
+      "top_level_non_empty_counts": {
+        "__version__": 2,
+        "_geolocation": 2,
+        "_id": 2,
+        "_status": 2,
+        "_submission_time": 2,
+        "_submitted_by": 2,
+        "_uuid": 2,
+        "_validation_status": 2,
+        "_xform_id_string": 2,
+        "batiment": 2,
+        "deviceid": 2,
+        "end": 2,
+        "formhub/uuid": 2,
+        "meta/instanceID": 2,
+        "meta/rootUuid": 2,
+        "modA/code_agent": 2,
+        "modA/conditions": 2,
+        "modA/enqueteur": 2,
+        "modA/equipe_num": 2,
+        "modA/fiche_id": 2,
+        "modA/gps_centre": 2,
+        "modA/gps_manuel": 2,
+        "modA/gps_site": 2,
+        "modA/pr_email": 2,
+        "modA/pr_fonction": 2,
+        "modA/pr_nom": 2,
+        "modA/pr_tel": 2,
+        "modA/superviseur1": 2,
+        "modA/tel_agent": 2,
+        "modB/acces_route": 2,
+        "modB/adresse": 2,
+        "modB/annee_creation": 2,
+        "modB/commune": 2,
+        "modB/dec_san": 2,
+        "modB/departement": 2,
+        "modB/drena_select": 2,
+        "modB/emprise_site": 1,
+        "modB/milieu": 2,
+        "modB/ministere": 2,
+        "modB/nom_ecole_select": 2,
+        "modB/nom_officiel": 2,
+        "modB/quartier": 2,
+        "modB/region": 2,
+        "modB/sous_prefecture": 2,
+        "modB/sous_type": 2,
+        "modB/statut_fonct": 2,
+        "modB/superficie_site": 1,
+        "modB/type_infra": 2,
+        "modC/nb_batiments": 2,
+        "modC/nb_eleves": 2,
+        "modC/nb_salles": 2,
+        "modC/personnel": 2,
+        "modC/plages": 2,
+        "modC/population": 2,
+        "modC/utilisateurs_cible": 2,
+        "modD/amperage_cie": 2,
+        "modD/charge_sup": 2,
+        "modD/dispo_jour": 2,
+        "modD/electricite": 2,
+        "modD/freq_coupure": 2,
+        "modD/groupe_etat": 2,
+        "modD/mise_terre": 2,
+        "modD/obs_energie": 2,
+        "modD/qualite_courant": 2,
+        "modD/raccord_type": 2,
+        "modD/solaire_etat": 2,
+        "modD/source_elec": 2,
+        "modE/moov_qual": 2,
+        "modE/moov_tech": 2,
+        "modE/mtn_qual": 2,
+        "modE/mtn_tech": 2,
+        "modE/nb_pylones": 2,
+        "modE/operateurs": 2,
+        "modE/orange_qual": 2,
+        "modE/orange_tech": 2,
+        "modE/pylone": 2,
+        "modE/pylone_rep": 2,
+        "modF/internet": 2,
+        "modF/meilleur_choix_fai": 2,
+        "modF/obs_internet": 2,
+        "modF/operateur_rep": 2,
+        "modF/operateur_rep_count": 2,
+        "modF/operateurs_internet": 2,
+        "modF/redondance": 2,
+        "modG/autocommutateur": 2,
+        "modG/comm_service": 2,
+        "modG/comm_service_autres": 2,
+        "modG/standard_tel": 2,
+        "modG/tel_fixe": 2,
+        "modG/tel_fixe_detail": 2,
+        "modG/tel_type": 2,
+        "modH/autre_site": 2,
+        "modH/ciel": 2,
+        "modH/dist_raccord_auto": 2,
+        "modH/dist_raccord_m": 2,
+        "modH/dist_raccord_manuel": 1,
+        "modH/fibre_proximite": 2,
+        "modH/gps_raccord": 2,
+        "modH/gps_raccord_manuel": 1,
+        "modH/infra_abords": 2,
+        "modH/ligne_vue": 2,
+        "modH/poteaux_elec": 2,
+        "modH/prop_fibre": 2,
+        "modH/prop_rep": 2,
+        "modH/prop_rep_count": 2,
+        "modH/type_poteau": 2,
+        "modH/voirie": 2,
+        "modJ/interco": 2,
+        "modJ/nb_bat_releves": 2,
+        "modJ/nb_principal": 2,
+        "modJ/surface_batie_tot": 2,
+        "modK/appli_loc": 2,
+        "modK/appli_metier": 2,
+        "modK/besoins_exprimes": 2,
+        "modK/comm_outils": 2,
+        "modK/debit_cible": 2,
+        "modK/freins": 2,
+        "modK/justif_souhait": 2,
+        "modK/profil_usage": 2,
+        "modK/projet_co": 2,
+        "modK/projet_enseign": 2,
+        "modK/qos": 2,
+        "modK/sensibilite": 2,
+        "modK/services_pub": 2,
+        "modK/type_co_souhait": 2,
+        "modL/contraintes_archi": 2,
+        "modL/emplacement_pylone": 2,
+        "modL/mat_possible": 2,
+        "modL/rehab": 2,
+        "modL/rehab_detail": 1,
+        "modL/type_lien_radio": 2,
+        "modL/voirie_int": 2,
+        "modM/obs_environnement": 2,
+        "modM/protection_foudre": 2,
+        "modM/risques_clim": 2,
+        "modM/securite_site": 2,
+        "modM/vol_vandalisme": 2,
+        "modM/zone_inondable": 2,
+        "modN/commentaire": 2,
+        "modN/niveau_co": 2,
+        "modN/priorite": 2,
+        "modN/solutions": 2,
+        "modN/travaux": 2,
+        "modN/valid_responsable": 2,
+        "modN/valid_sup": 2,
+        "start": 2,
+        "today": 2
+      },
+      "repeated_batiment_count": 10
+    },
+    "vCgD2XABFtrurba9VoCFkJ": {
+      "submissions_count": 1,
+      "top_level_non_empty_counts": {
+        "__version__": 1,
+        "_attachments": 1,
+        "_geolocation": 1,
+        "_id": 1,
+        "_status": 1,
+        "_submission_time": 1,
+        "_submitted_by": 1,
+        "_uuid": 1,
+        "_validation_status": 1,
+        "_xform_id_string": 1,
+        "batiment": 1,
+        "deviceid": 1,
+        "end": 1,
+        "formhub/uuid": 1,
+        "meta/instanceID": 1,
+        "meta/rootUuid": 1,
+        "modA/code_agent": 1,
+        "modA/conditions": 1,
+        "modA/enqueteur": 1,
+        "modA/equipe_num": 1,
+        "modA/fiche_id": 1,
+        "modA/gps_centre": 1,
+        "modA/gps_manuel": 1,
+        "modA/gps_site": 1,
+        "modA/pr_email": 1,
+        "modA/pr_fonction": 1,
+        "modA/pr_nom": 1,
+        "modA/pr_tel": 1,
+        "modA/superviseur1": 1,
+        "modB/acces_route": 1,
+        "modB/adresse": 1,
+        "modB/annee_creation": 1,
+        "modB/commune": 1,
+        "modB/dec_san": 1,
+        "modB/departement": 1,
+        "modB/dir_san": 1,
+        "modB/dist_san": 1,
+        "modB/emprise_site": 1,
+        "modB/milieu": 1,
+        "modB/ministere": 1,
+        "modB/nom_etab_san": 1,
+        "modB/nom_officiel": 1,
+        "modB/quartier": 1,
+        "modB/region": 1,
+        "modB/sous_prefecture": 1,
+        "modB/sous_type": 1,
+        "modB/statut_fonct": 1,
+        "modB/superficie_site": 1,
+        "modB/type_infra": 1,
+        "modC/nb_batiments": 1,
+        "modC/nb_lits": 1,
+        "modC/patients_jour": 1,
+        "modC/personnel": 1,
+        "modC/plages": 1,
+        "modC/population": 1,
+        "modC/services_sante": 1,
+        "modC/utilisateurs_cible": 1,
+        "modD/amperage_cie": 1,
+        "modD/amperage_groupe": 1,
+        "modD/charge_sup": 1,
+        "modD/dispo_jour": 1,
+        "modD/electricite": 1,
+        "modD/freq_coupure": 1,
+        "modD/groupe_etat": 1,
+        "modD/groupe_puissance": 1,
+        "modD/mise_terre": 1,
+        "modD/obs_energie": 1,
+        "modD/qualite_courant": 1,
+        "modD/raccord_type": 1,
+        "modD/solaire_etat": 1,
+        "modD/source_elec": 1,
+        "modE/moov_qual": 1,
+        "modE/moov_tech": 1,
+        "modE/mtn_qual": 1,
+        "modE/mtn_tech": 1,
+        "modE/nb_pylones": 1,
+        "modE/operateurs": 1,
+        "modE/orange_qual": 1,
+        "modE/orange_tech": 1,
+        "modE/pylone": 1,
+        "modE/pylone_rep": 1,
+        "modF/internet": 1,
+        "modF/meilleur_choix_fai": 1,
+        "modF/obs_internet": 1,
+        "modF/operateur_rep": 1,
+        "modF/operateur_rep_count": 1,
+        "modF/operateurs_internet": 1,
+        "modF/redondance": 1,
+        "modG/autocommutateur": 1,
+        "modG/comm_service": 1,
+        "modG/standard_tel": 1,
+        "modG/tel_fixe": 1,
+        "modG/tel_fixe_detail": 1,
+        "modG/tel_type": 1,
+        "modH/autre_site": 1,
+        "modH/ciel": 1,
+        "modH/dist_raccord_auto": 1,
+        "modH/dist_raccord_manuel": 1,
+        "modH/fibre_proximite": 1,
+        "modH/gps_raccord": 1,
+        "modH/gps_raccord_coords": 1,
+        "modH/gps_raccord_manuel": 1,
+        "modH/infra_abords": 1,
+        "modH/ligne_vue": 1,
+        "modH/poteaux_elec": 1,
+        "modH/prop_fibre": 1,
+        "modH/prop_rep": 1,
+        "modH/prop_rep_count": 1,
+        "modH/type_poteau": 1,
+        "modH/voirie": 1,
+        "modJ/interco": 1,
+        "modJ/nb_bat_releves": 1,
+        "modJ/nb_principal": 1,
+        "modJ/surface_batie_tot": 1,
+        "modK/appli_loc": 1,
+        "modK/appli_metier": 1,
+        "modK/besoins_exprimes": 1,
+        "modK/comm_outils": 1,
+        "modK/debit_cible": 1,
+        "modK/freins": 1,
+        "modK/justif_souhait": 1,
+        "modK/profil_usage": 1,
+        "modK/projet_co": 1,
+        "modK/qos": 1,
+        "modK/sensibilite": 1,
+        "modK/services_pub": 1,
+        "modK/type_co_souhait": 1,
+        "modL/contraintes_archi": 1,
+        "modL/emplacement_pylone": 1,
+        "modL/mat_possible": 1,
+        "modL/rehab": 1,
+        "modL/rehab_detail": 1,
+        "modL/type_lien_radio": 1,
+        "modL/voirie_int": 1,
+        "modM/obs_environnement": 1,
+        "modM/protection_foudre": 1,
+        "modM/risques_clim": 1,
+        "modM/securite_site": 1,
+        "modM/vol_vandalisme": 1,
+        "modM/zone_inondable": 1,
+        "modN/commentaire": 1,
+        "modN/niveau_co": 1,
+        "modN/photo_ensemble": 1,
+        "modN/photo_entree": 1,
+        "modN/priorite": 1,
+        "modN/solutions": 1,
+        "modN/travaux": 1,
+        "modN/valid_responsable": 1,
+        "modN/valid_sup": 1,
+        "start": 1,
+        "today": 1
+      },
+      "repeated_batiment_count": 8
+    },
+    "vGYwptaw8LRM2Ug9CtGAhd": {
+      "submissions_count": 7,
+      "top_level_non_empty_counts": {
+        "__version__": 7,
+        "_geolocation": 7,
+        "_id": 7,
+        "_status": 7,
+        "_submission_time": 7,
+        "_submitted_by": 7,
+        "_uuid": 7,
+        "_validation_status": 7,
+        "_xform_id_string": 7,
+        "batiment": 7,
+        "deviceid": 7,
+        "end": 7,
+        "formhub/uuid": 7,
+        "meta/instanceID": 7,
+        "meta/rootUuid": 7,
+        "modA/code_agent": 7,
+        "modA/conditions": 7,
+        "modA/enqueteur": 7,
+        "modA/equipe_num": 7,
+        "modA/fiche_id": 7,
+        "modA/gps_centre": 5,
+        "modA/gps_manuel": 3,
+        "modA/gps_site": 7,
+        "modA/pr_email": 5,
+        "modA/pr_fonction": 7,
+        "modA/pr_nom": 7,
+        "modA/pr_tel": 7,
+        "modA/superviseur1": 3,
+        "modA/superviseur2": 4,
+        "modA/tel_agent": 7,
+        "modB/acces_route": 7,
+        "modB/adresse": 7,
+        "modB/annee_creation": 7,
+        "modB/commune": 7,
+        "modB/dec_san": 7,
+        "modB/departement": 7,
+        "modB/dir_san": 6,
+        "modB/dist_san": 6,
+        "modB/drena_select": 1,
+        "modB/emprise_site": 4,
+        "modB/emprise_site_manuel": 6,
+        "modB/milieu": 7,
+        "modB/ministere": 7,
+        "modB/nom_ecole_select": 1,
+        "modB/nom_etab_san": 6,
+        "modB/nom_officiel": 7,
+        "modB/quartier": 7,
+        "modB/region": 7,
+        "modB/sous_prefecture": 7,
+        "modB/sous_type": 7,
+        "modB/statut_fonct": 7,
+        "modB/superficie_site": 4,
+        "modB/type_infra": 7,
+        "modC/nb_batiments": 7,
+        "modC/nb_eleves": 1,
+        "modC/nb_lits": 6,
+        "modC/nb_salles": 1,
+        "modC/patients_jour": 6,
+        "modC/personnel": 7,
+        "modC/plages": 7,
+        "modC/population": 6,
+        "modC/services_sante": 6,
+        "modC/services_sante_autres": 5,
+        "modC/utilisateurs_cible": 7,
+        "modD/amperage_cie": 7,
+        "modD/amperage_groupe": 5,
+        "modD/charge_sup": 7,
+        "modD/dispo_jour": 7,
+        "modD/electricite": 7,
+        "modD/freq_coupure": 7,
+        "modD/groupe_etat": 7,
+        "modD/groupe_puissance": 4,
+        "modD/mise_terre": 7,
+        "modD/obs_energie": 7,
+        "modD/qualite_courant": 7,
+        "modD/raccord_type": 6,
+        "modD/solaire_etat": 7,
+        "modD/source_elec": 7,
+        "modE/moov_qual": 6,
+        "modE/moov_tech": 6,
+        "modE/mtn_qual": 7,
+        "modE/mtn_tech": 7,
+        "modE/nb_pylones": 7,
+        "modE/operateurs": 7,
+        "modE/orange_qual": 7,
+        "modE/orange_tech": 7,
+        "modE/pylone": 7,
+        "modE/pylone_rep": 7,
+        "modF/internet": 7,
+        "modF/meilleur_choix_fai": 7,
+        "modF/obs_internet": 7,
+        "modF/operateur_rep": 7,
+        "modF/operateur_rep_count": 7,
+        "modF/operateurs_internet": 7,
+        "modF/redondance": 7,
+        "modG/autocommutateur": 7,
+        "modG/comm_service": 7,
+        "modG/standard_tel": 7,
+        "modG/tel_fixe": 7,
+        "modG/tel_fixe_detail": 5,
+        "modG/tel_type": 5,
+        "modH/autre_site": 7,
+        "modH/ciel": 7,
+        "modH/dist_raccord_auto": 7,
+        "modH/dist_raccord_m": 1,
+        "modH/fibre_proximite": 7,
+        "modH/gps_raccord": 7,
+        "modH/gps_raccord_manuel": 4,
+        "modH/infra_abords": 7,
+        "modH/ligne_vue": 7,
+        "modH/poteaux_elec": 7,
+        "modH/prop_fibre": 7,
+        "modH/prop_rep": 7,
+        "modH/prop_rep_count": 7,
+        "modH/type_poteau": 7,
+        "modH/voirie": 7,
+        "modJ/interco": 7,
+        "modJ/nb_bat_releves": 7,
+        "modJ/nb_principal": 7,
+        "modJ/surface_batie_tot": 7,
+        "modK/appli_loc": 7,
+        "modK/appli_metier": 7,
+        "modK/appli_metier_autres": 3,
+        "modK/besoins_exprimes": 7,
+        "modK/comm_outils": 7,
+        "modK/debit_cible": 7,
+        "modK/freins": 7,
+        "modK/justif_souhait": 7,
+        "modK/profil_usage": 7,
+        "modK/projet_co": 7,
+        "modK/projet_enseign": 4,
+        "modK/qos": 7,
+        "modK/sensibilite": 7,
+        "modK/services_pub": 7,
+        "modK/type_co_souhait": 7,
+        "modL/contraintes_archi": 7,
+        "modL/emplacement_pylone": 7,
+        "modL/mat_possible": 7,
+        "modL/rehab": 7,
+        "modL/rehab_detail": 4,
+        "modL/type_lien_radio": 7,
+        "modL/voirie_int": 7,
+        "modM/obs_environnement": 6,
+        "modM/protection_foudre": 7,
+        "modM/risques_clim": 7,
+        "modM/securite_site": 7,
+        "modM/vol_vandalisme": 7,
+        "modM/zone_inondable": 7,
+        "modN/commentaire": 7,
+        "modN/niveau_co": 7,
+        "modN/priorite": 7,
+        "modN/solutions": 7,
+        "modN/travaux": 7,
+        "modN/valid_responsable": 7,
+        "modN/valid_sup": 7,
+        "start": 7,
+        "today": 7
+      },
+      "repeated_batiment_count": 160
+    },
+    "vD3CxGyFeWTzSdQ3ARwkrS": {
+      "submissions_count": 28,
+      "top_level_non_empty_counts": {
+        "__version__": 28,
+        "_attachments": 28,
+        "_geolocation": 28,
+        "_id": 28,
+        "_status": 28,
+        "_submission_time": 28,
+        "_submitted_by": 28,
+        "_uuid": 28,
+        "_validation_status": 28,
+        "_xform_id_string": 28,
+        "batiment": 28,
+        "deviceid": 28,
+        "end": 28,
+        "formhub/uuid": 28,
+        "meta/instanceID": 28,
+        "meta/rootUuid": 28,
+        "modA/code_agent": 28,
+        "modA/conditions": 28,
+        "modA/enqueteur": 28,
+        "modA/equipe_num": 28,
+        "modA/fiche_id": 28,
+        "modA/gps_centre": 19,
+        "modA/gps_manuel": 26,
+        "modA/gps_site": 28,
+        "modA/pr_email": 22,
+        "modA/pr_fonction": 28,
+        "modA/pr_nom": 28,
+        "modA/pr_tel": 28,
+        "modA/superviseur1": 15,
+        "modA/superviseur2": 13,
+        "modA/tel_agent": 28,
+        "modB/acces_route": 28,
+        "modB/adresse": 28,
+        "modB/annee_creation": 28,
+        "modB/commune": 28,
+        "modB/dec_san": 28,
+        "modB/departement": 28,
+        "modB/dir_regionale": 16,
+        "modB/dir_san": 5,
+        "modB/dist_san": 5,
+        "modB/drena_select": 6,
+        "modB/emprise_site": 13,
+        "modB/emprise_site_manuel": 28,
+        "modB/milieu": 28,
+        "modB/ministere": 28,
+        "modB/nom_ecole_select": 5,
+        "modB/nom_etab_san": 4,
+        "modB/nom_officiel": 28,
+        "modB/nom_structure": 16,
+        "modB/quartier": 28,
+        "modB/region": 28,
+        "modB/sous_prefecture": 28,
+        "modB/sous_type": 27,
+        "modB/statut_fonct": 28,
+        "modB/superficie_site": 13,
+        "modB/type_infra": 28,
+        "modB/type_infra_autres": 4,
+        "modC/nb_agents_interieur": 9,
+        "modC/nb_agents_justice": 7,
+        "modC/nb_batiments": 28,
+        "modC/nb_eleves": 7,
+        "modC/nb_lits": 5,
+        "modC/nb_salles": 7,
+        "modC/patients_jour": 5,
+        "modC/personnel": 28,
+        "modC/plages": 28,
+        "modC/plages_autres": 2,
+        "modC/population": 26,
+        "modC/services_sante": 5,
+        "modC/services_sante_autres": 3,
+        "modC/utilisateurs_cible": 28,
+        "modD/amperage_cie": 28,
+        "modD/amperage_groupe": 9,
+        "modD/charge_sup": 28,
+        "modD/dispo_jour": 28,
+        "modD/electricite": 28,
+        "modD/freq_coupure": 28,
+        "modD/groupe_etat": 28,
+        "modD/groupe_puissance": 10,
+        "modD/mise_terre": 28,
+        "modD/obs_energie": 28,
+        "modD/qualite_courant": 28,
+        "modD/raccord_type": 28,
+        "modD/solaire_etat": 28,
+        "modD/source_elec": 28,
+        "modE/moov_qual": 28,
+        "modE/moov_tech": 28,
+        "modE/mtn_qual": 28,
+        "modE/mtn_tech": 28,
+        "modE/nb_pylones": 28,
+        "modE/operateurs": 28,
+        "modE/orange_qual": 28,
+        "modE/orange_tech": 28,
+        "modE/pylone": 28,
+        "modE/pylone_rep": 28,
+        "modF/internet": 28,
+        "modF/meilleur_choix_fai": 23,
+        "modF/obs_internet": 28,
+        "modF/operateur_rep": 23,
+        "modF/operateur_rep_count": 28,
+        "modF/operateurs_internet": 23,
+        "modF/redondance": 22,
+        "modG/autocommutateur": 28,
+        "modG/comm_service": 28,
+        "modG/comm_service_autres": 1,
+        "modG/standard_tel": 28,
+        "modG/tel_fixe": 28,
+        "modG/tel_fixe_detail": 8,
+        "modG/tel_type": 8,
+        "modH/autre_site": 28,
+        "modH/ciel": 28,
+        "modH/dist_raccord_auto": 22,
+        "modH/dist_raccord_m": 8,
+        "modH/fibre_proximite": 28,
+        "modH/gps_raccord": 22,
+        "modH/gps_raccord_manuel": 25,
+        "modH/infra_abords": 28,
+        "modH/infra_abords_autres": 4,
+        "modH/ligne_vue": 28,
+        "modH/poteaux_elec": 28,
+        "modH/prop_fibre": 26,
+        "modH/prop_rep": 26,
+        "modH/prop_rep_count": 28,
+        "modH/type_poteau": 28,
+        "modH/voirie": 28,
+        "modJ/interco": 28,
+        "modJ/nb_bat_releves": 28,
+        "modJ/nb_principal": 28,
+        "modJ/surface_batie_tot": 28,
+        "modK/appli_loc": 28,
+        "modK/appli_metier": 28,
+        "modK/appli_metier_autres": 16,
+        "modK/besoins_exprimes": 27,
+        "modK/comm_outils": 28,
+        "modK/debit_cible": 28,
+        "modK/freins": 28,
+        "modK/justif_souhait": 27,
+        "modK/profil_usage": 28,
+        "modK/projet_co": 28,
+        "modK/projet_enseign": 10,
+        "modK/qos": 28,
+        "modK/sensibilite": 28,
+        "modK/services_pub": 28,
+        "modK/type_co_souhait": 28,
+        "modL/contraintes_archi": 28,
+        "modL/emplacement_pylone": 24,
+        "modL/mat_possible": 28,
+        "modL/rehab": 26,
+        "modL/rehab_detail": 12,
+        "modL/type_lien_radio": 24,
+        "modL/voirie_int": 27,
+        "modM/obs_environnement": 28,
+        "modM/protection_foudre": 28,
+        "modM/risques_clim": 28,
+        "modM/securite_site": 28,
+        "modM/vol_vandalisme": 28,
+        "modM/zone_inondable": 28,
+        "modN/commentaire": 28,
+        "modN/niveau_co": 28,
+        "modN/photo_ensemble": 28,
+        "modN/photo_entree": 27,
+        "modN/photo_environnement": 28,
+        "modN/photo_raccord": 28,
+        "modN/photo_site_note": 22,
+        "modN/priorite": 28,
+        "modN/solutions": 28,
+        "modN/travaux": 28,
+        "modN/valid_responsable": 28,
+        "modN/valid_sup": 26,
+        "start": 28,
+        "today": 28
+      },
+      "repeated_batiment_count": 230
+    }
+  }
+}
