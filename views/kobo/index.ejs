@@ -14,6 +14,14 @@
         <i class="fa-solid fa-rotate" aria-hidden="true"></i>
         <span><%= t("kobo.sections.sync") %></span>
       </button>
+      <button class="kobo-section-nav-button" type="button" role="tab" data-kobo-section-target="advanced-sync">
+        <i class="fa-solid fa-arrows-rotate" aria-hidden="true"></i>
+        <span>Synchronisation avancée</span>
+      </button>
+      <button class="kobo-section-nav-button" type="button" role="tab" data-kobo-section-target="media">
+        <i class="fa-solid fa-images" aria-hidden="true"></i>
+        <span>Images</span>
+      </button>
       <button class="kobo-section-nav-button" type="button" role="tab" data-kobo-section-target="data">
         <i class="fa-solid fa-code" aria-hidden="true"></i>
         <span><%= t("kobo.sections.data") %></span>
@@ -165,6 +173,235 @@
       <% } %>
     </section>
 
+    <section class="kobo-section" data-kobo-section="advanced-sync" aria-labelledby="kobo-section-advanced-sync-title" hidden>
+      <div class="panel">
+        <div class="panel-header">
+          <h2 id="kobo-section-advanced-sync-title">Synchronisation avancée</h2>
+          <span class="status status-suspendu" data-kobo-advanced-sync-status>Idle</span>
+        </div>
+        <form class="kobo-sync-form" data-kobo-advanced-sync-form>
+          <label>Mission
+            <select name="mission_id" required>
+              <option value="">Sélectionner une mission</option>
+              <% missions.forEach((mission) => { %>
+                <option value="<%= mission.id %>" <%= String(advancedSyncValues.mission_id) === String(mission.id) ? "selected" : "" %>>
+                  <%= mission.name %><%= mission.kobo_asset_uid ? ` - ${mission.kobo_asset_uid}` : "" %>
+                </option>
+              <% }) %>
+            </select>
+          </label>
+          <label>UID du formulaire
+            <input name="asset_uid" required value="<%= advancedSyncValues.asset_uid %>" placeholder="<%= t("common.placeholderExample", { example: "aBcDeF123" }) %>">
+          </label>
+          <label>Mode d'import
+            <select name="mode">
+              <option value="all" <%= advancedSyncValues.mode === "all" ? "selected" : "" %>>Tout</option>
+              <option value="last_n" <%= advancedSyncValues.mode === "last_n" ? "selected" : "" %>>N dernières</option>
+              <option value="dates" <%= advancedSyncValues.mode === "dates" ? "selected" : "" %>>Dates</option>
+              <option value="index" <%= advancedSyncValues.mode === "index" ? "selected" : "" %>>Index</option>
+            </select>
+          </label>
+          <label>Taille de page
+            <select name="page_size">
+              <% [10,20,30,40,50,60,70,80,90,100].forEach((size) => { %>
+                <option value="<%= size %>" <%= Number(advancedSyncValues.page_size) === size ? "selected" : "" %>><%= size %></option>
+              <% }) %>
+            </select>
+          </label>
+          <label>N dernières soumissions
+            <input type="number" name="last_n" min="1" step="1" value="<%= advancedSyncValues.last_n %>" data-kobo-advanced-field="last_n">
+          </label>
+          <label>Date de début
+            <input type="datetime-local" name="date_from" value="<%= advancedSyncValues.date_from %>" data-kobo-advanced-field="dates">
+          </label>
+          <label>Date de fin
+            <input type="datetime-local" name="date_to" value="<%= advancedSyncValues.date_to %>" data-kobo-advanced-field="dates">
+          </label>
+          <label>Index début
+            <input type="number" name="index_from" min="0" step="1" value="<%= advancedSyncValues.index_from %>" data-kobo-advanced-field="index">
+          </label>
+          <label>Index fin
+            <input type="number" name="index_to" min="0" step="1" value="<%= advancedSyncValues.index_to %>" data-kobo-advanced-field="index">
+          </label>
+          <label><%= t("kobo.sync.gpsField") %>
+            <input name="gps_field" value="<%= advancedSyncValues.gps_field %>" placeholder="<%= t("common.placeholderExample", { example: "coordonnees_gps" }) %>">
+          </label>
+          <label><%= t("kobo.sync.agentCodeField") %>
+            <input name="agent_code_field" value="<%= advancedSyncValues.agent_code_field %>" placeholder="<%= t("common.placeholderExample", { example: "modA/enqueteur" }) %>">
+          </label>
+          <label><%= t("kobo.sync.formType") %>
+            <input name="form_type" value="<%= advancedSyncValues.form_type %>">
+          </label>
+          <p class="form-note">Le job lit les pages Kobo via l'attribut <code>next</code>, insère uniquement les nouvelles soumissions et écrit un manifeste dans les logs.</p>
+          <div class="form-actions">
+            <button class="button button-primary" type="submit">
+              <i class="fa-solid fa-play" aria-hidden="true"></i>
+              Lancer le job
+            </button>
+            <a class="button secondary" href="#" data-kobo-advanced-sync-manifest-link hidden target="_blank" rel="noreferrer">
+              <i class="fa-solid fa-file-code" aria-hidden="true"></i>
+              Voir le manifeste
+            </a>
+          </div>
+        </form>
+      </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Derniers manifestes</h2>
+          <span class="sig-count"><%= advancedSyncManifests.length %></span>
+        </div>
+        <% if (advancedSyncManifests.length) { %>
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>Job</th>
+                <th>Statut</th>
+                <th>Pages</th>
+                <th>Lues</th>
+                <th>Importées</th>
+                <th>Manifeste</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% advancedSyncManifests.forEach((manifest) => { %>
+                <tr>
+                  <td><code><%= manifest.job_id %></code></td>
+                  <td><%= manifest.status %></td>
+                  <td><%= manifest.pages_read %></td>
+                  <td><%= manifest.submissions_read %></td>
+                  <td><%= manifest.submissions_imported %></td>
+                  <td><a href="/parametrages/kobo/advanced-sync/jobs/<%= encodeURIComponent(manifest.job_id) %>/manifest" target="_blank" rel="noreferrer">Ouvrir</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <div class="empty-state">
+            <p>Aucun manifeste de synchronisation avancée.</p>
+          </div>
+        <% } %>
+      </section>
+    </section>
+
+    <section class="kobo-section" data-kobo-section="media" aria-labelledby="kobo-section-media-title" hidden>
+      <div class="panel">
+        <h2 id="kobo-section-media-title">Téléchargement des images Kobo</h2>
+        <form action="/parametrages/kobo/media/list" method="post" class="kobo-sync-form">
+          <label>Formulaire Kobo
+            <input name="asset_uid" required value="<%= mediaValues.asset_uid %>" placeholder="<%= t("common.placeholderExample", { example: "aBcDeF123" }) %>">
+          </label>
+          <label>Début de plage
+            <input type="number" name="start_index" min="1" max="1000" value="<%= mediaValues.start_index %>" required>
+          </label>
+          <label>Fin de plage
+            <input type="number" name="end_index" min="1" max="1000" value="<%= mediaValues.end_index %>" required>
+          </label>
+          <p class="form-note">Les indices sont basés sur l'ordre retourné par Kobo pour le formulaire sélectionné.</p>
+          <div class="form-actions">
+            <button class="button button-primary" type="submit">
+              <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+              Lister les images
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <% if (mediaInventory) { %>
+        <section class="panel">
+          <div class="panel-header">
+            <h2>Images détectées</h2>
+            <span class="sig-count"><%= mediaInventory.imageCount %></span>
+          </div>
+          <% if (mediaInventory.images.length) { %>
+            <form action="/parametrages/kobo/media/download" method="post" data-kobo-media-download-form>
+              <input type="hidden" name="asset_uid" value="<%= mediaInventory.assetUid %>">
+              <table class="simple-table">
+                <thead>
+                  <tr>
+                    <th>Sélection</th>
+                    <th>Soumission</th>
+                    <th>Champ</th>
+                    <th>Fichier</th>
+                    <th>Type</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <% mediaInventory.images.forEach((image) => { %>
+                    <tr>
+                      <td>
+                        <input type="checkbox" name="selected_images" value="<%= encodeSelectedImage(image) %>" checked>
+                      </td>
+                      <td><%= image.submission_id || image.submission_ordinal %></td>
+                      <td><code><%= image.field_path || "-" %></code></td>
+                      <td><%= image.filename %></td>
+                      <td><%= image.mimetype || image.source %></td>
+                    </tr>
+                  <% }) %>
+                </tbody>
+              </table>
+              <div class="form-actions">
+                <button class="button button-primary" type="submit">
+                  <i class="fa-solid fa-download" aria-hidden="true"></i>
+                  Télécharger la sélection
+                </button>
+              </div>
+              <div class="kobo-media-progress" data-kobo-media-progress hidden>
+                <progress value="0" max="100" data-kobo-media-progress-bar></progress>
+                <p role="status" aria-live="polite" data-kobo-media-progress-text>
+                  Téléchargement réalisé à 0 % (0 image sur 0 téléchargée)
+                </p>
+              </div>
+            </form>
+          <% } else { %>
+            <div class="empty-state">
+              <p>Aucune image détectée sur cette plage.</p>
+            </div>
+          <% } %>
+        </section>
+      <% } %>
+
+      <% if (mediaDownloadSummary) { %>
+        <section class="panel">
+          <h2>Résultat du téléchargement</h2>
+          <div class="kobo-summary">
+            <div><span>Demandées</span><strong><%= mediaDownloadSummary.requested %></strong></div>
+            <div><span>Téléchargées</span><strong><%= mediaDownloadSummary.downloaded %></strong></div>
+            <div><span>Ignorées</span><strong><%= mediaDownloadSummary.skipped %></strong></div>
+            <div><span>Erreurs</span><strong><%= mediaDownloadSummary.errors.length %></strong></div>
+          </div>
+          <p class="form-hint"><code><%= mediaDownloadSummary.downloadRoot %></code></p>
+          <% if (mediaDownloadSummary.files.length) { %>
+            <table class="simple-table">
+              <thead>
+                <tr>
+                  <th>Statut</th>
+                  <th>Fichier</th>
+                  <th>Octets</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% mediaDownloadSummary.files.slice(0, 50).forEach((file) => { %>
+                  <tr>
+                    <td><%= file.status %></td>
+                    <td><code><%= file.path %></code></td>
+                    <td><%= file.bytes || "" %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } %>
+          <% if (mediaDownloadSummary.errors.length) { %>
+            <ul class="kobo-error-list">
+              <% mediaDownloadSummary.errors.slice(0, 20).forEach((entry) => { %>
+                <li><%= entry.filename || entry.url %> : <%= entry.error %></li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </section>
+      <% } %>
+    </section>
+
     <section class="kobo-section" data-kobo-section="data" aria-labelledby="kobo-section-data-title" hidden>
       <div class="panel kobo-json-panel" id="kobo-json-panel" data-copy-success-label="<%= t("kobo.debug.copySuccess") %>">
         <header class="kobo-json-panel-header">
@@ -232,4 +469,6 @@
   <script type="module" src="/js/kobo-json-viewer.js"></script>
 <% } %>
 <script src="/js/kobo-admin-tabs.js"></script>
+<script src="/js/kobo-media-download.js"></script>
+<script src="/js/kobo-advanced-sync.js"></script>
 <%- include("../partials/footer") %>

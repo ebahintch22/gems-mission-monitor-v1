@@ -3127,6 +3127,95 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.doesNotMatch(scriptResponse.text, /http:\/\/\{s\}\.tile\.openstreetmap\.org/);
 });
 
+test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries Kobo", async () => {
+  const gisCookie = await loginTestUser({
+    email: "gis.kobo-geometries-review@g2m.test",
+    role: "specialiste_gis"
+  });
+  const agentCookie = await loginTestUser({
+    email: "agent.kobo-geometries-review-denied@g2m.test",
+    role: "agent"
+  });
+
+  const anonymousResponse = await request(app).get("/cartographie/extractions-kobo");
+  const deniedResponse = await request(app)
+    .get("/cartographie/extractions-kobo")
+    .set("Cookie", agentCookie);
+  const response = await request(app)
+    .get("/cartographie/extractions-kobo")
+    .set("Cookie", gisCookie);
+  const invalidSelectionResponse = await request(app)
+    .get("/cartographie/extractions-kobo?batch=..%2Fsecret&output=file.json")
+    .set("Cookie", gisCookie);
+  const matchingResponse = await request(app)
+    .get("/cartographie/extractions-kobo/reference-matching")
+    .set("Cookie", gisCookie);
+  const invalidMatchingResponse = await request(app)
+    .get("/cartographie/extractions-kobo/reference-matching?batch=..%2Fsecret&matching=matching_review.geojson")
+    .set("Cookie", gisCookie);
+  const deniedMatchingResponse = await request(app)
+    .get("/cartographie/extractions-kobo/reference-matching")
+    .set("Cookie", agentCookie);
+  const scriptResponse = await request(app).get("/js/kobo-geometries-review.js");
+
+  assert.equal(anonymousResponse.status, 302);
+  assert.equal(anonymousResponse.headers.location, "/login?next=%2Fcartographie%2Fextractions-kobo");
+  assert.equal(deniedResponse.status, 403);
+  assert.equal(deniedMatchingResponse.status, 403);
+  assert.equal(invalidSelectionResponse.status, 400);
+  assert.equal(invalidMatchingResponse.status, 400);
+  assert.equal(response.status, 200);
+  assert.equal(matchingResponse.status, 200);
+  assert.equal(matchingResponse.body.ok, true);
+  assert.equal(matchingResponse.body.output, "matching_review.geojson");
+  assert.equal(matchingResponse.body.payload.type, "FeatureCollection");
+  assert.match(response.text, /Revue des extractions geometriques Kobo/);
+  assert.match(response.text, /id="kobo-geometry-source-form"/);
+  assert.match(response.text, /id="kobo-geometry-batch-select"/);
+  assert.match(response.text, /id="kobo-geometry-output-select"/);
+  assert.match(response.text, /id="kobo-geometry-review-left"/);
+  assert.match(response.text, /id="kobo-geometry-resizer"/);
+  assert.match(response.text, /Appariement de reference/);
+  assert.match(response.text, /Charger matching_review/);
+  assert.match(scriptResponse.text, /reference-matching/);
+  assert.match(scriptResponse.text, /Appariement de reference/);
+  assert.match(response.text, /data-kobo-geometry-tab="summary"/);
+  assert.match(response.text, /data-kobo-geometry-tab="filters"/);
+  assert.match(response.text, /data-kobo-geometry-tab="submissions"/);
+  assert.match(response.text, /data-kobo-geometry-tab="quality"/);
+  assert.match(response.text, /data-kobo-geometry-tab="json"/);
+  assert.match(response.text, /id="kobo-geometry-review-payload"/);
+  assert.match(response.text, /"schema_name":"g2m_kobo_geometry_extraction_output"/);
+  assert.match(response.text, /id="kobo-geometry-review-catalog"/);
+  assert.match(response.text, /<section class="kobo-geometry-review-map-pane"[\s\S]*<div class="kobo-geometry-review-map" id="kobo-geometry-review-map"><\/div>[\s\S]*<\/section>/);
+  assert.match(response.text, /id="kobo-geometry-json-viewer"/);
+  assert.match(response.text, /\/js\/kobo-geometries-review\.js/);
+  assert.equal(scriptResponse.status, 200);
+  assert.match(scriptResponse.text, /Google Satellite/);
+  assert.match(scriptResponse.text, /L\.control\.layers/);
+  assert.match(scriptResponse.text, /g2m\.koboGeometryReview\.layout\.v1/);
+  assert.match(scriptResponse.text, /Math\.max\(20, Math\.min\(60/);
+  assert.match(scriptResponse.text, /setActiveTab/);
+  assert.match(scriptResponse.text, /renderOutputOptions/);
+  assert.match(scriptResponse.text, /Nom officiel/);
+  assert.match(scriptResponse.text, /field: "official_name"/);
+  assert.match(scriptResponse.text, /Localite/);
+  assert.match(scriptResponse.text, /field: "locality"/);
+  assert.match(scriptResponse.text, /siteLayer/);
+  assert.match(scriptResponse.text, /buildingLayer/);
+  assert.match(scriptResponse.text, /buildingCentroidLayer/);
+  assert.match(scriptResponse.text, /Centroides batiments/);
+  assert.match(scriptResponse.text, /building_number/);
+  assert.match(scriptResponse.text, /building_name/);
+  assert.match(scriptResponse.text, /building_status/);
+  assert.match(scriptResponse.text, /building_vocation/);
+  assert.match(scriptResponse.text, /building_services/);
+  assert.match(scriptResponse.text, /Services installes/);
+  assert.match(scriptResponse.text, /raccordementLayer/);
+  assert.match(scriptResponse.text, /pyloneLayer/);
+  assert.match(scriptResponse.text, /kobo-geometry-json-viewer/);
+});
+
 test("POST /cartographie/buildings/import alimente le referentiel batimentaire preparatoire", async () => {
   const gisCookie = await loginTestUser({
     email: "gis.buildings-import@g2m.test",

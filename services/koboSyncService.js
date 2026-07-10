@@ -196,6 +196,7 @@ function sanitizeLimit(limit) {
 
 module.exports = {
   buildKoboQuery,
+  createKoboClient,
   getKoboConfigStatus,
   listKoboAssets,
   syncKoboSubmissions,

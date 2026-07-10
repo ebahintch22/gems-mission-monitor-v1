@@ -4318,6 +4318,431 @@ h2 {
   max-width: 520px;
 }
 
+.kobo-geometry-review {
+  --sig-tools-width: 38%;
+}
+
+.kobo-geometry-review-tools {
+  min-width: 360px;
+}
+
+.kobo-geometry-review-summary .sig-metrics {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.kobo-geometry-review-source {
+  margin: 10px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.kobo-geometry-review-filters {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+
+.kobo-geometry-review-filters .checkbox-inline {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+  min-height: 38px;
+}
+
+.kobo-geometry-review-filters .checkbox-inline input {
+  width: auto;
+}
+
+.kobo-geometry-review-table-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.kobo-geometry-review-table-panel #kobo-geometry-review-table {
+  min-height: 280px;
+}
+
+#kobo-geometry-review-table .tabulator {
+  border: 1px solid var(--border);
+  font-size: var(--font-small);
+}
+
+#kobo-geometry-review-table .tabulator-row.requires-review {
+  background: #fff7ed;
+}
+
+.kobo-geometry-review-map-pane {
+  display: grid;
+  gap: 10px;
+  grid-template-rows: minmax(320px, 56%) minmax(220px, 44%);
+  padding: 0;
+}
+
+.kobo-geometry-review-detail {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.kobo-geometry-review-detail-header {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.96);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  padding: 8px 10px;
+  z-index: 2;
+}
+
+.kobo-geometry-review-detail-header strong,
+.kobo-geometry-review-detail-header span {
+  display: block;
+}
+
+.kobo-geometry-review-detail-header span {
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.kobo-geometry-review-map {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.kobo-geometry-review-bottom {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(280px, 0.42fr) minmax(360px, 0.58fr);
+  min-height: 0;
+  padding: 0 10px 10px;
+}
+
+.kobo-geometry-review-quality,
+.kobo-geometry-review-json {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.kobo-geometry-quality-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+.kobo-geometry-quality-body h3 {
+  font-size: var(--font-small);
+  margin: 12px 0 6px;
+}
+
+.kobo-geometry-quality-grid {
+  display: grid;
+  gap: 6px 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.kobo-geometry-quality-grid span {
+  color: var(--muted);
+}
+
+.kobo-geometry-attempt-list {
+  display: grid;
+  gap: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.kobo-geometry-attempt-list li {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+}
+
+.kobo-geometry-attempt-list span,
+.kobo-geometry-attempt-list em {
+  color: var(--muted);
+  font-size: var(--font-small);
+  overflow-wrap: anywhere;
+}
+
+.kobo-geometry-json-viewer {
+  background: #111827;
+  border-radius: 6px;
+  color: #e5e7eb;
+  flex: 1 1 auto;
+  font-family: Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.35;
+  margin: 0;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+  white-space: pre-wrap;
+}
+
+.badge {
+  background: #e5e7eb;
+  border-radius: 999px;
+  color: #374151;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 5px 8px;
+  text-transform: uppercase;
+}
+
+.badge.status-ok {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.badge.status-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.badge.status-error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.kobo-geometry-review {
+  --kobo-geometry-left-width: 38%;
+  display: flex;
+  flex: 1 1 auto;
+  height: calc(100vh - var(--site-header-height));
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.kobo-geometry-review.is-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
+.kobo-geometry-review-left {
+  background: #f8fafc;
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex: 0 0 var(--kobo-geometry-left-width);
+  flex-direction: column;
+  max-width: 60%;
+  min-height: 0;
+  min-width: 20%;
+  overflow: hidden;
+}
+
+.kobo-geometry-resizer {
+  background: linear-gradient(to right, transparent, var(--border), transparent);
+  cursor: col-resize;
+  flex: 0 0 10px;
+  position: relative;
+  z-index: 5;
+}
+
+.kobo-geometry-resizer:hover,
+.kobo-geometry-resizer:focus,
+.kobo-geometry-review.is-resizing .kobo-geometry-resizer {
+  background: linear-gradient(to right, transparent, var(--primary), transparent);
+  outline: none;
+}
+
+.kobo-geometry-review-map-pane {
+  flex: 1 1 auto;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+}
+
+.kobo-geometry-review-map {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+.kobo-geometry-tabs {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex: 0 0 auto;
+  gap: 2px;
+  overflow-x: auto;
+  padding: 6px;
+}
+
+.kobo-geometry-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--muted);
+  cursor: pointer;
+  flex: 0 0 auto;
+  font-size: var(--font-small);
+  font-weight: 700;
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.kobo-geometry-tab:hover,
+.kobo-geometry-tab:focus {
+  border-color: var(--border);
+  color: var(--primary);
+  outline: none;
+}
+
+.kobo-geometry-tab.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+.kobo-geometry-tab-panels {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.kobo-geometry-tab-panel {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 10px;
+}
+
+.kobo-geometry-tab-panel[hidden] {
+  display: none;
+}
+
+.kobo-geometry-tab-panel.kobo-geometry-review-table-panel {
+  overflow: hidden;
+}
+
+.kobo-geometry-fill-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.kobo-geometry-current-card {
+  background: #f8fafc;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 4px;
+  margin: 12px 0;
+  padding: 10px;
+}
+
+.kobo-geometry-current-card span {
+  color: var(--muted);
+  font-size: var(--font-small);
+}
+
+.kobo-geometry-source-form {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr);
+  margin-top: 12px;
+  padding: 10px;
+}
+
+.kobo-geometry-source-form label {
+  display: grid;
+  gap: 5px;
+  font-size: var(--font-small);
+  font-weight: 700;
+}
+
+.kobo-geometry-source-form select {
+  min-width: 0;
+}
+
+.kobo-reference-matching-status {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted);
+  font-size: var(--font-small);
+  margin-top: 10px;
+  overflow-wrap: anywhere;
+  padding: 10px;
+}
+
+.kobo-reference-matching-legend {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.kobo-reference-matching-legend span {
+  align-items: center;
+  display: flex;
+  font-size: var(--font-small);
+  gap: 8px;
+}
+
+.kobo-reference-matching-legend i {
+  border: 1px solid rgba(17, 24, 39, 0.28);
+  border-radius: 999px;
+  display: inline-block;
+  flex: 0 0 auto;
+  height: 12px;
+  width: 12px;
+}
+
+.kobo-geometry-review .kobo-geometry-review-map-pane {
+  display: block;
+  gap: 0;
+  grid-template-rows: none;
+  padding: 0;
+}
+
+.kobo-geometry-review .kobo-geometry-review-bottom,
+.kobo-geometry-review .kobo-geometry-review-detail,
+.kobo-geometry-review .kobo-geometry-review-detail-header {
+  display: contents;
+}
+
+.kobo-geometry-review .kobo-geometry-review-quality,
+.kobo-geometry-review .kobo-geometry-review-json {
+  height: 100%;
+}
+
+.kobo-geometry-review .kobo-geometry-json-viewer {
+  white-space: pre;
+}
+
+@media (max-width: 800px) {
+  .kobo-geometry-review {
+    --kobo-geometry-left-width: 100%;
+    flex-direction: column;
+    height: calc(100vh - var(--site-header-mobile-height));
+  }
+
+  .kobo-geometry-review-left {
+    flex: 0 0 46%;
+    max-width: none;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .kobo-geometry-resizer {
+    cursor: row-resize;
+    flex-basis: 8px;
+  }
+
+  .kobo-geometry-review-map-pane {
+    min-height: 280px;
+  }
+}
+
 .filters-form {
   display: grid;
   gap: 14px;

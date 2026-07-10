@@ -1,0 +1,195 @@
+<%- include("../partials/header", { title, mapAssets: true, wideLayout: true }) %>
+<section class="kobo-geometry-review" id="kobo-geometry-review">
+  <aside class="kobo-geometry-review-left" id="kobo-geometry-review-left" aria-label="Panneau de revue des extractions geometriques Kobo">
+    <div class="kobo-geometry-tabs" role="tablist" aria-label="Sections de revue">
+      <button class="kobo-geometry-tab is-active" id="kobo-geometry-tab-summary" type="button" role="tab" aria-selected="true" aria-controls="kobo-geometry-panel-summary" data-kobo-geometry-tab="summary">Extraction Kobo</button>
+      <button class="kobo-geometry-tab" id="kobo-geometry-tab-filters" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-filters" data-kobo-geometry-tab="filters">Filtres</button>
+      <button class="kobo-geometry-tab" id="kobo-geometry-tab-submissions" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-submissions" data-kobo-geometry-tab="submissions">Soumissions</button>
+      <button class="kobo-geometry-tab" id="kobo-geometry-tab-quality" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-quality" data-kobo-geometry-tab="quality">Qualite</button>
+      <button class="kobo-geometry-tab" id="kobo-geometry-tab-matching" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-matching" data-kobo-geometry-tab="matching">Appariement</button>
+      <button class="kobo-geometry-tab" id="kobo-geometry-tab-json" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-json" data-kobo-geometry-tab="json">JSON normalise</button>
+    </div>
+
+    <div class="kobo-geometry-tab-panels">
+      <section class="kobo-geometry-tab-panel is-active" id="kobo-geometry-panel-summary" role="tabpanel" aria-labelledby="kobo-geometry-tab-summary" data-kobo-geometry-panel="summary">
+        <div class="panel sig-panel kobo-geometry-review-summary">
+          <div class="panel-header">
+            <h2>Extractions Kobo</h2>
+            <span class="sig-count"><%= summary.extracted_count %></span>
+          </div>
+          <div class="sig-metrics">
+            <div><span>Soumissions</span><strong><%= summary.source_count %></strong></div>
+            <div><span>Extraites</span><strong><%= summary.extracted_count %></strong></div>
+            <div><span>Source</span><strong><%= reviewSource === "normalized_file" ? "JSON" : "Memoire" %></strong></div>
+          </div>
+          <form class="kobo-geometry-source-form" id="kobo-geometry-source-form" method="get" action="/cartographie/extractions-kobo">
+            <label>
+              Batch
+              <select id="kobo-geometry-batch-select" name="batch">
+                <option value="">Auto / echantillon par defaut</option>
+                <% (reviewCatalog.batches || []).forEach((batch) => { %>
+                  <option value="<%= batch.name %>" <%= selectedBatch === batch.name ? "selected" : "" %> <%= batch.outputs.length ? "" : "disabled" %>><%= batch.name %><%= batch.outputs.length ? "" : " (aucun output)" %></option>
+                <% }) %>
+              </select>
+            </label>
+            <label>
+              Fichier resultat
+              <select id="kobo-geometry-output-select" name="output" <%= selectedBatch ? "" : "disabled" %>>
+                <% if (!selectedBatch) { %>
+                  <option value="">Selection automatique</option>
+                <% } else {
+                  const selectedBatchEntry = (reviewCatalog.batches || []).find((batch) => batch.name === selectedBatch);
+                  (selectedBatchEntry?.outputs || []).forEach((output) => { %>
+                    <option value="<%= output %>" <%= selectedOutput === output ? "selected" : "" %>><%= output %></option>
+                  <% });
+                } %>
+              </select>
+            </label>
+            <button class="button" type="submit">Charger</button>
+          </form>
+          <div class="kobo-geometry-current-card">
+            <strong id="kobo-geometry-current-title">Aucune soumission selectionnee</strong>
+            <span id="kobo-geometry-current-subtitle">Selectionnez une ligne pour afficher ses geometries.</span>
+          </div>
+          <button class="button secondary" id="kobo-geometry-fit" type="button">
+            <i class="fa-solid fa-up-right-and-down-left-from-center" aria-hidden="true"></i>
+            <span>Cadrer la carte</span>
+          </button>
+          <p class="form-hint kobo-geometry-review-source"><%= reviewFilePath %></p>
+        </div>
+      </section>
+
+      <section class="kobo-geometry-tab-panel" id="kobo-geometry-panel-filters" role="tabpanel" aria-labelledby="kobo-geometry-tab-filters" data-kobo-geometry-panel="filters" hidden>
+        <div class="panel sig-panel">
+          <h2>Filtres</h2>
+          <form class="sig-filters kobo-geometry-review-filters" id="kobo-geometry-review-filters">
+            <label>
+              Statut qualite
+              <select id="kobo-geometry-status-filter">
+                <option value="">Tous les statuts</option>
+                <option value="ok">OK</option>
+                <option value="warning">Warning</option>
+                <option value="error">Error</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </label>
+            <label>
+              Version Kobo
+              <select id="kobo-geometry-version-filter">
+                <option value="">Toutes les versions</option>
+              </select>
+            </label>
+            <label class="checkbox-inline">
+              <input id="kobo-geometry-review-required-filter" type="checkbox">
+              A revoir uniquement
+            </label>
+            <button class="button secondary" id="kobo-geometry-reset-filters" type="button">Reinitialiser</button>
+          </form>
+        </div>
+      </section>
+
+      <section class="kobo-geometry-tab-panel kobo-geometry-review-table-panel" id="kobo-geometry-panel-submissions" role="tabpanel" aria-labelledby="kobo-geometry-tab-submissions" data-kobo-geometry-panel="submissions" hidden>
+        <div class="panel sig-panel kobo-geometry-fill-panel">
+          <h2>Soumissions</h2>
+          <div id="kobo-geometry-review-table"></div>
+        </div>
+      </section>
+
+      <section class="kobo-geometry-tab-panel" id="kobo-geometry-panel-quality" role="tabpanel" aria-labelledby="kobo-geometry-tab-quality" data-kobo-geometry-panel="quality" hidden>
+        <section class="panel kobo-geometry-review-quality kobo-geometry-fill-panel">
+          <div class="panel-header">
+            <h2>Qualite</h2>
+            <span id="kobo-geometry-quality-status" class="badge">-</span>
+          </div>
+          <div id="kobo-geometry-quality-body" class="kobo-geometry-quality-body"></div>
+        </section>
+      </section>
+
+      <section class="kobo-geometry-tab-panel" id="kobo-geometry-panel-matching" role="tabpanel" aria-labelledby="kobo-geometry-tab-matching" data-kobo-geometry-panel="matching" hidden>
+        <section class="panel sig-panel kobo-geometry-fill-panel">
+          <div class="panel-header">
+            <h2>Appariement de reference</h2>
+            <span id="kobo-reference-matching-count" class="sig-count">0</span>
+          </div>
+          <form class="kobo-geometry-source-form" id="kobo-reference-matching-form">
+            <label>
+              Batch
+              <select id="kobo-reference-matching-batch-select">
+                <option value="">Auto / dernier appariement</option>
+                <% (reviewCatalog.batches || []).forEach((batch) => { %>
+                  <option value="<%= batch.name %>" <%= selectedBatch === batch.name ? "selected" : "" %> <%= batch.matchingOutputs && batch.matchingOutputs.length ? "" : "disabled" %>><%= batch.name %><%= batch.matchingOutputs && batch.matchingOutputs.length ? "" : " (aucun appariement)" %></option>
+                <% }) %>
+              </select>
+            </label>
+            <div class="button-row">
+              <button class="button" id="kobo-reference-matching-load" type="submit">Charger matching_review</button>
+              <button class="button secondary" id="kobo-reference-matching-clear" type="button">Masquer</button>
+            </div>
+          </form>
+          <div class="kobo-reference-matching-status" id="kobo-reference-matching-status">Aucun appariement charge.</div>
+          <div class="kobo-reference-matching-legend" aria-label="Legende appariement de reference">
+            <span><i style="background:#16a34a"></i>A reussi</span>
+            <span><i style="background:#f97316"></i>B conflit</span>
+            <span><i style="background:#dc2626"></i>C non resolu</span>
+            <span><i style="background:#6b7280"></i>D reference sans point</span>
+            <span><i style="background:#a855f7"></i>E recouvrement multiple</span>
+            <span><i style="background:#991b1b"></i>F hors site</span>
+          </div>
+          <div class="panel-header">
+            <h2>Emprises normalisees</h2>
+            <span id="kobo-normalized-buildings-count" class="sig-count">0</span>
+          </div>
+          <form class="kobo-geometry-source-form" id="kobo-normalized-buildings-form">
+            <label>
+              Batch
+              <select id="kobo-normalized-buildings-batch-select">
+                <option value="">Auto / dernier fichier</option>
+                <% (reviewCatalog.batches || []).forEach((batch) => { %>
+                  <option value="<%= batch.name %>" <%= selectedBatch === batch.name ? "selected" : "" %> <%= batch.matchingOutputs && batch.matchingOutputs.includes("emprises_batiment_normalized.geojson") ? "" : "disabled" %>><%= batch.name %><%= batch.matchingOutputs && batch.matchingOutputs.includes("emprises_batiment_normalized.geojson") ? "" : " (aucune emprise normalisee)" %></option>
+                <% }) %>
+              </select>
+            </label>
+            <div class="button-row">
+              <button class="button" id="kobo-normalized-buildings-load" type="submit">Charger emprises normalisees</button>
+              <button class="button secondary" id="kobo-normalized-buildings-clear" type="button">Masquer</button>
+            </div>
+          </form>
+          <div class="kobo-reference-matching-status" id="kobo-normalized-buildings-status">Aucune emprise normalisee chargee.</div>
+          <div class="kobo-reference-matching-legend" aria-label="Legende emprises normalisees">
+            <span><i style="background:#16a34a"></i>Direct</span>
+            <span><i style="background:#f97316"></i>Conflit</span>
+            <span><i style="background:#0ea5e9"></i>Proximite</span>
+            <span><i style="background:#6b7280"></i>Aucun</span>
+          </div>
+        </section>
+      </section>
+
+      <section class="kobo-geometry-tab-panel" id="kobo-geometry-panel-json" role="tabpanel" aria-labelledby="kobo-geometry-tab-json" data-kobo-geometry-panel="json" hidden>
+        <section class="panel kobo-geometry-review-json kobo-geometry-fill-panel">
+          <div class="panel-header">
+            <h2>JSON normalise</h2>
+            <button class="button secondary" id="kobo-geometry-copy-json" type="button">
+              <i class="fa-solid fa-copy" aria-hidden="true"></i>
+              <span>Copier</span>
+            </button>
+          </div>
+          <pre id="kobo-geometry-json-viewer" class="kobo-geometry-json-viewer">{}</pre>
+        </section>
+      </section>
+    </div>
+  </aside>
+
+  <div class="kobo-geometry-resizer" id="kobo-geometry-resizer" role="separator" aria-label="Redimensionner le panneau de revue" aria-orientation="vertical" tabindex="0"></div>
+
+  <section class="kobo-geometry-review-map-pane" aria-label="Carte de revue des extractions Kobo">
+    <div class="kobo-geometry-review-map" id="kobo-geometry-review-map"></div>
+  </section>
+</section>
+
+<script id="kobo-geometry-review-payload" type="application/json"><%- JSON.stringify(payload).replace(/</g, "\\u003c") %></script>
+<script id="kobo-geometry-review-summary" type="application/json"><%- JSON.stringify(summary).replace(/</g, "\\u003c") %></script>
+<script id="kobo-geometry-review-catalog" type="application/json"><%- JSON.stringify(reviewCatalog || { batches: [] }).replace(/</g, "\\u003c") %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+<script src="/js/kobo-geometries-review.js"></script>
+<%- include("../partials/footer") %>

@@ -3,6 +3,11 @@ const Mission = require("../models/Mission");
 const Setting = require("../models/Setting");
 const siteCategoryIcons = require("../config/map/site-category-icons.json");
 const { getKoboConfigStatus, syncKoboSubmissions } = require("../services/koboSyncService");
+const {
+  buildKoboGeometryReviewSummary,
+  loadKoboReferenceMatchingReview,
+  loadKoboGeometryReviewData
+} = require("../services/koboGeometryReviewService");
 
 exports.index = (req, res) => {
   const points = SoumissionCollecte.mapPoints();
@@ -58,6 +63,76 @@ exports.filterOptions = (req, res) => {
   }
 
   return res.json(SoumissionCollecte.mapFilterOptionsForMission(missionId));
+};
+
+exports.koboGeometriesReview = (req, res) => {
+  let reviewData;
+  try {
+    reviewData = loadKoboGeometryReviewData({
+      batch: req.query.batch,
+      output: req.query.output
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).render("errors/500", {
+      title: "Chargement des extractions Kobo impossible",
+      error
+    });
+  }
+  const summary = buildKoboGeometryReviewSummary(reviewData.payload);
+
+  res.render("sig/kobo-geometries-review", {
+    title: "Revue des extractions geometriques Kobo",
+    payload: reviewData.payload,
+    summary,
+    reviewSource: reviewData.source,
+    reviewFilePath: reviewData.filePath,
+    reviewCatalog: reviewData.catalog,
+    selectedBatch: reviewData.selectedBatch,
+    selectedOutput: reviewData.selectedOutput
+  });
+};
+
+exports.koboReferenceMatchingReview = (req, res) => {
+  try {
+    const review = loadKoboReferenceMatchingReview({
+      batch: req.query.batch,
+      matching: req.query.batch ? "matching_review.geojson" : undefined
+    });
+    return res.json({
+      ok: true,
+      batch: review.batch,
+      output: review.output,
+      filePath: review.filePath,
+      payload: review.payload
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      ok: false,
+      error: error.message
+    });
+  }
+};
+
+exports.koboReferenceNormalizedBuildings = (req, res) => {
+  try {
+    const review = loadKoboReferenceMatchingReview({
+      batch: req.query.batch,
+      matching: req.query.batch ? "emprises_batiment_normalized.geojson" : undefined,
+      defaultOutputName: "emprises_batiment_normalized.geojson"
+    });
+    return res.json({
+      ok: true,
+      batch: review.batch,
+      output: review.output,
+      filePath: review.filePath,
+      payload: review.payload
+    });
+  } catch (error) {
+    return res.status(error.statusCode || 400).json({
+      ok: false,
+      error: error.message
+    });
+  }
 };
 
 exports.koboLightStatus = (req, res) => {

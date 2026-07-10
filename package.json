@@ -13,6 +13,7 @@
     "agents:import": "node scripts/import-agents.js",
     "sites-planning:import": "node scripts/import-sites-planning.js",
     "submissions:seed": "node scripts/seed-submissions.js",
+    "g2m:create-batch": "node scripts/g2m-create-batch.mjs",
     "kobo:sync": "node scripts/sync-kobo.js"
   },
   "keywords": [

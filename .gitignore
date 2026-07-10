@@ -11,6 +11,8 @@ node_modules/
 # Documentations techniques
 # =========================
 Kbase-docs/*
+KBase-docs/
+data/kobo-assets/
 # =========================
 # Bases SQLite runtime
 # =========================

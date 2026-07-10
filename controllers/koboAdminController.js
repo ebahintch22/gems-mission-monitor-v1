@@ -5,6 +5,16 @@ const {
   syncKoboSubmissions,
   testKoboConnection
 } = require("../services/koboSyncService");
+const {
+  downloadKoboImageAssets,
+  encodeSelectedImage,
+  listKoboImageAssets
+} = require("../services/koboAssetDownloadService");
+const {
+  getAdvancedKoboSyncStatus,
+  listAdvancedKoboSyncManifests,
+  startAdvancedKoboSyncJob
+} = require("../services/koboAdvancedSyncService");
 const { setRuntimeKoboConfig } = require("../services/koboRuntimeConfig");
 
 exports.index = (req, res) => {
@@ -102,6 +112,132 @@ exports.sync = async (req, res) => {
   }
 };
 
+exports.listMedia = async (req, res) => {
+  try {
+    const mediaInventory = await listKoboImageAssets({
+      assetUid: req.body.asset_uid,
+      startIndex: req.body.start_index,
+      endIndex: req.body.end_index
+    });
+
+    renderKoboAdmin(req, res, {
+      notice: `${mediaInventory.imageCount} image(s) trouvee(s).`,
+      activeSection: "media",
+      mediaValues: req.body,
+      mediaInventory,
+      koboDebugPayload: buildKoboDebugPayload({
+        action: "Inventaire des images Kobo",
+        summary: {
+          assetUid: mediaInventory.assetUid,
+          startIndex: mediaInventory.startIndex,
+          endIndex: mediaInventory.endIndex,
+          submissionsRead: mediaInventory.submissionsRead,
+          imageCount: mediaInventory.imageCount
+        }
+      })
+    });
+  } catch (error) {
+    renderKoboAdmin(req, res, {
+      error: sanitizeError(error),
+      activeSection: "media",
+      mediaValues: req.body
+    }, 400);
+  }
+};
+
+exports.downloadMedia = async (req, res) => {
+  try {
+    const summary = await downloadKoboImageAssets({
+      assetUid: req.body.asset_uid,
+      selectedImages: req.body.selected_images
+    });
+
+    renderKoboAdmin(req, res, {
+      notice: `${summary.downloaded} image(s) telechargee(s), ${summary.skipped} ignoree(s).`,
+      activeSection: "media",
+      mediaValues: req.body,
+      mediaDownloadSummary: summary,
+      koboDebugPayload: buildKoboDebugPayload({
+        action: "Telechargement des images Kobo",
+        summary
+      })
+    });
+  } catch (error) {
+    renderKoboAdmin(req, res, {
+      error: sanitizeError(error),
+      activeSection: "media",
+      mediaValues: req.body
+    }, 400);
+  }
+};
+
+exports.downloadMediaItem = async (req, res) => {
+  try {
+    const summary = await downloadKoboImageAssets({
+      assetUid: req.body.asset_uid,
+      selectedImages: req.body.selected_images
+    });
+    return res.json({
+      ok: summary.errors.length === 0,
+      summary
+    });
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      error: sanitizeError(error)
+    });
+  }
+};
+
+exports.startAdvancedSync = async (req, res) => {
+  try {
+    const result = await startAdvancedKoboSyncJob({
+      ...req.body,
+      actorUserId: req.currentUser?.id,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent")
+    });
+    return res.status(202).json({
+      ok: true,
+      job_id: result.jobId,
+      manifest: result.manifest
+    });
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      error: sanitizeError(error)
+    });
+  }
+};
+
+exports.advancedSyncStatus = (req, res) => {
+  const result = getAdvancedKoboSyncStatus(req.params.jobId);
+  if (!result.manifest) {
+    return res.status(404).json({
+      ok: false,
+      error: "Manifeste de synchronisation introuvable."
+    });
+  }
+
+  return res.json({
+    ok: true,
+    running: result.running,
+    manifest: result.manifest
+  });
+};
+
+exports.advancedSyncManifest = (req, res) => {
+  const result = getAdvancedKoboSyncStatus(req.params.jobId);
+  if (!result.manifest) {
+    return res.status(404).json({
+      ok: false,
+      error: "Manifeste de synchronisation introuvable."
+    });
+  }
+
+  return res.type("application/json").send(JSON.stringify(result.manifest, null, 2));
+};
+
 function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
   const config = getKoboConfigStatus();
   const values = {
@@ -114,6 +250,25 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
     form_type: options.values?.form_type || config.formType,
     dry_run: options.values?.dry_run === "on"
   };
+  const mediaValues = {
+    asset_uid: options.mediaValues?.asset_uid || config.defaultAssetUid,
+    start_index: options.mediaValues?.start_index || "1",
+    end_index: options.mediaValues?.end_index || "25"
+  };
+  const advancedSyncValues = {
+    asset_uid: options.advancedSyncValues?.asset_uid || config.defaultAssetUid,
+    mission_id: options.advancedSyncValues?.mission_id || config.defaultMissionId,
+    page_size: options.advancedSyncValues?.page_size || "20",
+    mode: options.advancedSyncValues?.mode || "all",
+    last_n: options.advancedSyncValues?.last_n || "500",
+    date_from: options.advancedSyncValues?.date_from || "",
+    date_to: options.advancedSyncValues?.date_to || "",
+    index_from: options.advancedSyncValues?.index_from || "",
+    index_to: options.advancedSyncValues?.index_to || "",
+    gps_field: options.advancedSyncValues?.gps_field || config.gpsField,
+    agent_code_field: options.advancedSyncValues?.agent_code_field || config.agentCodeField,
+    form_type: options.advancedSyncValues?.form_type || config.formType
+  };
 
   res.status(statusCode).render("kobo/index", {
     title: req.t("kobo.admin.title"),
@@ -121,6 +276,12 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
     missions: Mission.all(),
     assets: options.assets || [],
     summary: options.summary || null,
+    mediaValues,
+    mediaInventory: options.mediaInventory || null,
+    mediaDownloadSummary: options.mediaDownloadSummary || null,
+    advancedSyncValues,
+    advancedSyncManifests: listAdvancedKoboSyncManifests(8),
+    encodeSelectedImage,
     koboDebugPayloadJson: serializeDebugPayload(options.koboDebugPayload),
     activeSection: options.activeSection || "config",
     notice: options.notice || null,

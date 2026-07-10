@@ -15,6 +15,9 @@ router.post("/buildings/import", requirePermission("buildings.manage"), building
 router.post("/buildings/import-osm", requirePermission("buildings.manage"), buildingFeatureController.importFromOsm);
 router.patch("/buildings/:id/status", requirePermission("buildings.manage"), buildingFeatureController.updateStatus);
 router.get("/options", requirePermission("sig.read"), sigController.filterOptions);
+router.get("/extractions-kobo/reference-matching", requirePermission("sig.read"), sigController.koboReferenceMatchingReview);
+router.get("/extractions-kobo/reference-normalized-buildings", requirePermission("sig.read"), sigController.koboReferenceNormalizedBuildings);
+router.get("/extractions-kobo", requirePermission("sig.read"), sigController.koboGeometriesReview);
 router.get("/", requirePermission("sig.read"), sigController.index);
 
 module.exports = router;

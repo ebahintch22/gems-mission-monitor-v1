@@ -46,6 +46,26 @@ class KoboClient {
     return response.json();
   }
 
+  async download(urlOrPathname, { params, ...options } = {}) {
+    const targetUrl = /^https?:\/\//i.test(String(urlOrPathname))
+      ? urlOrPathname
+      : this.url(urlOrPathname, params);
+    const response = await this.fetchImpl(targetUrl, {
+      ...options,
+      headers: {
+        Authorization: `Token ${this.apiToken}`,
+        ...(options.headers || {})
+      }
+    });
+
+    if (!response.ok) {
+      const message = await safeResponseText(response);
+      throw new Error(`Erreur KoboToolbox ${response.status}: ${message || response.statusText}`);
+    }
+
+    return response;
+  }
+
   listAssets(params = {}) {
     return this.request("/assets/", { params });
   }

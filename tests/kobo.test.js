@@ -39,6 +39,27 @@ test("KoboClient sends token authorization header without adding it to the URL",
   assert.equal(calls[0].url.includes("secret-token"), false);
 });
 
+test("KoboClient downloads absolute media URLs with token header", async () => {
+  const calls = [];
+  const fetchImpl = async (url, options) => {
+    calls.push({ url: String(url), options });
+    return {
+      ok: true,
+      arrayBuffer: async () => Buffer.from("image")
+    };
+  };
+  const client = new KoboClient({
+    baseUrl: "https://kf.kobotoolbox.org",
+    apiToken: "secret-token",
+    fetchImpl
+  });
+
+  await client.download("https://kf.kobotoolbox.org/media/photo.jpg");
+
+  assert.equal(calls[0].url, "https://kf.kobotoolbox.org/media/photo.jpg");
+  assert.equal(calls[0].options.headers.Authorization, "Token secret-token");
+});
+
 test("parseKoboGeopoint accepts Kobo geopoint strings", () => {
   assert.deepEqual(parseKoboGeopoint("5.123 -4.456 20 8"), {
     latitude: 5.123,
