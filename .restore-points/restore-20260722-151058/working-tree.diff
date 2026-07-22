@@ -1,0 +1,2952 @@
+﻿diff --git a/.env.example b/.env.example
+index 3a0c47f..c2075b0 100644
+--- a/.env.example
++++ b/.env.example
+@@ -14,6 +14,11 @@ KOBO_MISSION_ID=
+ KOBO_GPS_FIELD=
+ KOBO_AGENT_CODE_FIELD=
+ KOBO_FORM_TYPE=site
++WASABI_ACCESS_KEY_ID=
++WASABI_SECRET_ACCESS_KEY=
++WASABI_REGION=
++WASABI_BUCKET=
++WASABI_ENDPOINT=
+ APP_BASE_URL=http://localhost:3000
+ JWT_SECRET=change-me
+ JWT_EXPIRES_IN=8h
+diff --git a/app.js b/app.js
+index 31d0550..c3ad457 100644
+--- a/app.js
++++ b/app.js
+@@ -17,6 +17,7 @@ const koboAdminRoutes = require("./routes/koboAdminRoutes");
+ const siteSearchRoutes = require("./routes/siteSearchRoutes");
+ const sitesPlanningRoutes = require("./routes/sitesPlanningRoutes");
+ const sitesPlanningApiRoutes = require("./routes/sitesPlanningApiRoutes");
++const mediaRoutes = require("./routes/mediaRoutes");
+ const { currentUser } = require("./middlewares/authMiddleware");
+ const { i18nMiddleware } = require("./services/i18nService");
+ const Mission = require("./models/Mission");
+@@ -55,6 +56,7 @@ app.use("/cartographie", sigRoutes);
+ app.use("/sites", sitesPlanningRoutes);
+ app.use("/infographies", infographieRoutes);
+ app.use("/soumissions", submissionRoutes);
++app.use("/media", mediaRoutes);
+ app.use("/parametrages/kobo", koboAdminRoutes);
+ app.use("/api/sites", sitesPlanningApiRoutes);
+ app.use("/api", siteSearchRoutes);
+diff --git a/config/database.js b/config/database.js
+index efdc7fb..da52465 100644
+--- a/config/database.js
++++ b/config/database.js
+@@ -560,6 +560,82 @@ db.exec(`
+ 
+   CREATE INDEX IF NOT EXISTS idx_user_permission_overrides_permission_id
+     ON user_permission_overrides(permission_id);
++
++  CREATE TABLE IF NOT EXISTS media_files (
++    id TEXT PRIMARY KEY,
++    bucket TEXT NOT NULL,
++    object_key TEXT NOT NULL UNIQUE,
++    original_filename TEXT NOT NULL,
++    stored_filename TEXT NOT NULL,
++    mime_type TEXT NOT NULL,
++    media_type TEXT NOT NULL
++      CHECK (media_type IN ('image', 'video', 'pdf', 'document', 'archive', 'other')),
++    size_bytes INTEGER NOT NULL DEFAULT 0 CHECK (size_bytes >= 0),
++    checksum_sha256 TEXT,
++    storage_provider TEXT NOT NULL DEFAULT 'wasabi'
++      CHECK (storage_provider IN ('wasabi')),
++    source TEXT NOT NULL DEFAULT 'manual_upload'
++      CHECK (source IN ('kobo', 'manual_upload', 'generated_export', 'import')),
++    visibility TEXT NOT NULL DEFAULT 'private'
++      CHECK (visibility IN ('private', 'internal', 'public_candidate')),
++    created_by INTEGER,
++    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    deleted_at TEXT,
++    FOREIGN KEY (created_by) REFERENCES users(id)
++      ON UPDATE CASCADE
++      ON DELETE SET NULL
++  );
++
++  CREATE INDEX IF NOT EXISTS idx_media_files_media_type
++    ON media_files(media_type);
++
++  CREATE INDEX IF NOT EXISTS idx_media_files_source
++    ON media_files(source);
++
++  CREATE INDEX IF NOT EXISTS idx_media_files_deleted_at
++    ON media_files(deleted_at);
++
++  CREATE TABLE IF NOT EXISTS media_links (
++    id INTEGER PRIMARY KEY AUTOINCREMENT,
++    media_file_id TEXT NOT NULL,
++    entity_type TEXT NOT NULL,
++    entity_id TEXT,
++    entity_ref TEXT,
++    role TEXT NOT NULL,
++    caption TEXT,
++    sort_order INTEGER NOT NULL DEFAULT 0,
++    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    FOREIGN KEY (media_file_id) REFERENCES media_files(id)
++      ON UPDATE CASCADE
++      ON DELETE CASCADE
++  );
++
++  CREATE INDEX IF NOT EXISTS idx_media_links_media_file_id
++    ON media_links(media_file_id);
++
++  CREATE INDEX IF NOT EXISTS idx_media_links_entity
++    ON media_links(entity_type, entity_id, entity_ref);
++
++  CREATE TABLE IF NOT EXISTS media_variants (
++    id INTEGER PRIMARY KEY AUTOINCREMENT,
++    media_file_id TEXT NOT NULL,
++    variant_type TEXT NOT NULL
++      CHECK (variant_type IN ('original', 'thumb', 'preview')),
++    bucket TEXT NOT NULL,
++    object_key TEXT NOT NULL UNIQUE,
++    mime_type TEXT NOT NULL,
++    size_bytes INTEGER NOT NULL DEFAULT 0 CHECK (size_bytes >= 0),
++    width INTEGER,
++    height INTEGER,
++    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
++    FOREIGN KEY (media_file_id) REFERENCES media_files(id)
++      ON UPDATE CASCADE
++      ON DELETE CASCADE
++  );
++
++  CREATE UNIQUE INDEX IF NOT EXISTS idx_media_variants_file_type
++    ON media_variants(media_file_id, variant_type);
+ `);
+ 
+ const submissionColumns = db.prepare("PRAGMA table_info('soumissions_collecte')").all()
+@@ -881,6 +957,14 @@ function seedDefaultSettings() {
+       label: "Duree du rebond des marqueurs",
+       description: "Duree en millisecondes de l'animation du marqueur selectionne sur la carte."
+     },
++    {
++      key: "map.site_label_wrap_length",
++      value: "30",
++      type: "number",
++      group_name: "map",
++      label: "Etiquettes de site - longueur de ligne",
++      description: "Nombre de caracteres avant retour a la ligne dans les etiquettes des sites, de 10 a 80."
++    },
+     {
+       key: "map.site_contour_stroke_color",
+       value: "#006b5b",
+@@ -1109,6 +1193,8 @@ function seedDefaultPermissions() {
+     ["quality.read", "Consultation qualite", "Lecture des controles qualite.", "quality", 0],
+     ["quality.manage", "Gestion qualite", "Actions de controle et validation.", "quality", 0],
+     ["exports.manage", "Gestion des exports", "Generation et gestion des exports.", "exports", 0],
++    ["media.read", "Consultation des medias", "Lecture des fichiers multimedia rattaches aux objets metier.", "media", 0],
++    ["media.manage", "Gestion des medias", "Import, rattachement et suppression des fichiers multimedia.", "media", 0],
+     ["permissions.manage", "Gestion des habilitations", "Administration de la matrice des droits.", "admin", 1]
+   ];
+ 
+@@ -1195,6 +1281,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+       "users.invite.read",
+       "monitoring.read",
+       "sig.read",
++      "media.read",
+       "infographics.read",
+       "quality.read",
+       "exports.manage"
+@@ -1212,6 +1299,8 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+       "users.invite.read",
+       "monitoring.read",
+       "sig.read",
++      "media.read",
++      "media.manage",
+       "infographics.read",
+       "quality.read",
+       "exports.manage"
+@@ -1225,6 +1314,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+       "agents.read",
+       "agents.manage",
+       "sig.read",
++      "media.read",
+       "infographics.read",
+       "quality.read"
+     ],
+@@ -1235,6 +1325,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+       "teams.read",
+       "agents.read",
+       "sig.read",
++      "media.read",
+       "infographics.read",
+       "quality.read",
+       "quality.manage",
+@@ -1251,6 +1342,8 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+       "buildings.manage",
+       "sites.planning.read",
+       "sites.planning.manage",
++      "media.read",
++      "media.manage",
+       "infographics.read",
+       "exports.manage"
+     ],
+@@ -1262,6 +1355,7 @@ function seedDefaultRoleMatrix(insertDefaultRolePermission) {
+       "agents.read",
+       "monitoring.read",
+       "sig.read",
++      "media.read",
+       "infographics.read",
+       "quality.read",
+       "exports.manage"
+diff --git a/controllers/sigController.js b/controllers/sigController.js
+index 276bc5a..30ad885 100644
+--- a/controllers/sigController.js
++++ b/controllers/sigController.js
+@@ -2,11 +2,15 @@ const SoumissionCollecte = require("../models/SoumissionCollecte");
+ const Mission = require("../models/Mission");
+ const Setting = require("../models/Setting");
+ const siteCategoryIcons = require("../config/map/site-category-icons.json");
++const { DEFAULT_FORM_ID, loadChoiceList } = require("../services/formMappingService");
+ const { getKoboConfigStatus, syncKoboSubmissions } = require("../services/koboSyncService");
+ const {
++  buildKoboGeometryReviewAssetIndex,
++  buildKoboGeometryReviewChoiceIndex,
+   buildKoboGeometryReviewSummary,
+   loadKoboReferenceMatchingReview,
+-  loadKoboGeometryReviewData
++  loadKoboGeometryReviewData,
++  resolveKoboGeometryReviewAssetPath
+ } = require("../services/koboGeometryReviewService");
+ 
+ exports.index = (req, res) => {
+@@ -26,9 +30,11 @@ exports.index = (req, res) => {
+     points,
+     regions,
+     siteCategoryIcons,
++    administrativeChoiceIndex: buildAdministrativeChoiceIndex(),
+     geometryImportConfig: {
+       resultsTarget: Setting.rawValue("map.geometry_import_results_target") || "floating",
+       markerBounceDurationMs: normalizeMarkerBounceDuration(Setting.rawValue("map.marker_bounce_duration_ms")),
++      siteLabelWrapLength: normalizeSiteLabelWrapLength(Setting.rawValue("map.site_label_wrap_length")),
+       siteContourStyle: normalizeMapFeatureStyle({
+         strokeColor: Setting.rawValue("map.site_contour_stroke_color"),
+         strokeWeight: Setting.rawValue("map.site_contour_stroke_weight"),
+@@ -56,6 +62,22 @@ exports.index = (req, res) => {
+   });
+ };
+ 
++function buildAdministrativeChoiceIndex() {
++  return ["adm1_ci", "adm2_ci", "adm3_ci"].reduce((index, choiceListName) => {
++    const choices = loadChoiceList(DEFAULT_FORM_ID, choiceListName);
++    index[choiceListName] = Array.isArray(choices)
++      ? choices.reduce((choiceMap, choice) => {
++        const name = String(choice.name || "");
++        if (name) {
++          choiceMap[name] = choice.label || choice.name;
++        }
++        return choiceMap;
++      }, {})
++      : {};
++    return index;
++  }, {});
++}
++
+ exports.filterOptions = (req, res) => {
+   const missionId = Number.parseInt(req.query.mission_id, 10);
+   if (!Number.isInteger(missionId) || missionId <= 0) {
+@@ -87,11 +109,22 @@ exports.koboGeometriesReview = (req, res) => {
+     reviewSource: reviewData.source,
+     reviewFilePath: reviewData.filePath,
+     reviewCatalog: reviewData.catalog,
++    localAssets: buildKoboGeometryReviewAssetIndex(),
++    choiceIndex: buildKoboGeometryReviewChoiceIndex(),
+     selectedBatch: reviewData.selectedBatch,
+     selectedOutput: reviewData.selectedOutput
+   });
+ };
+ 
++exports.koboGeometryReviewAsset = (req, res) => {
++  try {
++    const filePath = resolveKoboGeometryReviewAssetPath(req.params);
++    return res.sendFile(filePath);
++  } catch (error) {
++    return res.status(error.statusCode || 400).send(error.message);
++  }
++};
++
+ exports.koboReferenceMatchingReview = (req, res) => {
+   try {
+     const review = loadKoboReferenceMatchingReview({
+@@ -182,6 +215,11 @@ function normalizeMarkerBounceDuration(value) {
+   return Number.isInteger(duration) && duration >= 100 && duration <= 5000 ? duration : 600;
+ }
+ 
++function normalizeSiteLabelWrapLength(value) {
++  const length = Number(value);
++  return Number.isInteger(length) && length >= 10 && length <= 80 ? length : 30;
++}
++
+ function normalizeMapFeatureStyle(input, defaults) {
+   const strokeWeight = Number(input.strokeWeight);
+   const fillOpacity = Number(input.fillOpacity);
+diff --git a/locales/en.json b/locales/en.json
+index 3dbd91a..db3dcad 100644
+--- a/locales/en.json
++++ b/locales/en.json
+@@ -9,6 +9,7 @@
+   "nav.dashboard": "Dashboard",
+   "nav.visualization": "Visualization",
+   "nav.cartography": "Mapping",
++  "nav.koboSubmissionExplorer": "Kobo submission explorer",
+   "nav.sitesPlanning": "Sites to visit",
+   "nav.infographics": "Infographics",
+   "nav.infographicsGlobal": "Global mission",
+@@ -321,6 +322,7 @@
+   "sig.tools.hide": "Hide mapping tools",
+   "sig.tools.aria": "Mapping tools",
+   "sig.tools.filters": "Filters",
++  "sig.rootActions.aria": "Visited sites actions",
+   "sig.filters.mission": "Mission",
+   "sig.filters.allMissions": "All missions",
+   "sig.filters.allRegions": "All regions",
+@@ -333,11 +335,18 @@
+   "sig.filters.from": "From",
+   "sig.filters.to": "To",
+   "sig.filters.reset": "Reset",
++  "sig.filters.open": "Filter",
++  "sig.filters.apply": "Apply",
++  "sig.columns.open": "Columns",
++  "sig.columns.title": "Visible columns",
++  "sig.columns.close": "Close",
+   "sig.summary.title": "Summary",
++  "sig.summary.toggle": "Show or hide summary",
+   "sig.summary.valid": "Validated",
+   "sig.summary.check": "To check",
+   "sig.summary.rejected": "Rejected",
+-  "sig.table.title": "Displayed submissions",
++  "sig.table.title": "Visited sites",
++  "sig.table.visibleCount": "{{count}} visible site(s)",
+   "sig.table.empty": "No submission for these criteria",
+   "sig.table.agent": "Agent",
+   "sig.table.team": "Team",
+diff --git a/locales/es.json b/locales/es.json
+index d0c9506..c9bf75f 100644
+--- a/locales/es.json
++++ b/locales/es.json
+@@ -9,6 +9,7 @@
+   "nav.dashboard": "Dashboard",
+   "nav.visualization": "Visualización",
+   "nav.cartography": "Cartografía",
++  "nav.koboSubmissionExplorer": "Exploración de envíos Kobo",
+   "nav.infographics": "Infografía",
+   "nav.infographicsGlobal": "Misión global",
+   "nav.infographicsSupervisor": "Por supervisor",
+@@ -320,6 +321,7 @@
+   "sig.tools.hide": "Ocultar herramientas cartográficas",
+   "sig.tools.aria": "Herramientas cartográficas",
+   "sig.tools.filters": "Filtros",
++  "sig.rootActions.aria": "Acciones de sitios visitados",
+   "sig.filters.mission": "Misión",
+   "sig.filters.allMissions": "Todas las misiones",
+   "sig.filters.allRegions": "Todas las regiones",
+@@ -332,11 +334,18 @@
+   "sig.filters.from": "Desde",
+   "sig.filters.to": "Hasta",
+   "sig.filters.reset": "Reinicializar",
++  "sig.filters.open": "Filtrar",
++  "sig.filters.apply": "Aplicar",
++  "sig.columns.open": "Columnas",
++  "sig.columns.title": "Columnas visibles",
++  "sig.columns.close": "Cerrar",
+   "sig.summary.title": "Síntesis",
++  "sig.summary.toggle": "Mostrar u ocultar síntesis",
+   "sig.summary.valid": "Validadas",
+   "sig.summary.check": "Por verificar",
+   "sig.summary.rejected": "Rechazadas",
+-  "sig.table.title": "Envíos mostrados",
++  "sig.table.title": "Sitios visitados",
++  "sig.table.visibleCount": "{{count}} sitio(s) mostrado(s)",
+   "sig.table.empty": "Ningún envío para estos criterios",
+   "sig.table.agent": "Agente",
+   "sig.table.team": "Equipo",
+diff --git a/locales/fr.json b/locales/fr.json
+index 994269b..85d5089 100644
+--- a/locales/fr.json
++++ b/locales/fr.json
+@@ -9,6 +9,7 @@
+   "nav.dashboard": "Dashboard",
+   "nav.visualization": "Visualisation",
+   "nav.cartography": "Cartographie",
++  "nav.koboSubmissionExplorer": "Exploration soumissions Kobo",
+   "nav.sitesPlanning": "Sites à visiter",
+   "nav.infographics": "Infographie",
+   "nav.infographicsGlobal": "Mission globale",
+@@ -321,6 +322,7 @@
+   "sig.tools.hide": "Masquer les outils cartographiques",
+   "sig.tools.aria": "Outils cartographiques",
+   "sig.tools.filters": "Filtres",
++  "sig.rootActions.aria": "Actions des sites visités",
+   "sig.filters.mission": "Mission",
+   "sig.filters.allMissions": "Toutes les missions",
+   "sig.filters.allRegions": "Toutes les régions",
+@@ -333,11 +335,18 @@
+   "sig.filters.from": "Depuis le",
+   "sig.filters.to": "Jusqu'au",
+   "sig.filters.reset": "Réinitialiser",
++  "sig.filters.open": "Filtrer",
++  "sig.filters.apply": "Appliquer",
++  "sig.columns.open": "Colonnes",
++  "sig.columns.title": "Colonnes visibles",
++  "sig.columns.close": "Fermer",
+   "sig.summary.title": "Synthèse",
++  "sig.summary.toggle": "Afficher ou masquer la synthèse",
+   "sig.summary.valid": "Validées",
+   "sig.summary.check": "À vérifier",
+   "sig.summary.rejected": "Rejetées",
+-  "sig.table.title": "Soumissions affichées",
++  "sig.table.title": "Sites visités",
++  "sig.table.visibleCount": "{{count}} sites affiché(s)",
+   "sig.table.empty": "Aucune soumission pour ces critères",
+   "sig.table.agent": "Agent",
+   "sig.table.team": "Équipe",
+diff --git a/models/Setting.js b/models/Setting.js
+index b5a538b..885a18f 100644
+--- a/models/Setting.js
++++ b/models/Setting.js
+@@ -5,6 +5,7 @@ const editableKeys = [
+   "app.default_mission_id",
+   "map.geometry_import_results_target",
+   "map.marker_bounce_duration_ms",
++  "map.site_label_wrap_length",
+   "map.site_contour_stroke_color",
+   "map.site_contour_stroke_weight",
+   "map.site_contour_dash_style",
+@@ -162,6 +163,14 @@ function normalizeValue(setting, value) {
+     return String(duration);
+   }
+ 
++  if (setting.key === "map.site_label_wrap_length") {
++    const length = Number(String(value ?? "").trim());
++    if (!Number.isInteger(length) || length < 10 || length > 80) {
++      throw new Error("invalid_number");
++    }
++    return String(length);
++  }
++
+   if (setting.key.endsWith("_stroke_color")) {
+     const color = String(value ?? "").trim();
+     if (!/^#[0-9a-f]{6}$/i.test(color)) {
+diff --git a/public/css/app.css b/public/css/app.css
+index 954af8a..ee19d62 100644
+--- a/public/css/app.css
++++ b/public/css/app.css
+@@ -991,7 +991,7 @@ h2 {
+   border-radius: 0 7px 7px 0;
+   display: grid;
+   gap: 8px;
+-  grid-template-rows: auto auto minmax(0, 1fr);
++  grid-template-rows: auto auto auto minmax(0, 1fr);
+ }
+ 
+ .sites-planning-table-panel > .panel-header {
+@@ -2051,10 +2051,14 @@ h2 {
+ 
+ .sig-pal-root-content {
+   display: grid;
+-  gap: 16px;
++  gap: 10px;
+   grid-template-columns: minmax(0, 1fr);
++  grid-template-rows: auto auto minmax(0, 1fr);
++  height: 100%;
++  min-height: 100%;
+   max-width: 100%;
+   min-width: 0;
++  position: relative;
+   width: 100%;
+ }
+ 
+@@ -2149,31 +2153,63 @@ h2 {
+   grid-template-columns: repeat(2, minmax(0, 1fr));
+ }
+ 
++.sig-filter-panel[hidden] {
++  display: none;
++}
++
++.sig-summary-panel[hidden] {
++  display: none;
++}
++
++.sig-summary-panel {
++  padding: 8px;
++}
++
++.sig-summary-panel .panel-header {
++  margin-bottom: 6px;
++}
++
++.sig-summary-panel h2 {
++  margin-bottom: 0;
++}
++
++.sig-table-actions {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 6px;
++}
++
+ .sig-filter-wide {
+   grid-column: 1 / -1;
+ }
+ 
+-.sig-filters .button {
++.sig-filter-actions {
++  display: flex;
++  gap: 8px;
+   grid-column: 1 / -1;
+ }
+ 
++.sig-filter-actions .button {
++  flex: 1 1 0;
++}
++
+ .sig-count {
+   background: var(--accent);
+   border-radius: 14px;
+   font-weight: bold;
+-  padding: 3px 12px;
++  padding: 2px 10px;
+ }
+ 
+ .sig-metrics {
+   display: grid;
+-  gap: 8px;
++  gap: 6px;
+   grid-template-columns: repeat(3, 1fr);
+ }
+ 
+ .sig-metrics div {
+   background: var(--background);
+   border-radius: 6px;
+-  padding: 9px;
++  padding: 5px 7px;
+ }
+ 
+ .sig-metrics span {
+@@ -2183,16 +2219,115 @@ h2 {
+ }
+ 
+ .sig-metrics strong {
+-  font-size: var(--font-metric);
++  font-size: var(--font-h2);
+ }
+ 
+ .sig-table-panel {
+-  flex: 1 0 270px;
++  display: flex;
++  flex-direction: column;
++  height: 100%;
++  min-height: 0;
+   overflow: hidden;
+ }
+ 
+ #sig-table {
++  flex: 1 1 auto;
+   font-size: var(--font-table);
++  height: 100%;
++  min-height: 0;
++  overflow: hidden;
++}
++
++#sig-table .tabulator-row.is-selected-site {
++  background: #0f2f5f;
++  color: #7dd3fc;
++}
++
++#sig-table .tabulator-row.is-selected-site .tabulator-cell {
++  background: transparent;
++  color: #7dd3fc;
++  font-weight: 800;
++}
++
++.sig-columns-modal {
++  align-items: center;
++  display: flex;
++  inset: 0;
++  justify-content: center;
++  padding: 16px;
++  position: absolute;
++  z-index: 25;
++}
++
++.sig-columns-modal[hidden] {
++  display: none;
++}
++
++.sig-columns-backdrop {
++  background: rgba(24, 43, 55, 0.42);
++  inset: 0;
++  position: absolute;
++}
++
++.sig-columns-dialog {
++  background: #fff;
++  border: 1px solid var(--border);
++  border-radius: 7px;
++  box-shadow: var(--shadow);
++  display: grid;
++  gap: 12px;
++  max-height: min(620px, calc(100vh - 44px));
++  max-width: 520px;
++  min-width: min(100%, 340px);
++  overflow: hidden;
++  padding: 14px;
++  position: relative;
++  width: 100%;
++}
++
++.sig-columns-dialog header,
++.sig-columns-dialog footer {
++  align-items: center;
++  display: flex;
++  gap: 10px;
++  justify-content: space-between;
++}
++
++.sig-columns-dialog h2 {
++  margin: 0;
++}
++
++.sig-columns-form {
++  display: grid;
++  gap: 12px;
++  min-height: 0;
++}
++
++.sig-columns-list {
++  display: grid;
++  gap: 7px;
++  max-height: 390px;
++  min-height: 0;
++  overflow: auto;
++  padding-right: 4px;
++}
++
++.sig-column-option {
++  align-items: center;
++  background: #f8fafc;
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  display: grid;
++  gap: 8px;
++  grid-template-columns: 18px minmax(0, 1fr) auto;
++  padding: 8px 10px;
++}
++
++.sig-column-option em {
++  color: var(--muted);
++  font-size: var(--font-small);
++  font-style: normal;
++  font-weight: 700;
+ }
+ 
+ .site-identification {
+@@ -3061,6 +3196,41 @@ h2 {
+   translate: 0 -8px;
+ }
+ 
++#sig-map .sig-site-label {
++  background: transparent;
++  border: 0;
++  box-shadow: none;
++  color: #111827;
++  font-size: 11px;
++  font-weight: 800;
++  line-height: 1.25;
++  max-width: none;
++  overflow: visible;
++  padding: 0 2px;
++  text-align: center;
++  text-shadow:
++    -1px -1px 0 #fff,
++    1px -1px 0 #fff,
++    -1px 1px 0 #fff,
++    1px 1px 0 #fff,
++    0 0 3px #fff;
++  white-space: nowrap;
++}
++
++#sig-map .sig-site-label span {
++  display: block;
++  white-space: nowrap;
++}
++
++#sig-map .sig-site-label-hidden {
++  opacity: 0;
++  pointer-events: none;
++}
++
++#sig-map .sig-site-label::before {
++  display: none;
++}
++
+ @media (prefers-reduced-motion: reduce) {
+   #sig-map .marker-bounce {
+     animation: none;
+@@ -4697,6 +4867,259 @@ h2 {
+   width: 12px;
+ }
+ 
++.kobo-submission-search {
++  align-items: center;
++  background: #fff;
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  color: var(--muted);
++  display: grid;
++  gap: 8px;
++  grid-template-columns: 16px minmax(0, 1fr);
++  margin-bottom: 10px;
++  padding: 0 10px;
++}
++
++.kobo-submission-search:focus-within {
++  border-color: #7dd3fc;
++  box-shadow: 0 0 0 2px rgba(125, 211, 252, 0.24);
++}
++
++.kobo-submission-search input {
++  border: 0;
++  min-height: 36px;
++  min-width: 0;
++  outline: none;
++  width: 100%;
++}
++
++.kobo-submission-explorer-layout {
++  display: grid;
++  gap: 12px;
++  grid-template-columns: minmax(170px, 0.42fr) minmax(0, 0.58fr);
++  min-height: 0;
++  overflow: hidden;
++}
++
++.kobo-submission-tree,
++.kobo-submission-detail {
++  min-height: 0;
++  overflow: auto;
++}
++
++.kobo-submission-tree {
++  background: #f8fafc;
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  padding: 8px;
++}
++
++.kobo-submission-tree-empty {
++  margin: 0;
++  padding: 8px;
++}
++
++.kobo-submission-tree-list {
++  display: grid;
++  gap: 2px;
++  list-style: none;
++  margin: 0;
++  padding: 0;
++}
++
++.kobo-submission-tree-list .kobo-submission-tree-list {
++  margin-left: 12px;
++  padding-left: 8px;
++  border-left: 1px solid #dbe3ee;
++}
++
++.kobo-submission-tree-node {
++  align-items: center;
++  background: transparent;
++  border: 1px solid transparent;
++  border-radius: 6px;
++  color: #334155;
++  cursor: pointer;
++  display: grid;
++  font-size: var(--font-small);
++  gap: 8px;
++  grid-template-columns: 16px minmax(0, 1fr) auto;
++  min-height: 34px;
++  padding: 7px 8px;
++  text-align: left;
++  width: 100%;
++}
++
++.kobo-submission-tree-node:hover,
++.kobo-submission-tree-node:focus {
++  background: #eef6ff;
++  border-color: #bfdbfe;
++  color: #1d4ed8;
++  outline: none;
++}
++
++.kobo-submission-tree-node.is-active {
++  background: #e0f2fe;
++  border-color: #7dd3fc;
++  box-shadow: inset 3px 0 0 #0284c7;
++  color: #0f172a;
++  font-weight: 800;
++}
++
++.kobo-submission-tree-node i {
++  color: #64748b;
++  text-align: center;
++}
++
++.kobo-submission-tree-node.is-active i {
++  color: #0284c7;
++}
++
++.kobo-submission-tree-node span {
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.kobo-submission-tree-node em {
++  background: #fff;
++  border: 1px solid #dbe3ee;
++  border-radius: 999px;
++  color: #475569;
++  font-size: 0.72rem;
++  font-style: normal;
++  font-weight: 800;
++  min-width: 20px;
++  padding: 2px 6px;
++  text-align: center;
++}
++
++.kobo-submission-detail-card {
++  background: #fff;
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  min-height: 100%;
++  padding: 12px;
++}
++
++.kobo-submission-detail-card h3 {
++  font-size: 1rem;
++  margin: 0 0 12px;
++}
++
++.kobo-submission-detail-card dl {
++  display: grid;
++  gap: 8px 10px;
++  grid-template-columns: minmax(110px, 0.42fr) minmax(0, 0.58fr);
++  margin: 0;
++}
++
++.kobo-submission-detail-card dt {
++  color: var(--muted);
++  font-size: var(--font-small);
++  font-weight: 800;
++}
++
++.kobo-submission-detail-card dd {
++  font-size: var(--font-small);
++  margin: 0;
++  min-width: 0;
++  overflow-wrap: anywhere;
++}
++
++.kobo-submission-detail-card code {
++  background: #f8fafc;
++  border: 1px solid var(--border);
++  border-radius: 4px;
++  display: block;
++  max-height: 110px;
++  overflow: auto;
++  padding: 6px;
++  white-space: pre-wrap;
++}
++
++.kobo-submission-related-link {
++  align-items: center;
++  background: #f8fafc;
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  color: #0f172a;
++  cursor: pointer;
++  display: flex;
++  gap: 8px;
++  justify-content: space-between;
++  padding: 8px 10px;
++  text-align: left;
++  width: 100%;
++}
++
++.kobo-submission-related-link:hover,
++.kobo-submission-related-link:focus {
++  border-color: #7dd3fc;
++  outline: none;
++}
++
++.kobo-submission-related-link em {
++  color: var(--muted);
++  font-size: 0.72rem;
++  font-style: normal;
++  font-weight: 800;
++}
++
++.kobo-submission-photo-summary {
++  color: var(--muted);
++  font-size: var(--font-small);
++  margin: 0 0 10px;
++}
++
++.kobo-submission-photo-grid {
++  display: grid;
++  gap: 10px;
++  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
++}
++
++.kobo-submission-photo-tile {
++  background: #f8fafc;
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  color: #0f172a;
++  display: grid;
++  gap: 6px;
++  min-width: 0;
++  padding: 6px;
++  text-decoration: none;
++}
++
++.kobo-submission-photo-tile:hover,
++.kobo-submission-photo-tile:focus {
++  border-color: #7dd3fc;
++  outline: none;
++}
++
++.kobo-submission-photo-tile img {
++  aspect-ratio: 4 / 3;
++  background: #e2e8f0;
++  border-radius: 4px;
++  display: block;
++  object-fit: cover;
++  width: 100%;
++}
++
++.kobo-submission-photo-tile span,
++.kobo-submission-photo-tile em {
++  font-size: 0.72rem;
++  min-width: 0;
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
++}
++
++.kobo-submission-photo-tile em {
++  color: var(--muted);
++  font-style: normal;
++  font-weight: 800;
++}
++
+ .kobo-geometry-review .kobo-geometry-review-map-pane {
+   display: block;
+   gap: 0;
+@@ -4741,6 +5164,14 @@ h2 {
+   .kobo-geometry-review-map-pane {
+     min-height: 280px;
+   }
++
++  .kobo-submission-explorer-layout {
++    grid-template-columns: minmax(0, 1fr);
++  }
++
++  .kobo-submission-tree {
++    max-height: 220px;
++  }
+ }
+ 
+ .filters-form {
+diff --git a/public/js/cartographie.js b/public/js/cartographie.js
+index 6fba767..79cd25d 100644
+--- a/public/js/cartographie.js
++++ b/public/js/cartographie.js
+@@ -2,6 +2,7 @@
+   const points = JSON.parse(document.getElementById("sig-points-data").textContent);
+   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
+   const siteCategoryIcons = JSON.parse(document.getElementById("sig-site-category-icons-data").textContent);
++  const administrativeChoices = JSON.parse(document.getElementById("sig-administrative-choices-data")?.textContent || "{}");
+   const geometryImportConfig = JSON.parse(document.getElementById("sig-geometry-import-config-data")?.textContent || "{}");
+   let markerBounceDurationMs = 600;
+   const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
+@@ -160,6 +161,38 @@
+   let sitesPlanningExportTable = null;
+   const sitesPlanningOsmRequestTimeoutPassesMs = [30000, 60000];
+   const sitesPlanningColumnPrefsKey = "g2m.sig.sitesPlanningColumns.v1";
++  const visitedSitesColumnPrefsKey = "g2m.sig.visitedSitesColumns.v1";
++  const visitedSitesMandatoryColumns = ["_id", "modB/nom_officiel", "modB/region", "modB/ministere"];
++  const visitedSitesDefaultColumns = [
++    "_id",
++    "today",
++    "modA/fiche_id",
++    "modB/nom_officiel",
++    "modB/region",
++    "modB/ministere",
++    "modB/commune",
++    "modB/statut_fonct",
++    "_submission_time"
++  ];
++  const visitedSitesAvailableColumns = [
++    { field: "_id", title: "_id", locked: true },
++    { field: "today", title: "Date jour" },
++    { field: "modA/fiche_id", title: "ID fiche" },
++    { field: "modA/enqueteur", title: "Enquêteur" },
++    { field: "modA/equipe_num", title: "Équipe Kobo" },
++    { field: "modA/superviseur2", title: "Superviseur" },
++    { field: "modB/nom_officiel", title: "Nom officiel", locked: true, minWidth: 190, formatter: siteNameFormatter },
++    { field: "modB/region", title: "Région", locked: true, formatter: administrativeChoiceFormatter },
++    { field: "modB/departement", title: "Département", formatter: administrativeChoiceFormatter },
++    { field: "modB/sous_prefecture", title: "Sous-préfecture", formatter: administrativeChoiceFormatter },
++    { field: "modB/ministere", title: "Ministère", locked: true },
++    { field: "modB/nom_structure", title: "Nom structure" },
++    { field: "modB/commune", title: "Commune" },
++    { field: "modB/statut_fonct", title: "Statut fonctionnement" },
++    { field: "modB/annee_creation", title: "Année création" },
++    { field: "_geolocation", title: "Géolocalisation", minWidth: 140 },
++    { field: "_submission_time", title: "Date soumission", minWidth: 135, formatter: visitedSiteDateFormatter }
++  ];
+   const georeferencingAbandonReasonLabels = {
+     SITE_INTROUVABLE_SUR_BASEMAP: "Site introuvable sur basemap",
+     IMAGERIE_INSUFFISANTE: "Imagerie insuffisante",
+@@ -193,6 +226,9 @@
+   let planningDraftPolygonGeo = null;
+   let selectedPreparedBuildingId = null;
+   let selectedSiteId = null;
++  const experimentalSiteLabelsEnabled = true;
++  const siteLabelMinZoom = 14;
++  let siteLabelCollisionFrame = null;
+   const siteMarkersById = new Map();
+   const markerBounceTimers = new WeakMap();
+   let osmSelectionMode = null;
+@@ -2721,15 +2757,13 @@
+ 
+   const table = new Tabulator("#sig-table", {
+     data: [],
+-    height: 270,
++    height: "100%",
+     layout: "fitColumns",
+     placeholder: t("tableEmpty"),
+-    columns: [
+-      { title: t("tableAgent"), field: "code_agent", minWidth: 110, formatter: agentTeamFormatter },
+-      { title: t("tableSite"), field: "display_submission_id", minWidth: 150, formatter: siteNameFormatter },
+-      { title: t("status"), field: "statut_validation", minWidth: 95 },
+-      { title: t("tableDate"), field: "submitted_at", minWidth: 120, formatter: submittedDateFormatter }
+-    ]
++    columns: buildVisitedSitesTableColumns(),
++    rowFormatter(row) {
++      row.getElement().classList.toggle("is-selected-site", siteMarkerKey(row.getData()) === selectedSiteId);
++    }
+   });
+ 
+   table.on("rowClick", function (event, row) {
+@@ -2769,6 +2803,17 @@
+     map.invalidateSize();
+   }
+ 
++  function openSitePopup(point) {
++    const markers = siteMarkersById.get(siteMarkerKey(point)) || [];
++    const marker = markers.find((candidate) => map.hasLayer(candidate)) || markers[0];
++    if (!marker) {
++      return;
++    }
++    window.setTimeout(function () {
++      marker.openPopup();
++    }, 250);
++  }
++
+   function applyMarkerBounceConfig() {
+     const duration = Number(geometryImportConfig.markerBounceDurationMs);
+     const normalizedDuration = Number.isInteger(duration) && duration >= 100 && duration <= 5000 ? duration : 600;
+@@ -2776,6 +2821,11 @@
+     document.documentElement.style.setProperty("--marker-bounce-duration", `${normalizedDuration}ms`);
+   }
+ 
++  function siteLabelWrapLength() {
++    const length = Number(geometryImportConfig.siteLabelWrapLength);
++    return Number.isInteger(length) && length >= 10 && length <= 80 ? length : 30;
++  }
++
+   function agentTeamFormatter(cell) {
+     const point = cell.getData();
+     return escapeHtml([
+@@ -2784,6 +2834,156 @@
+     ].join("/"));
+   }
+ 
++  function buildVisitedSitesTableColumns() {
++    return selectedVisitedSitesColumnFields().map((field) => {
++      const definition = visitedSitesAvailableColumns.find((column) => column.field === field);
++      return {
++        title: definition?.title || field,
++        field,
++        minWidth: definition?.minWidth || 120,
++        formatter: definition?.formatter || visitedSiteFieldFormatter,
++        sorter: visitedSiteColumnSorter(field),
++        headerSort: true
++      };
++    });
++  }
++
++  function visitedSiteColumnSorter(field) {
++    return function (a, b, aRow, bRow) {
++      const aValue = normalizeVisitedSiteSortValue(aRow.getData(), field);
++      const bValue = normalizeVisitedSiteSortValue(bRow.getData(), field);
++      if (typeof aValue === "number" && typeof bValue === "number") {
++        return aValue - bValue;
++      }
++      return String(aValue).localeCompare(String(bValue), locale, {
++        numeric: true,
++        sensitivity: "base"
++      });
++    };
++  }
++
++  function normalizeVisitedSiteSortValue(point, field) {
++    const value = formatVisitedSiteSortValue(point, field);
++    if (value === null || value === undefined || value === "") {
++      return "";
++    }
++    const numeric = Number(value);
++    if (field === "_id" && Number.isFinite(numeric)) {
++      return numeric;
++    }
++    return String(value).trim();
++  }
++
++  function formatVisitedSiteSortValue(point, field) {
++    const value = visitedSiteFieldValue(point, field);
++    if (["modB/region", "modB/departement", "modB/sous_prefecture"].includes(field)) {
++      return resolveAdministrativeChoice(field, value);
++    }
++    if (Array.isArray(value)) {
++      return value.join(", ");
++    }
++    if (value && typeof value === "object") {
++      return JSON.stringify(value);
++    }
++    return value;
++  }
++
++  function selectedVisitedSitesColumnFields() {
++    const available = new Set(visitedSitesAvailableColumns.map((column) => column.field));
++    const stored = loadVisitedSitesColumnFields();
++    const selected = (stored.length ? stored : visitedSitesDefaultColumns)
++      .filter((field) => available.has(field));
++    return [
++      ...visitedSitesMandatoryColumns,
++      ...selected.filter((field) => !visitedSitesMandatoryColumns.includes(field))
++    ];
++  }
++
++  function loadVisitedSitesColumnFields() {
++    try {
++      const fields = JSON.parse(localStorage.getItem(visitedSitesColumnPrefsKey) || "[]");
++      return Array.isArray(fields) ? fields : [];
++    } catch (error) {
++      return [];
++    }
++  }
++
++  function saveVisitedSitesColumnFields(fields) {
++    const available = new Set(visitedSitesAvailableColumns.map((column) => column.field));
++    const nextFields = [
++      ...visitedSitesMandatoryColumns,
++      ...fields.filter((field) => available.has(field) && !visitedSitesMandatoryColumns.includes(field))
++    ];
++    try {
++      localStorage.setItem(visitedSitesColumnPrefsKey, JSON.stringify(nextFields));
++    } catch (error) {
++      // The table remains usable if browser storage is disabled.
++    }
++    table.setColumns(buildVisitedSitesTableColumns());
++    Promise.resolve(table.setData(currentVisiblePoints())).then(updateSelectedSiteTableRowStyles);
++    window.setTimeout(function () {
++      table.redraw(true);
++    }, 0);
++  }
++
++  function visitedSiteFieldFormatter(cell) {
++    return escapeHtml(formatVisitedSiteValue(cell.getData(), cell.getColumn().getField()));
++  }
++
++  function administrativeChoiceFormatter(cell) {
++    const field = cell.getColumn().getField();
++    const value = visitedSiteFieldValue(cell.getData(), field);
++    return escapeHtml(resolveAdministrativeChoice(field, value));
++  }
++
++  function resolveAdministrativeChoice(field, value) {
++    const choiceListByField = {
++      "modB/region": "adm1_ci",
++      "modB/departement": "adm2_ci",
++      "modB/sous_prefecture": "adm3_ci"
++    };
++    const raw = value === undefined || value === null ? "" : String(value);
++    const choiceListName = choiceListByField[field];
++    if (!raw || !choiceListName) {
++      return raw;
++    }
++    return administrativeChoices?.[choiceListName]?.[raw] || raw;
++  }
++
++  function visitedSiteDateFormatter(cell) {
++    const value = formatVisitedSiteValue(cell.getData(), cell.getColumn().getField());
++    if (!value) {
++      return "-";
++    }
++    const date = new Date(value);
++    return escapeHtml(Number.isNaN(date.getTime()) ? value : date.toLocaleString(locale));
++  }
++
++  function formatVisitedSiteValue(point, field) {
++    const value = visitedSiteFieldValue(point, field);
++    if (Array.isArray(value)) {
++      return value.join(", ");
++    }
++    if (value && typeof value === "object") {
++      return JSON.stringify(value);
++    }
++    return value ?? "";
++  }
++
++  function visitedSiteFieldValue(point, field) {
++    const raw = rawData(point);
++    if (field === "_id") {
++      return rawValue(raw, "_id") ?? point.source_submission_id ?? point.id;
++    }
++    if (field === "_submission_time") {
++      return rawValue(raw, "_submission_time") ?? point.submitted_at;
++    }
++    if (field === "_geolocation") {
++      return rawValue(raw, "_geolocation") ?? [point.latitude, point.longitude].filter((value) => value !== undefined && value !== null);
++    }
++    return rawValue(raw, field) ?? rawValue(raw, field.replaceAll("/", "."));
++  }
++
+   function siteNameFormatter(cell) {
+     const point = cell.getData();
+     const raw = rawData(point);
+@@ -2845,20 +3045,154 @@
+     });
+   }
+ 
++  function siteLabelText(point) {
++    const raw = rawData(point);
++    return rawValue(raw, "modB.nom_officiel")
++      || rawValue(raw, "modB/nom_officiel")
++      || point.display_submission_id
++      || point.source_submission_id
++      || "";
++  }
++
++  function siteLabelHtml(label) {
++    return fixedWrapSiteLabel(label, siteLabelWrapLength()).map(function (line) {
++      return `<span>${escapeHtml(line)}</span>`;
++    }).join("");
++  }
++
++  function fixedWrapSiteLabel(label, maxLineLength = 30) {
++    const normalized = String(label || "").replace(/\s+/g, " ").trim();
++    if (!normalized) {
++      return [];
++    }
++    const lines = [];
++    let currentLine = "";
++    normalized.split(" ").forEach(function (word) {
++      if (!currentLine) {
++        currentLine = word;
++        return;
++      }
++      if (currentLine.length >= maxLineLength) {
++        lines.push(currentLine);
++        currentLine = word;
++        return;
++      }
++      currentLine = `${currentLine} ${word}`;
++    });
++    if (currentLine) {
++      lines.push(currentLine);
++    }
++    return lines;
++  }
++
++  function updateSiteMarkerLabel(marker, point, selected = false) {
++    if (!experimentalSiteLabelsEnabled || !marker || !point) {
++      return;
++    }
++    const label = siteLabelText(point);
++    const shouldShow = Boolean(label) && (selected || map.getZoom() >= siteLabelMinZoom);
++    if (!shouldShow) {
++      marker.unbindTooltip();
++      return;
++    }
++    if (!marker.getTooltip()) {
++      marker.bindTooltip(siteLabelHtml(label), {
++        permanent: true,
++        direction: "bottom",
++        offset: [0, 12],
++        opacity: 1,
++        className: "sig-site-label"
++      });
++    } else {
++      marker.setTooltipContent(siteLabelHtml(label));
++    }
++    marker.openTooltip();
++  }
++
++  function updateSiteMarkerLabels() {
++    siteMarkersById.forEach(function (markers, markerKey) {
++      markers.forEach(function (marker) {
++        updateSiteMarkerLabel(marker, marker.__g2mSitePoint, markerKey === selectedSiteId);
++      });
++    });
++    scheduleSiteLabelCollisionRefresh();
++  }
++
++  function scheduleSiteLabelCollisionRefresh() {
++    if (siteLabelCollisionFrame) {
++      return;
++    }
++    siteLabelCollisionFrame = window.requestAnimationFrame(function () {
++      siteLabelCollisionFrame = null;
++      resolveSiteLabelCollisions();
++      window.requestAnimationFrame(resolveSiteLabelCollisions);
++    });
++  }
++
++  function resolveSiteLabelCollisions() {
++    const labels = [];
++    siteMarkersById.forEach(function (markers, markerKey) {
++      markers.forEach(function (marker) {
++        if (!map.hasLayer(marker)) {
++          return;
++        }
++        const element = marker.getTooltip?.()?.getElement?.();
++        if (!element) {
++          return;
++        }
++        element.classList.remove("sig-site-label-hidden");
++        labels.push({
++          element,
++          priority: siteLabelCollisionPriority(markerKey),
++          selected: markerKey === selectedSiteId
++        });
++      });
++    });
++
++    const accepted = [];
++    labels
++      .sort((a, b) => a.priority - b.priority)
++      .forEach(function (label) {
++        const rect = label.element.getBoundingClientRect();
++        const collides = accepted.some(function (acceptedRect) {
++          return siteLabelRectsCollide(rect, acceptedRect);
++        });
++        label.element.classList.toggle("sig-site-label-hidden", collides && !label.selected);
++        if (!collides || label.selected) {
++          accepted.push(rect);
++        }
++      });
++  }
++
++  function siteLabelCollisionPriority(markerKey) {
++    return markerKey === selectedSiteId ? 0 : 1;
++  }
++
++  function siteLabelRectsCollide(left, right) {
++    return left.left < right.right
++      && left.right > right.left
++      && left.top < right.bottom
++      && left.bottom > right.top;
++  }
++
+   function registerSiteMarker(point, marker) {
+     const markerKey = siteMarkerKey(point);
+     if (!markerKey) {
+       return marker;
+     }
++    marker.__g2mSitePoint = point;
+     if (!siteMarkersById.has(markerKey)) {
+       siteMarkersById.set(markerKey, []);
+     }
+     siteMarkersById.get(markerKey).push(marker);
+     marker.on("add", function () {
+       setSiteMarkerBounce(marker, markerKey === selectedSiteId);
++      updateSiteMarkerLabel(marker, point, markerKey === selectedSiteId);
++      scheduleSiteLabelCollisionRefresh();
+     });
+     marker.on("remove", function () {
+       setSiteMarkerBounce(marker, false);
++      marker.unbindTooltip();
+     });
+     return marker;
+   }
+@@ -2867,10 +3201,23 @@
+     const nextSiteId = siteMarkerKey(pointOrId);
+     if (selectedSiteId === nextSiteId) {
+       updateSelectedSiteMarkerBounce();
++      updateSiteMarkerLabels();
++      updateSelectedSiteTableRowStyles();
+       return;
+     }
+     selectedSiteId = nextSiteId;
+     updateSelectedSiteMarkerBounce();
++    updateSiteMarkerLabels();
++    updateSelectedSiteTableRowStyles();
++  }
++
++  function updateSelectedSiteTableRowStyles() {
++    if (!table || typeof table.getRows !== "function") {
++      return;
++    }
++    table.getRows().forEach(function (row) {
++      row.getElement().classList.toggle("is-selected-site", siteMarkerKey(row.getData()) === selectedSiteId);
++    });
+   }
+ 
+   function parseTabSeparatedCsv(text) {
+@@ -5277,10 +5624,17 @@
+     };
+   }
+ 
++  function currentVisiblePoints() {
++    const criteria = filters();
++    return points.filter(function (point) {
++      return isVisible(point, criteria);
++    });
++  }
++
+   function isVisible(point, criteria) {
+     const day = point.submitted_at.slice(0, 10);
+     return (!criteria.mission || String(point.mission_id) === criteria.mission)
+-      && (!criteria.region || point.nom_region === criteria.region)
++      && (!criteria.region || String(visitedSiteFieldValue(point, "modB/region") || point.nom_region || "") === criteria.region)
+       && (!criteria.equipe || String(point.equipe_id) === criteria.equipe)
+       && (!criteria.agent || String(point.agent_id) === criteria.agent)
+       && (!criteria.validation || point.statut_validation === criteria.validation)
+@@ -5294,11 +5648,20 @@
+       count[point.statut_validation] += 1;
+     });
+     document.getElementById("sig-visible-total").textContent = visiblePoints.length;
++    updateVisitedSitesTableTitle(visiblePoints.length);
+     document.getElementById("sig-count-valid").textContent = count.validee;
+     document.getElementById("sig-count-check").textContent = count.a_verifier;
+     document.getElementById("sig-count-rejected").textContent = count.rejetee;
+   }
+ 
++  function updateVisitedSitesTableTitle(count) {
++    const title = document.getElementById("sig-table-title");
++    if (!title) {
++      return;
++    }
++    title.textContent = (t("tableVisibleCount") || "{{count}} sites affiché(s)").replace("{{count}}", count);
++  }
++
+   function fitToVisiblePoints(visiblePoints) {
+     if (!visiblePoints.length) {
+       return;
+@@ -5319,9 +5682,7 @@
+   }
+ 
+   function renderPoints(reframeMap) {
+-    const visiblePoints = points.filter(function (point) {
+-      return isVisible(point, filters());
+-    });
++    const visiblePoints = currentVisiblePoints();
+ 
+     clusteredMarkersLayer.clearLayers();
+     plainMarkersLayer.clearLayers();
+@@ -5336,8 +5697,9 @@
+       selectedSiteId = null;
+     }
+     updateSelectedSiteMarkerBounce();
++    updateSiteMarkerLabels();
+ 
+-    table.setData(visiblePoints);
++    Promise.resolve(table.setData(visiblePoints)).then(updateSelectedSiteTableRowStyles);
+     updateMetrics(visiblePoints);
+     if (reframeMap) {
+       fitToVisiblePoints(visiblePoints);
+@@ -5378,10 +5740,13 @@
+ 
+   async function loadMissionScopedFilters(missionId, options = {}) {
+     const reframeMap = options.reframeMap !== false;
++    const applyFilters = options.applyFilters !== false;
+     showLoading();
+     if (!missionId) {
+       setMissionScopedFilters({ equipes: [], agents: [] });
+-      renderPoints(reframeMap);
++      if (applyFilters) {
++        renderPoints(reframeMap);
++      }
+       hideLoading();
+       return;
+     }
+@@ -5394,7 +5759,9 @@
+         equipe: options.equipe,
+         agent: options.agent
+       });
+-      renderPoints(reframeMap);
++      if (applyFilters) {
++        renderPoints(reframeMap);
++      }
+     } finally {
+       hideLoading();
+     }
+@@ -5561,7 +5928,7 @@
+     }
+     selectSite(point);
+     flyToSubmission(point);
+-    showDecisionDetail(point);
++    openSitePopup(point);
+     return true;
+   }
+ 
+@@ -5589,12 +5956,82 @@
+     }
+   }
+ 
++  function setFilterPanelOpen(open) {
++    const panel = document.getElementById("sig-filter-panel");
++    const toggle = document.getElementById("sig-filter-toggle");
++    if (!panel || !toggle) {
++      return;
++    }
++    panel.hidden = !open;
++    toggle.setAttribute("aria-expanded", String(open));
++    if (open) {
++      panel.querySelector("select, input, button")?.focus();
++    }
++    refreshPalLayout();
++  }
++
++  function setSummaryPanelOpen(open) {
++    const panel = document.getElementById("sig-summary-panel");
++    const toggle = document.getElementById("sig-summary-toggle");
++    if (!panel || !toggle) {
++      return;
++    }
++    panel.hidden = !open;
++    toggle.setAttribute("aria-expanded", String(open));
++    refreshPalLayout();
++  }
++
++  function openVisitedSitesColumnsModal() {
++    const modal = document.getElementById("sig-columns-modal");
++    if (!modal) {
++      return;
++    }
++    renderVisitedSitesColumnsList();
++    modal.hidden = false;
++    modal.querySelector("input, button")?.focus();
++  }
++
++  function closeVisitedSitesColumnsModal() {
++    const modal = document.getElementById("sig-columns-modal");
++    if (modal) {
++      modal.hidden = true;
++    }
++  }
++
++  function renderVisitedSitesColumnsList() {
++    const list = document.getElementById("sig-columns-list");
++    if (!list) {
++      return;
++    }
++    const selected = new Set(selectedVisitedSitesColumnFields());
++    list.innerHTML = visitedSitesAvailableColumns.map((column) => {
++      const checked = selected.has(column.field) || column.locked;
++      const disabled = column.locked ? " disabled" : "";
++      return `<label class="sig-column-option">
++        <input type="checkbox" name="column" value="${escapeHtml(column.field)}"${checked ? " checked" : ""}${disabled}>
++        <span>${escapeHtml(column.title)}</span>
++        ${column.locked ? "<em>fixe</em>" : ""}
++      </label>`;
++    }).join("");
++  }
++
++  document.getElementById("sig-filter-toggle")?.addEventListener("click", function () {
++    const panel = document.getElementById("sig-filter-panel");
++    setFilterPanelOpen(panel?.hidden !== false);
++  });
++  document.getElementById("sig-summary-toggle")?.addEventListener("click", function () {
++    const panel = document.getElementById("sig-summary-panel");
++    setSummaryPanelOpen(panel?.hidden !== false);
++  });
+   document.getElementById("sig-filters").addEventListener("change", function (event) {
+     if (event.target.id === "sig-mission-filter") {
+-      loadMissionScopedFilters(event.target.value).then(saveCurrentCartographyContext);
+-      return;
++      loadMissionScopedFilters(event.target.value, { reframeMap: false, applyFilters: false }).then(saveCurrentCartographyContext);
+     }
++  });
++  document.getElementById("sig-filters").addEventListener("submit", function (event) {
++    event.preventDefault();
+     renderPoints(true);
++    setFilterPanelOpen(false);
+     saveCurrentCartographyContext();
+   });
+   document.getElementById("sig-reset-filters").addEventListener("click", function () {
+@@ -5605,11 +6042,27 @@
+     document.getElementById("sig-filters").reset();
+     setMissionScopedFilters({ equipes: [], agents: [] });
+     renderPoints(true);
++    setFilterPanelOpen(false);
+     window.setTimeout(function () {
+       contextPersistenceFrozenUntil = 0;
+       saveCartographyContextNow();
+     }, 1000);
+   });
++  document.getElementById("sig-columns-open-inline")?.addEventListener("click", openVisitedSitesColumnsModal);
++  document.querySelectorAll("[data-sig-columns-close]").forEach((button) => {
++    button.addEventListener("click", closeVisitedSitesColumnsModal);
++  });
++  document.getElementById("sig-columns-form")?.addEventListener("submit", function (event) {
++    event.preventDefault();
++    const fields = Array.from(event.currentTarget.querySelectorAll('input[name="column"]:checked'))
++      .map((input) => input.value);
++    saveVisitedSitesColumnFields(fields);
++    closeVisitedSitesColumnsModal();
++  });
++  document.getElementById("sig-columns-reset")?.addEventListener("click", function () {
++    saveVisitedSitesColumnFields(visitedSitesDefaultColumns);
++    renderVisitedSitesColumnsList();
++  });
+   clusterToggle.addEventListener("click", function () {
+     setClustering(!clusteringEnabled);
+   });
+@@ -5714,6 +6167,7 @@
+     }
+   });
+   map.on("moveend zoomend", saveCurrentCartographyContext);
++  map.on("moveend zoomend", updateSiteMarkerLabels);
+   map.on("click", function (event) {
+     if (handleMeasureClick(event)) {
+       return;
+@@ -5825,7 +6279,8 @@
+   window.requestAnimationFrame(async function () {
+     try {
+       renderCategoryLegend();
+-      const restored = await restoreCartographyContext(savedContext);
++      const hasSubmissionQuery = Boolean(new URLSearchParams(window.location.search).get("submission_id"));
++      const restored = hasSubmissionQuery ? false : await restoreCartographyContext(savedContext);
+       if (!restored && territoryLayer.getBounds().isValid()) {
+         map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
+       }
+diff --git a/public/js/kobo-geometries-review.js b/public/js/kobo-geometries-review.js
+index 235b0bd..43b4d8b 100644
+--- a/public/js/kobo-geometries-review.js
++++ b/public/js/kobo-geometries-review.js
+@@ -2,6 +2,8 @@
+   const payload = JSON.parse(document.getElementById("kobo-geometry-review-payload").textContent);
+   const summary = JSON.parse(document.getElementById("kobo-geometry-review-summary").textContent);
+   const catalog = JSON.parse(document.getElementById("kobo-geometry-review-catalog")?.textContent || "{\"batches\":[]}");
++  const localAssets = JSON.parse(document.getElementById("kobo-geometry-review-assets")?.textContent || "{\"total\":0,\"bySubmissionId\":{}}");
++  const choiceIndex = JSON.parse(document.getElementById("kobo-geometry-review-choices")?.textContent || "{}");
+   const results = Array.isArray(payload.results) ? payload.results : [];
+   const records = Array.isArray(summary.records) ? summary.records : [];
+   const workspace = document.getElementById("kobo-geometry-review");
+@@ -9,6 +11,8 @@
+   const resizer = document.getElementById("kobo-geometry-resizer");
+   const layoutStorageKey = "g2m.koboGeometryReview.layout.v1";
+   let selectedIndex = null;
++  let selectedExplorerNodeId = "site";
++  let explorerSearchQuery = "";
+   let table = null;
+   let resizing = false;
+ 
+@@ -209,6 +213,10 @@
+     });
+     document.getElementById("kobo-geometry-fit").addEventListener("click", fitActiveLayers);
+     document.getElementById("kobo-geometry-copy-json").addEventListener("click", copyCurrentJson);
++    document.getElementById("kobo-submission-tree-search")?.addEventListener("input", function (event) {
++      explorerSearchQuery = event.target.value;
++      rerenderCurrentSubmissionExplorer();
++    });
+     document.getElementById("kobo-reference-matching-form")?.addEventListener("submit", loadReferenceMatching);
+     document.getElementById("kobo-reference-matching-clear")?.addEventListener("click", clearReferenceMatching);
+     document.getElementById("kobo-normalized-buildings-form")?.addEventListener("submit", loadNormalizedBuildings);
+@@ -389,11 +397,552 @@
+     ].filter(Boolean).join(" | ");
+     document.getElementById("kobo-geometry-json-viewer").textContent = JSON.stringify(result, null, 2);
+ 
++    renderSubmissionExplorer(result, record);
+     renderQuality(result);
+     renderGeometries(result);
+     fitActiveLayers();
+   }
+ 
++  function renderSubmissionExplorer(result, record) {
++    const treeHost = document.getElementById("kobo-submission-tree");
++    const detailHost = document.getElementById("kobo-submission-detail");
++    const countNode = document.getElementById("kobo-submission-tree-count");
++    if (!treeHost || !detailHost) {
++      return;
++    }
++
++    const nodes = buildSubmissionTree(result, record);
++    const searchQuery = normalizeSearchText(explorerSearchQuery);
++    const visibleNodes = searchQuery ? filterTreeNodes(nodes, searchQuery) : nodes;
++    const flatNodes = flattenTree(visibleNodes);
++    if (flatNodes.length && !flatNodes.some((node) => node.id === selectedExplorerNodeId)) {
++      selectedExplorerNodeId = flatNodes[0].id;
++    }
++    countNode.textContent = String(flatNodes.length);
++    treeHost.innerHTML = flatNodes.length
++      ? renderTreeNodes(visibleNodes)
++      : `<p class="empty kobo-submission-tree-empty">Aucune rubrique ne correspond a la recherche.</p>`;
++    treeHost.querySelectorAll("[data-kobo-tree-node]").forEach((button) => {
++      button.addEventListener("click", function () {
++        selectedExplorerNodeId = button.dataset.koboTreeNode;
++        renderSubmissionExplorer(result, record);
++        focusExplorerGeometry(selectedExplorerNodeId);
++      });
++    });
++    const activeNode = flatNodes.find((node) => node.id === selectedExplorerNodeId) || flatNodes[0];
++    detailHost.innerHTML = activeNode
++      ? renderExplorerDetail(activeNode, result, record)
++      : `<article class="kobo-submission-detail-card"><h3>Recherche</h3><p class="empty">Aucune rubrique ne correspond a la recherche.</p></article>`;
++  }
++
++  function rerenderCurrentSubmissionExplorer() {
++    if (selectedIndex === null) {
++      return;
++    }
++    const result = results[selectedIndex];
++    const record = records.find((candidate) => candidate.index === selectedIndex);
++    if (result && record) {
++      renderSubmissionExplorer(result, record);
++    }
++  }
++
++  function buildSubmissionTree(result, record) {
++    const buildings = Array.isArray(result.building_geometries) ? result.building_geometries : [];
++    const pylones = Array.isArray(result.pylone_geometries) ? result.pylone_geometries : [];
++    const photoCount = countKnownPhotos(result);
++    return [
++      {
++        id: "site",
++        type: "site",
++        icon: "fa-map-location-dot",
++        label: "Site",
++        badge: record.official_name ? "" : "à compléter",
++        children: [
++          { id: "site.identification", type: "site-section", icon: "fa-id-card", label: "Identification" },
++          { id: "site.localisation", type: "site-section", icon: "fa-location-dot", label: "Localisation" },
++          { id: "site.indicators", type: "site-section", icon: "fa-chart-simple", label: "Indicateurs" }
++        ]
++      },
++      {
++        id: "pylones",
++        type: "collection",
++        icon: "fa-tower-broadcast",
++        label: "Pylônes",
++        badge: pylones.length,
++        children: pylones.map((entry, index) => ({
++          id: `pylone.${index}`,
++          type: "pylone",
++          icon: "fa-tower-broadcast",
++          label: `Pylône ${index + 1}`,
++          badge: entry.requires_review ? "revue" : ""
++        }))
++      },
++      {
++        id: "buildings",
++        type: "collection",
++        icon: "fa-building",
++        label: "Bâtiments",
++        badge: buildings.length,
++        children: buildings.map((entry, index) => ({
++          id: `building.${index}`,
++          type: "building",
++          icon: "fa-building",
++          label: buildingTreeLabel(entry, index),
++          badge: entry.requires_review ? "revue" : ""
++        }))
++      },
++      { id: "raccordement", type: "raccordement", icon: "fa-network-wired", label: "Raccordement", badge: result.raccordement_geometry?.geometry ? "" : "absent" },
++      { id: "photos", type: "photos", icon: "fa-images", label: "Photos", badge: photoCount },
++      { id: "json", type: "json", icon: "fa-code", label: "JSON normalisé" }
++    ];
++  }
++
++  function renderTreeNodes(nodes, depth = 0) {
++    return `<ul class="kobo-submission-tree-list depth-${depth}">${nodes.map((node) => (
++      `<li>
++        <button class="kobo-submission-tree-node ${node.id === selectedExplorerNodeId ? "is-active" : ""}" type="button" data-kobo-tree-node="${escapeHtml(node.id)}" style="--depth:${depth}">
++          <i class="fa-solid ${escapeHtml(node.icon || "fa-circle-dot")}" aria-hidden="true"></i>
++          <span>${escapeHtml(node.label)}</span>
++          ${node.badge !== undefined && node.badge !== "" ? `<em>${escapeHtml(node.badge)}</em>` : ""}
++        </button>
++        ${Array.isArray(node.children) && node.children.length ? renderTreeNodes(node.children, depth + 1) : ""}
++      </li>`
++    )).join("")}</ul>`;
++  }
++
++  function renderExplorerDetail(node, result, record) {
++    if (!node) {
++      return `<p class="empty">Selectionnez une rubrique dans l'arbre.</p>`;
++    }
++
++    if (node.type === "building") {
++      const index = Number(node.id.split(".")[1]);
++      return renderBuildingDetail(result.building_geometries?.[index], index);
++    }
++
++    if (node.type === "pylone") {
++      const index = Number(node.id.split(".")[1]);
++      return renderPyloneDetail(result.pylone_geometries?.[index], index);
++    }
++
++    if (node.id === "site.identification") {
++      return renderSectionDetail("Identification du site", [
++        fieldLine("Nom officiel", record.official_name || result.site_description?.official_name),
++        fieldLine("Localité", record.locality || result.site_description?.locality),
++        fieldLine("Région", displayValue(result.site_description?.region, "modB.region")),
++        fieldLine("Version formulaire", result.form_version),
++        fieldLine("Identifiant Kobo", result.kobo_id),
++        fieldLine("Identifiant source", result.source_submission_id),
++        fieldLine("Soumis le", formatDateTime(result.site_description?.submitted_at))
++      ]);
++    }
++
++    if (node.id === "site.localisation" || node.id === "site") {
++      return renderSectionDetail(node.id === "site" ? "Synthèse du site" : "Localisation du site", [
++        fieldLine("Nom officiel", record.official_name || result.site_description?.official_name),
++        fieldLine("Localité", record.locality || result.site_description?.locality),
++        fieldLine("Géométrie site", result.site_geometry?.geometry?.type),
++        fieldLine("Champ source", result.site_geometry?.source_field),
++        fieldLine("Parseur", result.site_geometry?.parser),
++        fieldLine("Revue requise", result.site_geometry?.requires_review ? "Oui" : "Non"),
++        rawBlock("Valeur brute", result.site_geometry?.raw_value)
++      ]);
++    }
++
++    if (node.id === "site.indicators") {
++      return renderSectionDetail("Indicateurs disponibles", [
++        fieldLine("Bâtiments extraits", result.building_geometries?.length || 0),
++        fieldLine("Pylônes extraits", result.pylone_geometries?.length || 0),
++        fieldLine("Raccordement", result.raccordement_geometry?.geometry ? "Présent" : "Absent"),
++        fieldLine("Statut qualité", result.geometry_quality_report?.status || "unknown"),
++        fieldLine("Alertes", result.geometry_quality_report?.warnings?.length || 0)
++      ]);
++    }
++
++    if (node.id === "buildings") {
++      return renderCollectionDetail("Bâtiments", result.building_geometries || [], "building");
++    }
++
++    if (node.id === "pylones") {
++      return renderCollectionDetail("Pylônes", result.pylone_geometries || [], "pylone");
++    }
++
++    if (node.id === "raccordement") {
++      return renderRaccordementDetail(result.raccordement_geometry);
++    }
++
++    if (node.id === "photos") {
++      return renderPhotoDetail(result);
++    }
++
++    if (node.id === "json") {
++      return renderSectionDetail("Diagnostic JSON", [
++        fieldLine("Schéma", payload.schema_name || "g2m_kobo_geometry_extraction_output"),
++        fieldLine("Soumission", result.source_submission_id || result.kobo_id),
++        fieldLine("Objets bâtiment", result.building_geometries?.length || 0),
++        fieldLine("Objets pylône", result.pylone_geometries?.length || 0),
++        `<button class="button secondary" type="button" data-kobo-tree-copy-json>Copier le JSON normalisé</button>`
++      ]);
++    }
++
++    return renderSectionDetail(node.label, [fieldLine("Type", node.type)]);
++  }
++
++  function renderBuildingDetail(entry, index) {
++    if (!entry) {
++      return `<p class="empty">Bâtiment introuvable.</p>`;
++    }
++    const props = entry.properties || {};
++    return renderSectionDetail(`Bâtiment ${index + 1}`, [
++      fieldLine("Numéro", props.building_number),
++      fieldLine("Nom", props.building_name),
++      fieldLine("Statut", displayValue(props.building_status, "batiment.bat_statut")),
++      fieldLine("Vocation", displayValue(props.building_vocation, "batiment.bat_vocation")),
++      fieldLine("Services installés", props.building_services),
++      fieldLine("LAN", displayValue(props.building_lan, "batiment.lan")),
++      fieldLine("Faisabilité câblage", displayValue(props.building_cabling_feasibility, "batiment.faisab_cablage")),
++      fieldLine("Goulottes", displayValue(props.building_cable_trunking, "batiment.goulottes")),
++      fieldLine("Wi-Fi prévu", props.building_planned_wifi_count),
++      fieldLine("Baie", displayValue(props.building_rack, "batiment.baie")),
++      fieldLine("Équipements actifs", displayValue(props.building_active_equipment, "batiment.equip_actifs")),
++      fieldLine("Détail équipements", props.building_equipment_detail),
++      fieldLine("Géométrie", entry.geometry?.type),
++      fieldLine("Champ source", entry.source_field),
++      fieldLine("Parseur", entry.parser),
++      fieldLine("Revue requise", entry.requires_review ? "Oui" : "Non"),
++      `<button class="button secondary" type="button" data-kobo-tree-zoom="building.${index}">Zoom bâtiment</button>`,
++      rawBlock("Valeur brute géométrique", entry.raw_value)
++    ]);
++  }
++
++  function renderPyloneDetail(entry, index) {
++    if (!entry) {
++      return `<p class="empty">Pylône introuvable.</p>`;
++    }
++    const props = entry.properties || {};
++    return renderSectionDetail(`Pylône ${index + 1}`, [
++      fieldLine("Opérateur", displayValue(props.operator_name || props.pylone_operator, "modE.pylone_rep.pylone_op")),
++      fieldLine("Altitude", props.altitude),
++      fieldLine("Précision", props.precision_m ? `${props.precision_m} m` : ""),
++      fieldLine("Géométrie", entry.geometry?.type),
++      fieldLine("Champ source", entry.source_field),
++      fieldLine("Parseur", entry.parser),
++      fieldLine("Revue requise", entry.requires_review ? "Oui" : "Non"),
++      `<button class="button secondary" type="button" data-kobo-tree-zoom="pylone.${index}">Zoom pylône</button>`,
++      rawBlock("Valeur brute", entry.raw_value)
++    ]);
++  }
++
++  function renderRaccordementDetail(entry) {
++    if (!entry?.geometry) {
++      return renderSectionDetail("Raccordement", [
++        fieldLine("Statut", "Aucun point de raccordement extrait")
++      ]);
++    }
++    const props = entry.properties || {};
++    return renderSectionDetail("Raccordement", [
++      fieldLine("Opérateur", displayValue(props.operator_name || props.fiber_owner, "modH.prop_fibre")),
++      fieldLine("Altitude", props.altitude),
++      fieldLine("Précision", props.precision_m ? `${props.precision_m} m` : ""),
++      fieldLine("Géométrie", entry.geometry?.type),
++      fieldLine("Champ source", entry.source_field),
++      fieldLine("Parseur", entry.parser),
++      fieldLine("Revue requise", entry.requires_review ? "Oui" : "Non"),
++      `<button class="button secondary" type="button" data-kobo-tree-zoom="raccordement">Zoom raccordement</button>`,
++      rawBlock("Valeur brute", entry.raw_value)
++    ]);
++  }
++
++  function renderCollectionDetail(title, items, type) {
++    if (!items.length) {
++      return renderSectionDetail(title, [fieldLine("Statut", "Aucun objet extrait")]);
++    }
++    return renderSectionDetail(title, items.map((item, index) => {
++      const label = type === "building" ? buildingTreeLabel(item, index) : `Pylône ${index + 1}`;
++      return `<button class="kobo-submission-related-link" type="button" data-kobo-tree-jump="${type === "building" ? "building" : "pylone"}.${index}">
++        <span>${escapeHtml(label)}</span>
++        <em>${item.requires_review ? "Revue" : "OK"}</em>
++      </button>`;
++    }));
++  }
++
++  function renderSectionDetail(title, rows) {
++    window.setTimeout(bindExplorerDetailActions, 0);
++    return `<article class="kobo-submission-detail-card">
++      <h3>${escapeHtml(title)}</h3>
++      <dl>${rows.filter(Boolean).join("")}</dl>
++    </article>`;
++  }
++
++  function bindExplorerDetailActions() {
++    document.querySelectorAll("[data-kobo-tree-jump]").forEach((button) => {
++      button.addEventListener("click", function () {
++        selectedExplorerNodeId = button.dataset.koboTreeJump;
++        const result = results[selectedIndex];
++        const record = records.find((candidate) => candidate.index === selectedIndex);
++        renderSubmissionExplorer(result, record);
++        focusExplorerGeometry(selectedExplorerNodeId);
++      }, { once: true });
++    });
++    document.querySelectorAll("[data-kobo-tree-zoom]").forEach((button) => {
++      button.addEventListener("click", function () {
++        focusExplorerGeometry(button.dataset.koboTreeZoom);
++      }, { once: true });
++    });
++    document.querySelector("[data-kobo-tree-copy-json]")?.addEventListener("click", copyCurrentJson, { once: true });
++  }
++
++  function fieldLine(label, value) {
++    if (value === undefined || value === null || value === "") {
++      return "";
++    }
++    return `<dt>${escapeHtml(label)}</dt><dd>${escapeHtml(formatPopupValue(value))}</dd>`;
++  }
++
++  function rawBlock(label, value) {
++    if (!value) {
++      return "";
++    }
++    return `<dt>${escapeHtml(label)}</dt><dd><code>${escapeHtml(value)}</code></dd>`;
++  }
++
++  function displayValue(value, fieldPath) {
++    if (value === undefined || value === null || value === "") {
++      return "";
++    }
++    const entry = choiceIndex[String(fieldPath || "").replaceAll("/", ".")];
++    if (!entry) {
++      return humanizeValue(value);
++    }
++    const values = Array.isArray(value) ? value : String(value).split(/[\s,]+/).filter(Boolean);
++    if (entry.multiple || values.length > 1) {
++      return values.map((item) => resolveChoiceLabel(item, entry)).join(", ");
++    }
++    return resolveChoiceLabel(value, entry);
++  }
++
++  function resolveChoiceLabel(value, entry) {
++    const raw = String(value || "");
++    return entry.choices?.[raw] || entry.choices?.[raw.trim().toLowerCase()] || humanizeValue(raw);
++  }
++
++  function humanizeValue(value) {
++    if (Array.isArray(value)) {
++      return value.map(humanizeValue).join(", ");
++    }
++    return String(value)
++      .replaceAll("_", " ")
++      .replaceAll("-", " ")
++      .replace(/\s+/g, " ")
++      .trim()
++      .replace(/^./, (letter) => letter.toUpperCase());
++  }
++
++  function buildingTreeLabel(entry, index) {
++    const props = entry?.properties || {};
++    const number = props.building_number || index + 1;
++    const name = props.building_name || props.building_vocation || "";
++    return [`Bâtiment ${number}`, name].filter(Boolean).join(" - ");
++  }
++
++  function flattenTree(nodes) {
++    return nodes.flatMap((node) => [node, ...flattenTree(node.children || [])]);
++  }
++
++  function filterTreeNodes(nodes, query) {
++    return nodes.reduce((matches, node) => {
++      const children = filterTreeNodes(node.children || [], query);
++      if (nodeMatchesSearch(node, query) || children.length) {
++        matches.push({ ...node, children });
++      }
++      return matches;
++    }, []);
++  }
++
++  function nodeMatchesSearch(node, query) {
++    return normalizeSearchText([
++      node.id,
++      node.type,
++      node.label,
++      node.badge
++    ].filter(Boolean).join(" ")).includes(query);
++  }
++
++  function normalizeSearchText(value) {
++    return String(value || "")
++      .normalize("NFD")
++      .replace(/[\u0300-\u036f]/g, "")
++      .toLowerCase()
++      .trim();
++  }
++
++  function renderPhotoDetail(result) {
++    const photos = localPhotosForSubmission(result);
++    if (!photos.length) {
++      return renderSectionDetail("Photos", [
++        fieldLine("Photos locales", 0),
++        `<p class="form-hint">Aucune photo locale rattachee a cette soumission dans data/kobo-assets.</p>`
++      ]);
++    }
++
++    return `<article class="kobo-submission-detail-card">
++      <h3>Photos</h3>
++      <p class="kobo-submission-photo-summary">${photos.length} photo(s) locale(s) rattachee(s) a cette soumission.</p>
++      <div class="kobo-submission-photo-grid">
++        ${photos.map(renderPhotoTile).join("")}
++      </div>
++    </article>`;
++  }
++
++  function renderPhotoTile(photo) {
++    return `<a class="kobo-submission-photo-tile" href="${escapeHtml(photo.url)}" target="_blank" rel="noopener">
++      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.filename || "Photo Kobo")}" loading="lazy">
++      <span>${escapeHtml(photo.filename || "Photo Kobo")}</span>
++      ${photo.size_bytes ? `<em>${escapeHtml(formatBytes(photo.size_bytes))}</em>` : ""}
++    </a>`;
++  }
++
++  function countKnownPhotos(result) {
++    return localPhotosForSubmission(result).length;
++  }
++
++  function localPhotosForSubmission(result) {
++    const bySubmissionId = localAssets?.bySubmissionId || {};
++    const ids = [
++      result?.source_submission_id,
++      result?.submission_id,
++      result?.uuid,
++      result?.kobo_uuid,
++      result?.kobo_id
++    ].map((value) => String(value || "").trim()).filter(Boolean);
++    const photos = [];
++    const seen = new Set();
++    ids.forEach((id) => {
++      (bySubmissionId[id] || []).forEach((photo) => {
++        const key = `${photo.asset_uid}/${photo.submission_id}/${photo.filename}`;
++        if (!seen.has(key)) {
++          seen.add(key);
++          photos.push(photo);
++        }
++      });
++    });
++    return photos;
++  }
++
++  function formatBytes(value) {
++    const bytes = Number(value);
++    if (!Number.isFinite(bytes) || bytes <= 0) {
++      return "";
++    }
++    if (bytes >= 1024 * 1024) {
++      return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
++    }
++    if (bytes >= 1024) {
++      return `${Math.round(bytes / 1024)} Ko`;
++    }
++    return `${bytes} o`;
++  }
++
++  function formatDateTime(value) {
++    if (!value) {
++      return "";
++    }
++    const date = new Date(value);
++    if (Number.isNaN(date.getTime())) {
++      return value;
++    }
++    return date.toLocaleString("fr-FR");
++  }
++
++  function focusExplorerGeometry(nodeId) {
++    resetGeometryHighlights();
++    if (nodeId === "site" || nodeId === "site.localisation") {
++      highlightLayerByIndex(siteLayer, 0, "#1d4ed8");
++      fitGroupLayer(siteLayer);
++      return;
++    }
++    if (nodeId.startsWith("building.")) {
++      const index = Number(nodeId.split(".")[1]);
++      highlightLayerByIndex(buildingLayer, index, "#b91c1c");
++      fitLayerByIndex(buildingLayer, index);
++      return;
++    }
++    if (nodeId.startsWith("pylone.")) {
++      const index = Number(nodeId.split(".")[1]);
++      highlightLayerByIndex(pyloneLayer, index, "#5b21b6");
++      fitLayerByIndex(pyloneLayer, index);
++      return;
++    }
++    if (nodeId === "raccordement") {
++      highlightLayerByIndex(raccordementLayer, 0, "#15803d");
++      fitGroupLayer(raccordementLayer);
++    }
++  }
++
++  function resetGeometryHighlights() {
++    siteLayer.resetStyle();
++    buildingLayer.resetStyle();
++    raccordementLayer.eachLayer((layer) => layer.setStyle?.(pointStyle("#16a34a")));
++    pyloneLayer.eachLayer((layer) => layer.setStyle?.(pointStyle("#7c3aed")));
++  }
++
++  function highlightLayerByIndex(group, index, color) {
++    const layer = layerAt(group, index);
++    if (!layer) {
++      return;
++    }
++    if (typeof layer.setStyle === "function") {
++      layer.setStyle({
++        color,
++        fillColor: color,
++        fillOpacity: 0.36,
++        opacity: 1,
++        radius: 10,
++        weight: 5
++      });
++    }
++    layer.bringToFront?.();
++    layer.openPopup?.();
++  }
++
++  function fitLayerByIndex(group, index) {
++    const layer = layerAt(group, index);
++    if (!layer) {
++      return;
++    }
++    if (typeof layer.getBounds === "function" && layer.getBounds().isValid()) {
++      map.fitBounds(layer.getBounds(), { padding: [30, 30], maxZoom: 19 });
++    } else if (typeof layer.getLatLng === "function") {
++      map.setView(layer.getLatLng(), Math.max(map.getZoom(), 18));
++    }
++  }
++
++  function fitGroupLayer(group) {
++    const bounds = L.latLngBounds([]);
++    group.eachLayer((layer) => {
++      if (typeof layer.getBounds === "function" && layer.getBounds().isValid()) {
++        bounds.extend(layer.getBounds());
++      } else if (typeof layer.getLatLng === "function") {
++        bounds.extend(layer.getLatLng());
++      }
++    });
++    if (bounds.isValid()) {
++      map.fitBounds(bounds, { padding: [30, 30], maxZoom: 19 });
++    }
++  }
++
++  function layerAt(group, index) {
++    let found = null;
++    let cursor = 0;
++    group.eachLayer((layer) => {
++      if (cursor === index) {
++        found = layer;
++      }
++      cursor += 1;
++    });
++    return found;
++  }
++
+   function renderQuality(result) {
+     const report = result.geometry_quality_report || {};
+     const statusNode = document.getElementById("kobo-geometry-quality-status");
+diff --git a/routes/sigRoutes.js b/routes/sigRoutes.js
+index eb75974..5edc7be 100644
+--- a/routes/sigRoutes.js
++++ b/routes/sigRoutes.js
+@@ -15,6 +15,7 @@ router.post("/buildings/import", requirePermission("buildings.manage"), building
+ router.post("/buildings/import-osm", requirePermission("buildings.manage"), buildingFeatureController.importFromOsm);
+ router.patch("/buildings/:id/status", requirePermission("buildings.manage"), buildingFeatureController.updateStatus);
+ router.get("/options", requirePermission("sig.read"), sigController.filterOptions);
++router.get("/extractions-kobo/assets/:assetUid/:submissionId/:filename", requirePermission("sig.read"), sigController.koboGeometryReviewAsset);
+ router.get("/extractions-kobo/reference-matching", requirePermission("sig.read"), sigController.koboReferenceMatchingReview);
+ router.get("/extractions-kobo/reference-normalized-buildings", requirePermission("sig.read"), sigController.koboReferenceNormalizedBuildings);
+ router.get("/extractions-kobo", requirePermission("sig.read"), sigController.koboGeometriesReview);
+diff --git a/services/koboGeometryReviewService.js b/services/koboGeometryReviewService.js
+index bb56c0a..79577cb 100644
+--- a/services/koboGeometryReviewService.js
++++ b/services/koboGeometryReviewService.js
+@@ -1,6 +1,7 @@
+ const fs = require("node:fs");
+ const path = require("node:path");
+ const { extractKoboGeometryBatch } = require("./koboGeometryExtractor");
++const { DEFAULT_FORM_ID, loadChoiceList, loadMapping } = require("./formMappingService");
+ 
+ const PROJECT_ROOT = path.resolve(__dirname, "..");
+ const DEFAULT_NORMALIZED_PATH = path.join(
+@@ -28,6 +29,8 @@ const GEOMETRY_EXTRACTIONS_ROOT = path.join(
+   "kobo-geometry-extractions"
+ );
+ const BATCHES_ROOT = path.join(GEOMETRY_EXTRACTIONS_ROOT, "batches");
++const KOBO_ASSETS_ROOT = path.join(PROJECT_ROOT, "data", "kobo-assets");
++const IMAGE_FILE_PATTERN = /\.(?:jpe?g|png|gif|webp|bmp|tiff?)$/i;
+ 
+ function loadKoboGeometryReviewData(options = {}) {
+   const catalog = listKoboGeometryReviewCatalog();
+@@ -276,6 +279,150 @@ function buildKoboGeometryReviewSummary(payload) {
+   };
+ }
+ 
++function buildKoboGeometryReviewAssetIndex(options = {}) {
++  const root = options.root || KOBO_ASSETS_ROOT;
++  const bySubmissionId = {};
++
++  if (!fs.existsSync(root)) {
++    return { root, total: 0, bySubmissionId };
++  }
++
++  for (const assetEntry of fs.readdirSync(root, { withFileTypes: true })) {
++    if (!assetEntry.isDirectory()) {
++      continue;
++    }
++    const assetUid = assetEntry.name;
++    const assetDir = path.join(root, assetUid);
++    for (const submissionEntry of fs.readdirSync(assetDir, { withFileTypes: true })) {
++      if (!submissionEntry.isDirectory()) {
++        continue;
++      }
++      const submissionId = submissionEntry.name;
++      const submissionDir = path.join(assetDir, submissionId);
++      const images = fs.readdirSync(submissionDir, { withFileTypes: true })
++        .filter((entry) => entry.isFile() && IMAGE_FILE_PATTERN.test(entry.name))
++        .map((entry) => {
++          const filePath = path.join(submissionDir, entry.name);
++          const stat = fs.statSync(filePath);
++          return {
++            asset_uid: assetUid,
++            submission_id: submissionId,
++            filename: entry.name,
++            size_bytes: stat.size,
++            url: [
++              "/cartographie/extractions-kobo/assets",
++              encodeURIComponent(assetUid),
++              encodeURIComponent(submissionId),
++              encodeURIComponent(entry.name)
++            ].join("/")
++          };
++        });
++
++      if (images.length) {
++        bySubmissionId[submissionId] = (bySubmissionId[submissionId] || []).concat(images);
++      }
++    }
++  }
++
++  const total = Object.values(bySubmissionId).reduce((sum, images) => sum + images.length, 0);
++  return { root, total, bySubmissionId };
++}
++
++function resolveKoboGeometryReviewAssetPath({ assetUid, submissionId, filename, root = KOBO_ASSETS_ROOT } = {}) {
++  const parts = [assetUid, submissionId, filename].map((value) => String(value || "").trim());
++  if (parts.some((part) => !part || part.includes("/") || part.includes("\\") || part.includes(".."))) {
++    const error = new Error("Chemin d'asset Kobo invalide.");
++    error.statusCode = 400;
++    throw error;
++  }
++  if (!IMAGE_FILE_PATTERN.test(filename)) {
++    const error = new Error("Type de fichier Kobo non pris en charge.");
++    error.statusCode = 400;
++    throw error;
++  }
++
++  const resolvedRoot = path.resolve(root);
++  const filePath = path.resolve(resolvedRoot, assetUid, submissionId, filename);
++  if (!filePath.startsWith(`${resolvedRoot}${path.sep}`)) {
++    const error = new Error("Chemin d'asset Kobo invalide.");
++    error.statusCode = 400;
++    throw error;
++  }
++  if (!fs.existsSync(filePath)) {
++    const error = new Error("Asset Kobo introuvable.");
++    error.statusCode = 404;
++    throw error;
++  }
++  return filePath;
++}
++
++const REVIEW_CHOICE_FIELDS = [
++  "modB.region",
++  "modB.departement",
++  "modB.sous_prefecture",
++  "modB.ministere",
++  "modB.type_infra",
++  "modB.sous_type",
++  "modB.milieu",
++  "modB.statut_fonct",
++  "modD.electricite",
++  "modE.operateurs",
++  "modE.pylone_rep.pylone_op",
++  "modE.pylone_rep.type_pylone",
++  "modE.pylone_rep.type_transmission",
++  "modH.fibre_proximite",
++  "modH.prop_fibre",
++  "batiment.bat_statut",
++  "batiment.bat_vocation",
++  "batiment.lan",
++  "batiment.faisab_cablage",
++  "batiment.goulottes",
++  "batiment.baie",
++  "batiment.equip_actifs"
++];
++
++function buildKoboGeometryReviewChoiceIndex(formId = DEFAULT_FORM_ID) {
++  const mapping = loadMapping(formId);
++  const fields = Array.isArray(mapping.fields)
++    ? mapping.fields
++    : (mapping.sections || []).flatMap((section) => section.fields || []);
++  const fieldByPath = new Map(fields
++    .filter((field) => field.path)
++    .map((field) => [normalizeChoicePath(field.path), field]));
++
++  return REVIEW_CHOICE_FIELDS.reduce((index, fieldPath) => {
++    const field = fieldByPath.get(normalizeChoicePath(fieldPath));
++    if (!field?.choiceList) {
++      return index;
++    }
++
++    const choices = loadChoiceList(formId, field.choiceList, mapping);
++    if (!Array.isArray(choices) || choices.length === 0) {
++      return index;
++    }
++
++    index[normalizeChoicePath(fieldPath)] = {
++      multiple: String(field.type || "").startsWith("select_multiple"),
++      choices: choices.reduce((choiceMap, choice) => {
++        const name = String(choice.name);
++        const label = choice.label || choice.name;
++        choiceMap[name] = label;
++        choiceMap[normalizeChoiceValue(name)] = label;
++        return choiceMap;
++      }, {})
++    };
++    return index;
++  }, {});
++}
++
++function normalizeChoicePath(fieldPath) {
++  return String(fieldPath || "").replaceAll("/", ".");
++}
++
++function normalizeChoiceValue(value) {
++  return String(value || "").trim().toLowerCase();
++}
++
+ function hasReviewFlag(result) {
+   return Boolean(result.site_geometry?.requires_review)
+     || Boolean(result.raccordement_geometry?.requires_review)
+@@ -290,8 +437,12 @@ function readJson(filePath) {
+ module.exports = {
+   DEFAULT_NORMALIZED_PATH,
+   GEOMETRY_EXTRACTIONS_ROOT,
++  KOBO_ASSETS_ROOT,
++  buildKoboGeometryReviewAssetIndex,
++  buildKoboGeometryReviewChoiceIndex,
+   buildKoboGeometryReviewSummary,
+   listKoboGeometryReviewCatalog,
+   loadKoboReferenceMatchingReview,
+-  loadKoboGeometryReviewData
++  loadKoboGeometryReviewData,
++  resolveKoboGeometryReviewAssetPath
+ };
+diff --git a/tests/app.test.js b/tests/app.test.js
+index e074063..cb99b70 100644
+--- a/tests/app.test.js
++++ b/tests/app.test.js
+@@ -19,6 +19,7 @@ const { buildSubmissionReport, resolveValue } = require("../services/submissionR
+ const { displaySubmissionId } = require("../services/submissionIdentityService");
+ const { hashToken } = require("../services/tokenService");
+ const { hashPassword } = require("../services/passwordService");
++const MediaFile = require("../models/MediaFile");
+ 
+ const roleCsv = [
+   "Role;Label;description",
+@@ -334,6 +335,7 @@ test("la navigation affiche seulement les liens autorises", async () => {
+   assert.match(adminNavigation, /fa-solid fa-magnifying-glass/);
+   assert.match(adminNavigation, /fa-solid fa-eye/);
+   assert.match(adminNavigation, /href="\/cartographie" role="menuitem"[\s\S]*fa-map-location-dot[\s\S]*Cartographie/);
++  assert.match(adminNavigation, /href="\/cartographie\/extractions-kobo" role="menuitem"[\s\S]*fa-sitemap[\s\S]*Exploration soumissions Kobo/);
+   assert.match(adminNavigation, /class="nav-menu-panel-title">Infographie/);
+   assert.match(adminNavigation, /href="\/infographies\/mission-globale"[\s\S]*fa-chart-pie[\s\S]*Mission globale/);
+   assert.match(adminNavigation, /href="\/infographies\/par-superviseur"[\s\S]*fa-user-tie[\s\S]*Par superviseur/);
+@@ -372,6 +374,7 @@ test("la navigation affiche seulement les liens autorises", async () => {
+   assert.doesNotMatch(agentNavigation, /href="\/login"/);
+   assert.doesNotMatch(agentNavigation, /id="site-search-open"/);
+   assert.doesNotMatch(agentNavigation, /href="\/cartographie"/);
++  assert.doesNotMatch(agentNavigation, /href="\/cartographie\/extractions-kobo"/);
+   assert.doesNotMatch(agentNavigation, /href="\/infographies\/mission-globale"/);
+   assert.doesNotMatch(agentNavigation, /href="\/missions" role="menuitem"[\s\S]*Missions/);
+   assert.doesNotMatch(agentNavigation, /href="\/admin" role="menuitem">Administration/);
+@@ -1053,6 +1056,7 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
+         "app.default_mission_id": "",
+         "map.geometry_import_results_target": "layerbox",
+         "map.marker_bounce_duration_ms": "900",
++        "map.site_label_wrap_length": "34",
+         "map.site_contour_stroke_color": "#123456",
+         "map.site_contour_stroke_weight": "4",
+         "map.site_contour_dash_style": "dashdot",
+@@ -1084,6 +1088,7 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
+   const persistedSearchLimit = db.prepare("SELECT value FROM settings WHERE key = ?").get("search.site_limit");
+   const persistedGeometryTarget = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.geometry_import_results_target");
+   const persistedBounceDuration = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.marker_bounce_duration_ms");
++  const persistedSiteLabelWrapLength = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.site_label_wrap_length");
+   const persistedSiteContourColor = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.site_contour_stroke_color");
+   const persistedSiteContourOpacity = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.site_contour_fill_opacity");
+   const persistedBuildingColor = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.osm_building_stroke_color");
+@@ -1094,6 +1099,7 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
+   assert.equal(persistedSearchLimit.value, "7");
+   assert.equal(persistedGeometryTarget.value, "layerbox");
+   assert.equal(persistedBounceDuration.value, "900");
++  assert.equal(persistedSiteLabelWrapLength.value, "34");
+   assert.equal(persistedSiteContourColor.value, "#123456");
+   assert.equal(persistedSiteContourOpacity.value, "0.35");
+   assert.equal(persistedBuildingColor.value, "#654321");
+@@ -1111,11 +1117,13 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
+   assert.match(formResponse.text, /name="settings\[search\.site_fields\]\[\]"/);
+   assert.match(formResponse.text, /name="settings\[map\.geometry_import_results_target\]"/);
+   assert.match(formResponse.text, /name="settings\[map\.marker_bounce_duration_ms\]"/);
++  assert.match(formResponse.text, /name="settings\[map\.site_label_wrap_length\]"/);
+   assert.match(formResponse.text, /name="settings\[map\.site_contour_stroke_color\]"/);
+   assert.match(formResponse.text, /name="settings\[map\.site_contour_fill_opacity\]"/);
+   assert.match(formResponse.text, /name="settings\[map\.osm_building_stroke_color\]"/);
+   assert.match(formResponse.text, /name="settings\[map\.osm_building_dash_style\]"/);
+   assert.match(formResponse.text, /Duree du rebond des marqueurs/);
++  assert.match(formResponse.text, /Etiquettes de site - longueur de ligne/);
+   assert.match(formResponse.text, /Contours de site - couleur/);
+   assert.match(formResponse.text, /Emprises batiments - opacite du remplissage/);
+   assert.match(formResponse.text, /LayerBox - Resultat de l'importation/);
+@@ -2624,6 +2632,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.match(response.text, /id="sig-map-legend-toggle"/);
+   assert.match(response.text, /aria-expanded="false"/);
+   assert.match(response.text, /id="sig-i18n-data"/);
++  assert.match(response.text, /id="sig-administrative-choices-data"/);
++  assert.match(response.text, /"adm1_ci"/);
++  assert.match(response.text, /"adm2_ci"/);
++  assert.match(response.text, /"adm3_ci"/);
+   assert.match(response.text, /Voir plus/);
+   assert.match(response.text, /Synchronisation Kobo/);
+   assert.match(response.text, /Couche Humanitaire/);
+@@ -2649,13 +2661,24 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.match(response.text, /data-can-import-buildings="true"/);
+   assert.match(response.text, /id="sig-geometry-import-input"/);
+   assert.match(response.text, /id="sig-region-filter"/);
++  assert.match(response.text, /<option value="CI01">District Autonome d&#39;Abidjan<\/option>/);
+   assert.match(response.text, /sig-filter-wide/);
++  assert.match(response.text, /id="sig-filter-panel" hidden/);
++  assert.match(response.text, /id="sig-filter-toggle"/);
++  assert.match(response.text, /id="sig-summary-panel" hidden/);
++  assert.match(response.text, /id="sig-summary-toggle"/);
++  assert.match(response.text, /id="sig-columns-modal"[\s\S]*role="dialog"/);
++  assert.doesNotMatch(response.text, /id="sig-columns-open"/);
++  assert.match(response.text, /id="sig-columns-open-inline"/);
++  assert.match(response.text, /id="sig-table-title"/);
++  assert.match(response.text, /sites affich/);
+   assert.match(response.text, /Toutes les r.gions/);
+   assert.match(response.text, /accept="\.gems,\.gpx,application\/gpx\+xml,text\/xml,text\/plain"/);
+   assert.match(response.text, /id="sig-geometry-overlay"/);
+   assert.match(response.text, /id="sig-geometry-results-body"/);
+   assert.match(response.text, /id="sig-geometry-import-config-data"/);
+   assert.match(response.text, /"markerBounceDurationMs":\d+/);
++  assert.match(response.text, /"siteLabelWrapLength":\d+/);
+   assert.match(layerScriptResponse.text, /class LayerBoxManager/);
+   assert.match(layerScriptResponse.text, /renderToLayer\(id, content, options = \{\}\)/);
+   assert.match(layerScriptResponse.text, /activateLayer\(id\)/);
+@@ -2677,6 +2700,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.match(scriptResponse.text, /function applyMarkerBounceConfig\(\)/);
+   assert.match(scriptResponse.text, /--marker-bounce-duration/);
+   assert.match(scriptResponse.text, /geometryImportConfig\.markerBounceDurationMs/);
++  assert.match(scriptResponse.text, /function siteLabelWrapLength\(\)/);
++  assert.match(scriptResponse.text, /geometryImportConfig\.siteLabelWrapLength/);
+   assert.match(scriptResponse.text, /const mapFooterBand = document\.getElementById\("sig-map-footer-band"\)/);
+   assert.match(scriptResponse.text, /const coordinateControlContainer = document\.getElementById\("sig-coordinate-control"\)/);
+   assert.match(scriptResponse.text, /const sitesPlanningOpen = document\.getElementById\("sig-sites-planning-open"\)/);
+@@ -2788,15 +2813,38 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.match(scriptResponse.text, /map\.distance\(previous, latlng\)/);
+   assert.match(scriptResponse.text, /g2m:site-search-center-map/);
+   assert.match(scriptResponse.text, /map\.flyTo\(\[latitude, longitude\], Math\.max\(map\.getZoom\(\), 16\)/);
+-  assert.match(scriptResponse.text, /title: t\("tableAgent"\), field: "code_agent"[\s\S]*formatter: agentTeamFormatter/);
+-  assert.match(scriptResponse.text, /title: t\("tableSite"\), field: "display_submission_id"[\s\S]*formatter: siteNameFormatter/);
+-  assert.match(scriptResponse.text, /title: t\("status"\), field: "statut_validation"/);
+-  assert.match(scriptResponse.text, /title: t\("tableDate"\), field: "submitted_at"[\s\S]*formatter: submittedDateFormatter/);
+-  assert.match(scriptResponse.text, /function agentTeamFormatter\(cell\)/);
++  assert.match(scriptResponse.text, /visitedSitesColumnPrefsKey = "g2m\.sig\.visitedSitesColumns\.v1"/);
++  assert.match(scriptResponse.text, /visitedSitesMandatoryColumns = \["_id", "modB\/nom_officiel", "modB\/region", "modB\/ministere"\]/);
++  assert.match(scriptResponse.text, /const administrativeChoices = JSON\.parse\(document\.getElementById\("sig-administrative-choices-data"\)\?\.textContent \|\| "\{\}"\)/);
++  assert.match(scriptResponse.text, /field: "modB\/region"[\s\S]*formatter: administrativeChoiceFormatter/);
++  assert.match(scriptResponse.text, /field: "modB\/departement"[\s\S]*formatter: administrativeChoiceFormatter/);
++  assert.match(scriptResponse.text, /field: "modB\/sous_prefecture"[\s\S]*formatter: administrativeChoiceFormatter/);
++  assert.match(scriptResponse.text, /function administrativeChoiceFormatter\(cell\)/);
++  assert.match(scriptResponse.text, /function resolveAdministrativeChoice\(field, value\)/);
++  assert.match(scriptResponse.text, /function buildVisitedSitesTableColumns\(\)/);
++  assert.match(scriptResponse.text, /sorter: visitedSiteColumnSorter\(field\)/);
++  assert.match(scriptResponse.text, /function visitedSiteColumnSorter\(field\)/);
++  assert.match(scriptResponse.text, /function normalizeVisitedSiteSortValue\(point, field\)/);
++  assert.match(scriptResponse.text, /function formatVisitedSiteSortValue\(point, field\)/);
++  assert.match(scriptResponse.text, /localeCompare\(String\(bValue\), locale/);
++  assert.match(scriptResponse.text, /function selectedVisitedSitesColumnFields\(\)/);
++  assert.match(scriptResponse.text, /function openVisitedSitesColumnsModal\(\)/);
++  assert.match(scriptResponse.text, /function renderVisitedSitesColumnsList\(\)/);
++  assert.match(scriptResponse.text, /function visitedSiteFieldValue\(point, field\)/);
++  assert.match(scriptResponse.text, /table\.setColumns\(buildVisitedSitesTableColumns\(\)\)/);
++  assert.match(scriptResponse.text, /rowFormatter\(row\)[\s\S]*is-selected-site/);
+   assert.match(scriptResponse.text, /function siteNameFormatter\(cell\)/);
+-  assert.match(scriptResponse.text, /function submittedDateFormatter\(cell\)/);
++  assert.match(scriptResponse.text, /function visitedSiteDateFormatter\(cell\)/);
++  assert.match(scriptResponse.text, /function setSummaryPanelOpen\(open\)/);
++  assert.match(scriptResponse.text, /document\.getElementById\("sig-summary-toggle"\)\?\.addEventListener\("click"/);
++  assert.match(scriptResponse.text, /function updateSelectedSiteTableRowStyles\(\)/);
++  assert.match(scriptResponse.text, /function updateVisitedSitesTableTitle\(count\)/);
++  assert.match(scriptResponse.text, /updateVisitedSitesTableTitle\(visiblePoints\.length\)/);
++  assert.match(scriptResponse.text, /replace\("\{\{count\}\}", count\)/);
++  assert.match(scriptResponse.text, /document\.getElementById\("sig-filters"\)\.addEventListener\("submit"/);
++  assert.match(scriptResponse.text, /setFilterPanelOpen\(false\)/);
+   assert.match(scriptResponse.text, /region: document\.getElementById\("sig-region-filter"\)\.value/);
+-  assert.match(scriptResponse.text, /point\.nom_region === criteria\.region/);
++  assert.match(scriptResponse.text, /String\(visitedSiteFieldValue\(point, "modB\/region"\) \|\| point\.nom_region \|\| ""\) === criteria\.region/);
+   assert.match(scriptResponse.text, /document\.getElementById\("sig-region-filter"\)\.value = criteria\.region/);
+   assert.match(scriptResponse.text, /function parseImportedGeometry\(encodedGeometry\)/);
+   assert.match(scriptResponse.text, /Types autorisés : POINT, LINE, POLYGON/);
+@@ -2945,7 +2993,11 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.match(scriptResponse.text, /async function openSubmissionFromQuery\(\)/);
+   assert.match(scriptResponse.text, /new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)/);
+   assert.match(scriptResponse.text, /await loadMissionScopedFilters\(point\.mission_id \|\| "", \{ reframeMap: false \}\)/);
+-  assert.match(scriptResponse.text, /showDecisionDetail\(point\)/);
++  assert.match(scriptResponse.text, /function openSitePopup\(point\)/);
++  assert.match(scriptResponse.text, /openSitePopup\(point\)/);
++  assert.doesNotMatch(scriptResponse.text, /async function openSubmissionFromQuery\(\)[\s\S]*showDecisionDetail\(point\)[\s\S]*return true;/);
++  assert.match(scriptResponse.text, /const hasSubmissionQuery = Boolean\(new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)\)/);
++  assert.match(scriptResponse.text, /const restored = hasSubmissionQuery \? false : await restoreCartographyContext\(savedContext\)/);
+   assert.match(scriptResponse.text, /function showSubmissionDiagnostic\(submissionId, axis, title\)/);
+   assert.match(scriptResponse.text, /layerBoxManager\.renderToLayer\("submission-diagnostic"/);
+   assert.match(scriptResponse.text, /g2m:open-submission-diagnostic/);
+@@ -2954,10 +3006,32 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.match(scriptResponse.text, /function showLoading\(message\)/);
+   assert.match(scriptResponse.text, /function hideLoading\(\)/);
+   assert.match(scriptResponse.text, /let selectedSiteId = null/);
++  assert.match(scriptResponse.text, /const experimentalSiteLabelsEnabled = true/);
++  assert.match(scriptResponse.text, /const siteLabelMinZoom = 14/);
++  assert.match(scriptResponse.text, /let siteLabelCollisionFrame = null/);
+   assert.match(scriptResponse.text, /const siteMarkersById = new Map\(\)/);
+   assert.match(scriptResponse.text, /const markerBounceTimers = new WeakMap\(\)/);
+   assert.match(scriptResponse.text, /function selectSite\(pointOrId\)/);
+   assert.match(scriptResponse.text, /function updateSelectedSiteMarkerBounce\(\)/);
++  assert.match(scriptResponse.text, /function siteLabelText\(point\)/);
++  assert.match(scriptResponse.text, /function siteLabelHtml\(label\)/);
++  assert.match(scriptResponse.text, /fixedWrapSiteLabel\(label, siteLabelWrapLength\(\)\)/);
++  assert.match(scriptResponse.text, /function fixedWrapSiteLabel\(label, maxLineLength = 30\)/);
++  assert.match(scriptResponse.text, /if \(currentLine\.length >= maxLineLength\)/);
++  assert.match(scriptResponse.text, /currentLine = `\$\{currentLine\} \$\{word\}`/);
++  assert.match(scriptResponse.text, /function updateSiteMarkerLabel\(marker, point, selected = false\)/);
++  assert.match(scriptResponse.text, /function resolveSiteLabelCollisions\(\)/);
++  assert.match(scriptResponse.text, /if \(!map\.hasLayer\(marker\)\)/);
++  assert.match(scriptResponse.text, /priority: siteLabelCollisionPriority\(markerKey\)/);
++  assert.match(scriptResponse.text, /\.sort\(\(a, b\) => a\.priority - b\.priority\)/);
++  assert.match(scriptResponse.text, /function siteLabelCollisionPriority\(markerKey\)/);
++  assert.match(scriptResponse.text, /return markerKey === selectedSiteId \? 0 : 1/);
++  assert.match(scriptResponse.text, /function siteLabelRectsCollide\(left, right\)/);
++  assert.match(scriptResponse.text, /sig-site-label-hidden/);
++  assert.match(scriptResponse.text, /marker\.bindTooltip\(siteLabelHtml\(label\)/);
++  assert.match(scriptResponse.text, /marker\.setTooltipContent\(siteLabelHtml\(label\)\)/);
++  assert.match(scriptResponse.text, /className: "sig-site-label"/);
++  assert.match(scriptResponse.text, /map\.on\("moveend zoomend", updateSiteMarkerLabels\)/);
+   assert.match(scriptResponse.text, /markerBounceDurationMs = normalizedDuration/);
+   assert.match(scriptResponse.text, /geometryImportConfig\.siteContourStyle/);
+   assert.match(scriptResponse.text, /geometryImportConfig\.osmBuildingStyle/);
+@@ -3011,7 +3085,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+   assert.doesNotMatch(scriptResponse.text, /toolsWidth: toolsPanel\.getBoundingClientRect\(\)\.width/);
+   assert.match(scriptResponse.text, /map\.on\("moveend zoomend", saveCurrentCartographyContext\)/);
+   assert.match(scriptResponse.text, /map\.on\("baselayerchange"/);
+-  assert.match(scriptResponse.text, /loadMissionScopedFilters\(event\.target\.value\)\.then\(saveCurrentCartographyContext\)/);
++  assert.match(scriptResponse.text, /loadMissionScopedFilters\(event\.target\.value, \{ reframeMap: false, applyFilters: false \}\)\.then\(saveCurrentCartographyContext\)/);
+   assert.match(scriptResponse.text, /workspace\.classList\.toggle\("is-tools-open", open\)/);
+   assert.match(scriptResponse.text, /toolsToggle\.addEventListener\("click"/);
+   assert.match(scriptResponse.text, /toolsClose\.addEventListener\("click"/);
+@@ -3128,6 +3202,11 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
+ });
+ 
+ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries Kobo", async () => {
++  const testAssetDir = path.join(__dirname, "..", "data", "kobo-assets", "asset-test", "submission-test");
++  const testAssetPath = path.join(testAssetDir, "photo-test.jpg");
++  fs.mkdirSync(testAssetDir, { recursive: true });
++  fs.writeFileSync(testAssetPath, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
++
+   const gisCookie = await loginTestUser({
+     email: "gis.kobo-geometries-review@g2m.test",
+     role: "specialiste_gis"
+@@ -3156,16 +3235,30 @@ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries
+   const deniedMatchingResponse = await request(app)
+     .get("/cartographie/extractions-kobo/reference-matching")
+     .set("Cookie", agentCookie);
++  const assetResponse = await request(app)
++    .get("/cartographie/extractions-kobo/assets/asset-test/submission-test/photo-test.jpg")
++    .set("Cookie", gisCookie);
++  const deniedAssetResponse = await request(app)
++    .get("/cartographie/extractions-kobo/assets/asset-test/submission-test/photo-test.jpg")
++    .set("Cookie", agentCookie);
++  const invalidAssetResponse = await request(app)
++    .get("/cartographie/extractions-kobo/assets/asset-test/submission-test/photo-test.txt")
++    .set("Cookie", gisCookie);
+   const scriptResponse = await request(app).get("/js/kobo-geometries-review.js");
++  fs.rmSync(path.join(__dirname, "..", "data", "kobo-assets", "asset-test"), { recursive: true, force: true });
+ 
+   assert.equal(anonymousResponse.status, 302);
+   assert.equal(anonymousResponse.headers.location, "/login?next=%2Fcartographie%2Fextractions-kobo");
+   assert.equal(deniedResponse.status, 403);
+   assert.equal(deniedMatchingResponse.status, 403);
++  assert.equal(deniedAssetResponse.status, 403);
+   assert.equal(invalidSelectionResponse.status, 400);
+   assert.equal(invalidMatchingResponse.status, 400);
++  assert.equal(invalidAssetResponse.status, 400);
+   assert.equal(response.status, 200);
+   assert.equal(matchingResponse.status, 200);
++  assert.equal(assetResponse.status, 200);
++  assert.equal(assetResponse.headers["content-type"], "image/jpeg");
+   assert.equal(matchingResponse.body.ok, true);
+   assert.equal(matchingResponse.body.output, "matching_review.geojson");
+   assert.equal(matchingResponse.body.payload.type, "FeatureCollection");
+@@ -3184,9 +3277,12 @@ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries
+   assert.match(response.text, /data-kobo-geometry-tab="submissions"/);
+   assert.match(response.text, /data-kobo-geometry-tab="quality"/);
+   assert.match(response.text, /data-kobo-geometry-tab="json"/);
++  assert.match(response.text, /id="kobo-submission-tree-search"/);
+   assert.match(response.text, /id="kobo-geometry-review-payload"/);
+   assert.match(response.text, /"schema_name":"g2m_kobo_geometry_extraction_output"/);
+   assert.match(response.text, /id="kobo-geometry-review-catalog"/);
++  assert.match(response.text, /id="kobo-geometry-review-assets"/);
++  assert.match(response.text, /photo-test\.jpg/);
+   assert.match(response.text, /<section class="kobo-geometry-review-map-pane"[\s\S]*<div class="kobo-geometry-review-map" id="kobo-geometry-review-map"><\/div>[\s\S]*<\/section>/);
+   assert.match(response.text, /id="kobo-geometry-json-viewer"/);
+   assert.match(response.text, /\/js\/kobo-geometries-review\.js/);
+@@ -3197,6 +3293,10 @@ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries
+   assert.match(scriptResponse.text, /Math\.max\(20, Math\.min\(60/);
+   assert.match(scriptResponse.text, /setActiveTab/);
+   assert.match(scriptResponse.text, /renderOutputOptions/);
++  assert.match(scriptResponse.text, /filterTreeNodes/);
++  assert.match(scriptResponse.text, /normalizeSearchText/);
++  assert.match(scriptResponse.text, /localPhotosForSubmission/);
++  assert.match(scriptResponse.text, /kobo-submission-photo-grid/);
+   assert.match(scriptResponse.text, /Nom officiel/);
+   assert.match(scriptResponse.text, /field: "official_name"/);
+   assert.match(scriptResponse.text, /Localite/);
+@@ -3216,6 +3316,76 @@ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries
+   assert.match(scriptResponse.text, /kobo-geometry-json-viewer/);
+ });
+ 
++test("GET /media/:id/view genere une URL signee Wasabi pour un utilisateur autorise", async () => {
++  const previousEnv = {
++    WASABI_ACCESS_KEY_ID: process.env.WASABI_ACCESS_KEY_ID,
++    WASABI_SECRET_ACCESS_KEY: process.env.WASABI_SECRET_ACCESS_KEY,
++    WASABI_REGION: process.env.WASABI_REGION,
++    WASABI_BUCKET: process.env.WASABI_BUCKET,
++    WASABI_ENDPOINT: process.env.WASABI_ENDPOINT
++  };
++  process.env.WASABI_ACCESS_KEY_ID = "access-test";
++  process.env.WASABI_SECRET_ACCESS_KEY = "secret-test";
++  process.env.WASABI_REGION = "eu-central-1";
++  process.env.WASABI_BUCKET = "g2m-media-test";
++  process.env.WASABI_ENDPOINT = "https://s3.eu-central-1.wasabisys.com";
++
++  try {
++    const media = MediaFile.create({
++      id: "media-route-test",
++      bucket: "g2m-media-test",
++      object_key: "media/test/2026/07/media-route-test/original/photo.jpg",
++      original_filename: "photo.jpg",
++      stored_filename: "photo.jpg",
++      mime_type: "image/jpeg",
++      media_type: "image",
++      size_bytes: 42,
++      checksum_sha256: "abc123",
++      source: "manual_upload",
++      visibility: "private"
++    });
++    MediaFile.createLink({
++      media_file_id: media.id,
++      entity_type: "site",
++      entity_ref: "SITE-001",
++      role: "photo_site"
++    });
++
++    const gisCookie = await loginTestUser({
++      email: "gis.media-view@g2m.test",
++      role: "specialiste_gis"
++    });
++    const agentCookie = await loginTestUser({
++      email: "agent.media-view-denied@g2m.test",
++      role: "agent"
++    });
++
++    const anonymousResponse = await request(app).get(`/media/${media.id}/view`);
++    const deniedResponse = await request(app)
++      .get(`/media/${media.id}/view`)
++      .set("Cookie", agentCookie);
++    const response = await request(app)
++      .get(`/media/${media.id}/view`)
++      .set("Cookie", gisCookie);
++
++    assert.equal(anonymousResponse.status, 302);
++    assert.equal(anonymousResponse.headers.location, `/login?next=%2Fmedia%2F${media.id}%2Fview`);
++    assert.equal(deniedResponse.status, 403);
++    assert.equal(response.status, 302);
++    assert.match(response.headers.location, /^https:\/\/s3\.eu-central-1\.wasabisys\.com\/g2m-media-test\/media\/test\/2026\/07\/media-route-test\/original\/photo\.jpg\?/);
++    assert.match(response.headers.location, /X-Amz-Algorithm=AWS4-HMAC-SHA256/);
++    assert.match(response.headers.location, /response-content-disposition=inline/);
++  } finally {
++    Object.entries(previousEnv).forEach(([key, value]) => {
++      if (value === undefined) {
++        delete process.env[key];
++      } else {
++        process.env[key] = value;
++      }
++    });
++  }
++});
++
+ test("POST /cartographie/buildings/import alimente le referentiel batimentaire preparatoire", async () => {
+   const gisCookie = await loginTestUser({
+     email: "gis.buildings-import@g2m.test",
+@@ -3744,7 +3914,7 @@ test("GET /cartographie?lang=en utilise les ressources anglaises SIG", async ()
+   assert.match(response.text, /Filters/);
+   assert.match(response.text, /All missions/);
+   assert.match(response.text, /Summary/);
+-  assert.match(response.text, /Displayed submissions/);
++  assert.match(response.text, /Visited sites/);
+   assert.match(response.text, /Site identification sheet/);
+   assert.match(response.text, /Humanitarian layer/);
+   assert.match(response.text, /Road layer/);
+diff --git a/views/partials/header.ejs b/views/partials/header.ejs
+index 7cd9f45..9ef66f1 100644
+--- a/views/partials/header.ejs
++++ b/views/partials/header.ejs
+@@ -115,6 +115,10 @@
+                   <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
+                   <span><%= t("nav.cartography") %></span>
+                 </a>
++                <a href="/cartographie/extractions-kobo" role="menuitem">
++                  <i class="fa-solid fa-sitemap" aria-hidden="true"></i>
++                  <span><%= t("nav.koboSubmissionExplorer") %></span>
++                </a>
+               <% } %>
+               <% if (showSitesPlanningNav) { %>
+                 <a href="/sites" role="menuitem">
+diff --git a/views/sig/index.ejs b/views/sig/index.ejs
+index 93a0a45..4077278 100644
+--- a/views/sig/index.ejs
++++ b/views/sig/index.ejs
+@@ -21,7 +21,7 @@
+       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+     </button>
+     <div class="sig-pal-root-content" id="sig-pal-root-content">
+-      <div class="panel sig-panel">
++      <div class="panel sig-panel sig-filter-panel" id="sig-filter-panel" hidden>
+         <h2><%= t("sig.tools.filters") %></h2>
+         <form class="sig-filters" id="sig-filters">
+           <label class="sig-filter-wide">
+@@ -37,8 +37,8 @@
+             <%= t("common.region") %>
+             <select id="sig-region-filter">
+               <option value=""><%= t("sig.filters.allRegions") %></option>
+-              <% filters.regions.forEach((region) => { %>
+-                <option value="<%= region.nom_region %>"><%= region.nom_region %></option>
++              <% Object.entries(administrativeChoiceIndex?.adm1_ci || {}).forEach(([code, label]) => { %>
++                <option value="<%= code %>"><%= label %></option>
+               <% }) %>
+             </select>
+           </label>
+@@ -71,11 +71,14 @@
+             <%= t("sig.filters.to") %>
+             <input id="sig-date-to" type="date">
+           </label>
+-          <button class="button" id="sig-reset-filters" type="button"><%= t("sig.filters.reset") %></button>
++          <div class="sig-filter-actions">
++            <button class="button" id="sig-apply-filters" type="submit"><%= t("sig.filters.apply") %></button>
++            <button class="button secondary" id="sig-reset-filters" type="button"><%= t("sig.filters.reset") %></button>
++          </div>
+         </form>
+       </div>
+ 
+-      <div class="panel sig-panel">
++      <div class="panel sig-panel sig-summary-panel" id="sig-summary-panel" hidden>
+         <div class="panel-header">
+           <h2><%= t("sig.summary.title") %></h2>
+           <span class="sig-count" id="sig-visible-total">0</span>
+@@ -88,9 +91,41 @@
+       </div>
+ 
+       <div class="panel sig-panel sig-table-panel">
+-        <h2><%= t("sig.table.title") %></h2>
++        <div class="panel-header">
++          <h2 id="sig-table-title"><%= t("sig.table.title") %></h2>
++          <div class="sig-table-actions" role="toolbar" aria-label="<%= t("sig.rootActions.aria") %>">
++            <button class="icon-button" id="sig-summary-toggle" type="button" title="<%= t("sig.summary.toggle") %>" aria-label="<%= t("sig.summary.toggle") %>" aria-expanded="false" aria-controls="sig-summary-panel">
++              <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
++            </button>
++            <button class="icon-button" id="sig-filter-toggle" type="button" title="<%= t("sig.filters.open") %>" aria-label="<%= t("sig.filters.open") %>" aria-expanded="false" aria-controls="sig-filter-panel">
++              <i class="fa-solid fa-filter" aria-hidden="true"></i>
++            </button>
++            <button class="icon-button" id="sig-columns-open-inline" type="button" title="<%= t("sig.columns.title") %>" aria-label="<%= t("sig.columns.title") %>" aria-haspopup="dialog" aria-controls="sig-columns-modal">
++              <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
++            </button>
++          </div>
++        </div>
+         <div id="sig-table"></div>
+       </div>
++
++      <div class="sig-columns-modal" id="sig-columns-modal" role="dialog" aria-modal="true" aria-labelledby="sig-columns-modal-title" hidden>
++        <div class="sig-columns-backdrop" data-sig-columns-close></div>
++        <section class="sig-columns-dialog" role="document">
++          <header>
++            <h2 id="sig-columns-modal-title"><%= t("sig.columns.title") %></h2>
++            <button class="icon-button" type="button" data-sig-columns-close aria-label="<%= t("sig.columns.close") %>">
++              <i class="fa-solid fa-xmark" aria-hidden="true"></i>
++            </button>
++          </header>
++          <form id="sig-columns-form" class="sig-columns-form">
++            <div id="sig-columns-list" class="sig-columns-list"></div>
++            <footer>
++              <button class="button secondary" id="sig-columns-reset" type="button"><%= t("sig.filters.reset") %></button>
++              <button class="button" type="submit"><%= t("sig.filters.apply") %></button>
++            </footer>
++          </form>
++        </section>
++      </div>
+     </div>
+   </aside>
+ 
+@@ -201,11 +236,13 @@
+ <script id="sig-points-data" type="application/json"><%- JSON.stringify(points).replace(/</g, "\\u003c") %></script>
+ <script id="sig-regions-data" type="application/json"><%- JSON.stringify(regions).replace(/</g, "\\u003c") %></script>
+ <script id="sig-site-category-icons-data" type="application/json"><%- JSON.stringify(siteCategoryIcons).replace(/</g, "\\u003c") %></script>
++<script id="sig-administrative-choices-data" type="application/json"><%- JSON.stringify(administrativeChoiceIndex || {}).replace(/</g, "\\u003c") %></script>
+ <script id="sig-geometry-import-config-data" type="application/json"><%- JSON.stringify(geometryImportConfig || {}).replace(/</g, "\\u003c") %></script>
+ <script id="sig-i18n-data" type="application/json"><%- JSON.stringify({
+   locale,
+   messages: {
+     tableEmpty: t("sig.table.empty"),
++    tableVisibleCount: t("sig.table.visibleCount"),
+     tableAgent: t("sig.table.agent"),
+     tableSite: "Site",
+     tableTeam: t("sig.table.team"),
+diff --git a/views/sig/kobo-geometries-review.ejs b/views/sig/kobo-geometries-review.ejs
+index 981a706..901ab1f 100644
+--- a/views/sig/kobo-geometries-review.ejs
++++ b/views/sig/kobo-geometries-review.ejs
+@@ -5,6 +5,7 @@
+       <button class="kobo-geometry-tab is-active" id="kobo-geometry-tab-summary" type="button" role="tab" aria-selected="true" aria-controls="kobo-geometry-panel-summary" data-kobo-geometry-tab="summary">Extraction Kobo</button>
+       <button class="kobo-geometry-tab" id="kobo-geometry-tab-filters" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-filters" data-kobo-geometry-tab="filters">Filtres</button>
+       <button class="kobo-geometry-tab" id="kobo-geometry-tab-submissions" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-submissions" data-kobo-geometry-tab="submissions">Soumissions</button>
++      <button class="kobo-geometry-tab" id="kobo-geometry-tab-explorer" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-explorer" data-kobo-geometry-tab="explorer">Exploration</button>
+       <button class="kobo-geometry-tab" id="kobo-geometry-tab-quality" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-quality" data-kobo-geometry-tab="quality">Qualite</button>
+       <button class="kobo-geometry-tab" id="kobo-geometry-tab-matching" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-matching" data-kobo-geometry-tab="matching">Appariement</button>
+       <button class="kobo-geometry-tab" id="kobo-geometry-tab-json" type="button" role="tab" aria-selected="false" aria-controls="kobo-geometry-panel-json" data-kobo-geometry-tab="json">JSON normalise</button>
+@@ -95,6 +96,25 @@
+         </div>
+       </section>
+ 
++      <section class="kobo-geometry-tab-panel" id="kobo-geometry-panel-explorer" role="tabpanel" aria-labelledby="kobo-geometry-tab-explorer" data-kobo-geometry-panel="explorer" hidden>
++        <section class="panel sig-panel kobo-submission-explorer kobo-geometry-fill-panel">
++          <div class="panel-header">
++            <h2>Consultation soumission</h2>
++            <span id="kobo-submission-tree-count" class="sig-count">0</span>
++          </div>
++          <label class="kobo-submission-search" for="kobo-submission-tree-search">
++            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
++            <input id="kobo-submission-tree-search" type="search" autocomplete="off" placeholder="Rechercher dans l'arbre">
++          </label>
++          <div class="kobo-submission-explorer-layout">
++            <nav id="kobo-submission-tree" class="kobo-submission-tree" aria-label="Arbre de consultation de la soumission Kobo"></nav>
++            <section id="kobo-submission-detail" class="kobo-submission-detail" aria-live="polite">
++              <p class="empty">Selectionnez une rubrique dans l'arbre.</p>
++            </section>
++          </div>
++        </section>
++      </section>
++
+       <section class="kobo-geometry-tab-panel" id="kobo-geometry-panel-quality" role="tabpanel" aria-labelledby="kobo-geometry-tab-quality" data-kobo-geometry-panel="quality" hidden>
+         <section class="panel kobo-geometry-review-quality kobo-geometry-fill-panel">
+           <div class="panel-header">
+@@ -189,6 +209,8 @@
+ <script id="kobo-geometry-review-payload" type="application/json"><%- JSON.stringify(payload).replace(/</g, "\\u003c") %></script>
+ <script id="kobo-geometry-review-summary" type="application/json"><%- JSON.stringify(summary).replace(/</g, "\\u003c") %></script>
+ <script id="kobo-geometry-review-catalog" type="application/json"><%- JSON.stringify(reviewCatalog || { batches: [] }).replace(/</g, "\\u003c") %></script>
++<script id="kobo-geometry-review-assets" type="application/json"><%- JSON.stringify(localAssets || { total: 0, bySubmissionId: {} }).replace(/</g, "\\u003c") %></script>
++<script id="kobo-geometry-review-choices" type="application/json"><%- JSON.stringify(choiceIndex || {}).replace(/</g, "\\u003c") %></script>
+ <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+ <script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+ <script src="/js/kobo-geometries-review.js"></script>
