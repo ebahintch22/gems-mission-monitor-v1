@@ -6,15 +6,25 @@ const {
   testKoboConnection
 } = require("../services/koboSyncService");
 const {
+  DEFAULT_DOWNLOAD_ROOT,
   downloadKoboImageAssets,
   encodeSelectedImage,
   listKoboImageAssets
 } = require("../services/koboAssetDownloadService");
 const {
+  getLocalKoboMediaUploadManifest,
+  getLocalKoboMediaUploadStatus,
+  listLocalKoboMediaUploadManifests,
+  cancelLocalKoboMediaUploadJob,
+  startLocalKoboMediaUploadJob,
+  uploadLocalKoboAssetsToWasabi
+} = require("../services/koboLocalMediaUploadService");
+const {
   getAdvancedKoboSyncStatus,
   listAdvancedKoboSyncManifests,
   startAdvancedKoboSyncJob
 } = require("../services/koboAdvancedSyncService");
+const { aggregateKoboSubmissionsToFile } = require("../services/koboSubmissionAggregateService");
 const { setRuntimeKoboConfig } = require("../services/koboRuntimeConfig");
 
 exports.index = (req, res) => {
@@ -189,6 +199,116 @@ exports.downloadMediaItem = async (req, res) => {
   }
 };
 
+exports.uploadLocalMedia = async (req, res) => {
+  try {
+    const summary = await uploadLocalKoboAssetsToWasabi({
+      assetUid: req.body.asset_uid,
+      submissionId: req.body.submission_id,
+      submissionIndexFrom: req.body.submission_index_from,
+      submissionIndexTo: req.body.submission_index_to,
+      downloadRoot: req.body.download_root || DEFAULT_DOWNLOAD_ROOT,
+      dryRun: req.body.dry_run === "on",
+      deleteLocalAfterUpload: req.body.delete_local_after_upload === "on",
+      persistManifest: true,
+      actorUserId: req.currentUser?.id,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent")
+    });
+
+    renderKoboAdmin(req, res, {
+      notice: summary.dryRun
+        ? `${summary.requested} fichier(s) audite(s) dans le depot local.`
+        : `${summary.uploaded} fichier(s) televerse(s), ${summary.skipped} ignore(s), ${summary.errors.length} erreur(s).`,
+      activeSection: "media",
+      mediaValues: req.body,
+      mediaLocalUploadSummary: summary,
+      koboDebugPayload: buildKoboDebugPayload({
+        action: "Televersement du depot local Kobo vers Wasabi",
+        summary
+      })
+    });
+  } catch (error) {
+    renderKoboAdmin(req, res, {
+      error: sanitizeError(error),
+      activeSection: "media",
+      mediaValues: req.body
+    }, 400);
+  }
+};
+
+exports.startLocalMediaUploadJob = (req, res) => {
+  try {
+    const result = startLocalKoboMediaUploadJob({
+      assetUid: req.body.asset_uid,
+      submissionId: req.body.submission_id,
+      submissionIndexFrom: req.body.submission_index_from,
+      submissionIndexTo: req.body.submission_index_to,
+      downloadRoot: req.body.download_root || DEFAULT_DOWNLOAD_ROOT,
+      dryRun: req.body.dry_run === true || req.body.dry_run === "on",
+      deleteLocalAfterUpload: req.body.delete_local_after_upload === true || req.body.delete_local_after_upload === "on",
+      actorUserId: req.currentUser?.id,
+      ipAddress: req.ip,
+      userAgent: req.get("user-agent")
+    });
+
+    return res.status(202).json({
+      ok: true,
+      job_id: result.jobId,
+      manifest: result.manifest
+    });
+  } catch (error) {
+    return res.status(400).json({
+      ok: false,
+      error: sanitizeError(error)
+    });
+  }
+};
+
+exports.localMediaUploadJobStatus = (req, res) => {
+  const result = getLocalKoboMediaUploadStatus(req.params.jobId);
+  if (!result.manifest) {
+    return res.status(404).json({
+      ok: false,
+      error: "Manifeste de televersement media introuvable."
+    });
+  }
+
+  return res.json({
+    ok: true,
+    running: result.running,
+    manifest: result.manifest
+  });
+};
+
+exports.cancelLocalMediaUploadJob = (req, res) => {
+  const result = cancelLocalKoboMediaUploadJob(req.params.jobId);
+  if (!result.manifest) {
+    return res.status(404).json({
+      ok: false,
+      error: "Manifeste de televersement media introuvable."
+    });
+  }
+
+  return res.json({
+    ok: true,
+    running: result.running,
+    cancelled: result.cancelled,
+    manifest: result.manifest
+  });
+};
+
+exports.localMediaUploadManifest = (req, res) => {
+  const manifest = getLocalKoboMediaUploadManifest(req.params.jobId);
+  if (!manifest) {
+    return res.status(404).json({
+      ok: false,
+      error: "Manifeste de televersement media introuvable."
+    });
+  }
+
+  return res.type("application/json").send(JSON.stringify(manifest, null, 2));
+};
+
 exports.startAdvancedSync = async (req, res) => {
   try {
     const result = await startAdvancedKoboSyncJob({
@@ -238,6 +358,34 @@ exports.advancedSyncManifest = (req, res) => {
   return res.type("application/json").send(JSON.stringify(result.manifest, null, 2));
 };
 
+exports.aggregateSubmissions = async (req, res) => {
+  try {
+    const aggregateSummary = await aggregateKoboSubmissionsToFile({
+      assetUid: req.body.asset_uid,
+      pageSize: req.body.page_size,
+      maxPages: req.body.max_pages,
+      fileName: req.body.file_name
+    });
+
+    renderKoboAdmin(req, res, {
+      activeSection: "advanced-sync",
+      aggregateValues: req.body,
+      aggregateSummary,
+      notice: `${aggregateSummary.submissionsRead} soumission(s) agrégée(s) dans ${aggregateSummary.fileName}.`,
+      koboDebugPayload: buildKoboDebugPayload({
+        action: "Agrégation paginée des soumissions Kobo",
+        summary: aggregateSummary
+      })
+    });
+  } catch (error) {
+    renderKoboAdmin(req, res, {
+      error: sanitizeError(error),
+      activeSection: "advanced-sync",
+      aggregateValues: req.body
+    }, 400);
+  }
+};
+
 function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
   const config = getKoboConfigStatus();
   const values = {
@@ -253,7 +401,13 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
   const mediaValues = {
     asset_uid: options.mediaValues?.asset_uid || config.defaultAssetUid,
     start_index: options.mediaValues?.start_index || "1",
-    end_index: options.mediaValues?.end_index || "25"
+    end_index: options.mediaValues?.end_index || "25",
+    submission_id: options.mediaValues?.submission_id || "",
+    submission_index_from: options.mediaValues?.submission_index_from || "",
+    submission_index_to: options.mediaValues?.submission_index_to || "",
+    download_root: options.mediaValues?.download_root || DEFAULT_DOWNLOAD_ROOT,
+    dry_run: options.mediaValues?.dry_run === "on",
+    delete_local_after_upload: options.mediaValues?.delete_local_after_upload === "on"
   };
   const advancedSyncValues = {
     asset_uid: options.advancedSyncValues?.asset_uid || config.defaultAssetUid,
@@ -269,6 +423,12 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
     agent_code_field: options.advancedSyncValues?.agent_code_field || config.agentCodeField,
     form_type: options.advancedSyncValues?.form_type || config.formType
   };
+  const aggregateValues = {
+    asset_uid: options.aggregateValues?.asset_uid || config.defaultAssetUid,
+    page_size: options.aggregateValues?.page_size || "100",
+    max_pages: options.aggregateValues?.max_pages || "",
+    file_name: options.aggregateValues?.file_name || ""
+  };
 
   res.status(statusCode).render("kobo/index", {
     title: req.t("kobo.admin.title"),
@@ -279,7 +439,11 @@ function renderKoboAdmin(req, res, options = {}, statusCode = 200) {
     mediaValues,
     mediaInventory: options.mediaInventory || null,
     mediaDownloadSummary: options.mediaDownloadSummary || null,
+    mediaLocalUploadSummary: options.mediaLocalUploadSummary || null,
+    mediaLocalUploadManifests: listLocalKoboMediaUploadManifests(8),
     advancedSyncValues,
+    aggregateValues,
+    aggregateSummary: options.aggregateSummary || null,
     advancedSyncManifests: listAdvancedKoboSyncManifests(8),
     encodeSelectedImage,
     koboDebugPayloadJson: serializeDebugPayload(options.koboDebugPayload),

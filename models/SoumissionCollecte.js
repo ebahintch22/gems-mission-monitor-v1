@@ -79,6 +79,39 @@ class SoumissionCollecte {
     `).get(id));
   }
 
+  static findBySourceSubmissionId(sourceSubmissionId, assetUid = null) {
+    return attachDisplaySubmissionId(db.prepare(`
+      SELECT
+        s.id, s.source, s.source_submission_id, s.kobo_asset_uid,
+        s.mission_id, s.equipe_id, s.agent_id, s.assignment_id, s.sous_prefecture_id,
+        s.code_agent_source, s.submitted_at,
+        s.latitude, s.longitude, s.precision_m,
+        s.statut_validation, s.anomaly_count,
+        s.formulaire_type, s.raw_data_json, s.synced_at, s.created_at
+      FROM soumissions_collecte s
+      WHERE s.source = 'kobo'
+        AND s.source_submission_id = @source_submission_id
+        AND (@asset_uid IS NULL OR s.kobo_asset_uid = @asset_uid)
+      ORDER BY s.created_at DESC, s.id DESC
+      LIMIT 1
+    `).get({
+      source_submission_id: String(sourceSubmissionId || ""),
+      asset_uid: assetUid || null
+    }));
+  }
+
+  static koboSubmissionOrder(assetUid = null) {
+    return db.prepare(`
+      SELECT source_submission_id, submitted_at, id
+      FROM soumissions_collecte
+      WHERE source = 'kobo'
+        AND (@asset_uid IS NULL OR kobo_asset_uid = @asset_uid)
+      ORDER BY submitted_at ASC, id ASC, source_submission_id COLLATE NOCASE ASC
+    `).all({
+      asset_uid: assetUid || null
+    });
+  }
+
   static mapFilters() {
     return {
       missions: db.prepare(`

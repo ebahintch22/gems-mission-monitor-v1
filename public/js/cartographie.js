@@ -3,11 +3,11 @@
   const regions = JSON.parse(document.getElementById("sig-regions-data").textContent);
   const siteCategoryIcons = JSON.parse(document.getElementById("sig-site-category-icons-data").textContent);
   const administrativeChoices = JSON.parse(document.getElementById("sig-administrative-choices-data")?.textContent || "{}");
+  const administrativeChoiceLists = administrativeChoices.__choices || {};
   const geometryImportConfig = JSON.parse(document.getElementById("sig-geometry-import-config-data")?.textContent || "{}");
   let markerBounceDurationMs = 600;
   const i18nPayload = JSON.parse(document.getElementById("sig-i18n-data").textContent);
   const messages = i18nPayload.messages || {};
-  const filterLabels = i18nPayload.filters || {};
   const locale = i18nPayload.locale || "fr";
   function t(key) {
     return messages[key] || key;
@@ -27,6 +27,9 @@
   const mapPane = document.getElementById("sig-map-pane");
   const geometryImportOpen = document.getElementById("sig-geometry-import-open");
   const geometryImportInput = document.getElementById("sig-geometry-import-input");
+  const visitedSitesSearchControl = document.getElementById("sig-visited-sites-search-control");
+  const visitedSitesSearchInput = document.getElementById("sig-visited-sites-search");
+  const visitedSitesSearchClear = document.getElementById("sig-visited-sites-search-clear");
   const geometryOverlay = document.getElementById("sig-geometry-overlay");
   const geometryOverlayHandle = document.getElementById("sig-geometry-overlay-handle");
   const geometryOverlayBody = document.getElementById("sig-geometry-results-body");
@@ -185,7 +188,7 @@
     { field: "modB/region", title: "Région", locked: true, formatter: administrativeChoiceFormatter },
     { field: "modB/departement", title: "Département", formatter: administrativeChoiceFormatter },
     { field: "modB/sous_prefecture", title: "Sous-préfecture", formatter: administrativeChoiceFormatter },
-    { field: "modB/ministere", title: "Ministère", locked: true },
+    { field: "modB/ministere", title: "Ministère", locked: true, formatter: administrativeChoiceFormatter },
     { field: "modB/nom_structure", title: "Nom structure" },
     { field: "modB/commune", title: "Commune" },
     { field: "modB/statut_fonct", title: "Statut fonctionnement" },
@@ -228,6 +231,7 @@
   let selectedSiteId = null;
   const experimentalSiteLabelsEnabled = true;
   const siteLabelMinZoom = 14;
+  const siteLabelCollisionPadding = 4;
   let siteLabelCollisionFrame = null;
   const siteMarkersById = new Map();
   const markerBounceTimers = new WeakMap();
@@ -754,12 +758,17 @@
       container.append(rootContent);
     }
   });
+  const rootLayerHeader = layerBoxManager.getLayer("root")?.element.querySelector(".layer-box-header");
+  if (rootLayerHeader && visitedSitesSearchControl) {
+    rootLayerHeader.append(visitedSitesSearchControl);
+  }
 
   layerBoxManager.on("activate", function (event) {
     workspace.classList.toggle("is-pal-detail-open", event.id !== "root");
     activeLayerContext.id = event.id;
     if (event.id === "root") {
       activeLayerContext.submissionId = null;
+      syncVisitedSitesTable(lastVisitedSitesRows);
     }
     saveCurrentCartographyContext();
   });
@@ -2765,12 +2774,27 @@
       row.getElement().classList.toggle("is-selected-site", siteMarkerKey(row.getData()) === selectedSiteId);
     }
   });
+  let lastVisitedSitesRows = [];
 
   table.on("rowClick", function (event, row) {
     const point = row.getData();
     selectSite(point);
     flyToSubmission(point);
   });
+
+  function syncVisitedSitesTable(visiblePoints = currentVisiblePoints()) {
+    lastVisitedSitesRows = visiblePoints;
+    return Promise.resolve(table.setData(visiblePoints)).then(function () {
+      updateSelectedSiteTableRowStyles();
+      scheduleVisitedSitesTableRedraw();
+    });
+  }
+
+  function scheduleVisitedSitesTableRedraw() {
+    window.requestAnimationFrame(function () {
+      table.redraw(true);
+    });
+  }
 
   let palLayoutFrame = null;
 
@@ -2781,7 +2805,7 @@
     palLayoutFrame = window.requestAnimationFrame(function () {
       palLayoutFrame = null;
       if (table && typeof table.redraw === "function") {
-        table.redraw(true);
+        scheduleVisitedSitesTableRedraw();
       }
       if (sitesPlanningTable && typeof sitesPlanningTable.redraw === "function") {
         sitesPlanningTable.redraw();
@@ -2876,7 +2900,7 @@
 
   function formatVisitedSiteSortValue(point, field) {
     const value = visitedSiteFieldValue(point, field);
-    if (["modB/region", "modB/departement", "modB/sous_prefecture"].includes(field)) {
+    if (["modB/region", "modB/departement", "modB/sous_prefecture", "modB/ministere"].includes(field)) {
       return resolveAdministrativeChoice(field, value);
     }
     if (Array.isArray(value)) {
@@ -2920,10 +2944,7 @@
       // The table remains usable if browser storage is disabled.
     }
     table.setColumns(buildVisitedSitesTableColumns());
-    Promise.resolve(table.setData(currentVisiblePoints())).then(updateSelectedSiteTableRowStyles);
-    window.setTimeout(function () {
-      table.redraw(true);
-    }, 0);
+    syncVisitedSitesTable(currentVisiblePoints());
   }
 
   function visitedSiteFieldFormatter(cell) {
@@ -2940,7 +2961,11 @@
     const choiceListByField = {
       "modB/region": "adm1_ci",
       "modB/departement": "adm2_ci",
-      "modB/sous_prefecture": "adm3_ci"
+      "modB/sous_prefecture": "adm3_ci",
+      "modB/ministere": "ministere",
+      "modB/type_infra": "secteur",
+      "modB/sous_type": "sous_type",
+      "modB/milieu": "milieu"
     };
     const raw = value === undefined || value === null ? "" : String(value);
     const choiceListName = choiceListByField[field];
@@ -2948,6 +2973,70 @@
       return raw;
     }
     return administrativeChoices?.[choiceListName]?.[raw] || raw;
+  }
+
+  function administrativeChoiceItems(choiceListName) {
+    const choices = administrativeChoiceLists?.[choiceListName];
+    if (Array.isArray(choices) && choices.length) {
+      return choices;
+    }
+    return Object.entries(administrativeChoices?.[choiceListName] || {}).map(([name, label]) => ({
+      name,
+      label,
+      filters: {}
+    }));
+  }
+
+  function filterAdministrativeChoices(choiceListName, dependencyName, dependencyValue) {
+    const choices = administrativeChoiceItems(choiceListName);
+    if (!dependencyValue) {
+      return [];
+    }
+    return choices.filter((choice) => String(choice.filters?.[dependencyName] || "") === String(dependencyValue));
+  }
+
+  function populateAdministrativeSelect(select, choices, placeholder) {
+    if (!select) {
+      return;
+    }
+    const previous = select.value;
+    select.replaceChildren(new Option(placeholder, ""));
+    choices.forEach((choice) => {
+      select.append(new Option(choice.label || choice.name, choice.name));
+    });
+    select.disabled = choices.length === 0;
+    select.value = choices.some((choice) => String(choice.name) === previous) ? previous : "";
+  }
+
+  function updateAdministrativeFilterCascade(selected = {}) {
+    const regionSelect = document.getElementById("sig-region-filter");
+    const departmentSelect = document.getElementById("sig-department-filter");
+    const subprefectureSelect = document.getElementById("sig-subprefecture-filter");
+    const region = selected.region !== undefined ? selected.region : regionSelect?.value || "";
+    if (regionSelect && selected.region !== undefined) {
+      regionSelect.value = selected.region || "";
+    }
+    populateAdministrativeSelect(
+      departmentSelect,
+      filterAdministrativeChoices("adm2_ci", "region", region),
+      "Tous les départements"
+    );
+    if (departmentSelect && selected.department !== undefined) {
+      departmentSelect.value = Array.from(departmentSelect.options).some((option) => option.value === selected.department)
+        ? selected.department
+        : "";
+    }
+    const department = departmentSelect?.value || "";
+    populateAdministrativeSelect(
+      subprefectureSelect,
+      filterAdministrativeChoices("adm3_ci", "dept", department),
+      "Toutes les sous-préfectures"
+    );
+    if (subprefectureSelect && selected.subprefecture !== undefined) {
+      subprefectureSelect.value = Array.from(subprefectureSelect.options).some((option) => option.value === selected.subprefecture)
+        ? selected.subprefecture
+        : "";
+    }
   }
 
   function visitedSiteDateFormatter(cell) {
@@ -3141,8 +3230,14 @@
           return;
         }
         element.classList.remove("sig-site-label-hidden");
+        const rect = siteLabelCollisionRect(element);
+        if (!rect) {
+          return;
+        }
         labels.push({
           element,
+          rect,
+          markerKey,
           priority: siteLabelCollisionPriority(markerKey),
           selected: markerKey === selectedSiteId
         });
@@ -3151,21 +3246,46 @@
 
     const accepted = [];
     labels
-      .sort((a, b) => a.priority - b.priority)
+      .sort(siteLabelCollisionSort)
       .forEach(function (label) {
-        const rect = label.element.getBoundingClientRect();
         const collides = accepted.some(function (acceptedRect) {
-          return siteLabelRectsCollide(rect, acceptedRect);
+          return siteLabelRectsCollide(label.rect, acceptedRect);
         });
         label.element.classList.toggle("sig-site-label-hidden", collides && !label.selected);
         if (!collides || label.selected) {
-          accepted.push(rect);
+          accepted.push(label.rect);
         }
       });
   }
 
   function siteLabelCollisionPriority(markerKey) {
     return markerKey === selectedSiteId ? 0 : 1;
+  }
+
+  function siteLabelCollisionSort(left, right) {
+    if (left.priority !== right.priority) {
+      return left.priority - right.priority;
+    }
+    if (left.rect.top !== right.rect.top) {
+      return left.rect.top - right.rect.top;
+    }
+    if (left.rect.left !== right.rect.left) {
+      return left.rect.left - right.rect.left;
+    }
+    return String(left.markerKey || "").localeCompare(String(right.markerKey || ""));
+  }
+
+  function siteLabelCollisionRect(element) {
+    const rect = element.getBoundingClientRect();
+    if (!rect.width || !rect.height) {
+      return null;
+    }
+    return {
+      left: rect.left - siteLabelCollisionPadding,
+      right: rect.right + siteLabelCollisionPadding,
+      top: rect.top - siteLabelCollisionPadding,
+      bottom: rect.bottom + siteLabelCollisionPadding
+    };
   }
 
   function siteLabelRectsCollide(left, right) {
@@ -5606,6 +5726,7 @@
     );
     window.setTimeout(function () {
       map.invalidateSize();
+      syncVisitedSitesTable(lastVisitedSitesRows);
     }, 320);
     if (options.saveState !== false) {
       saveCurrentCartographyContext();
@@ -5616,9 +5737,10 @@
     return {
       mission: document.getElementById("sig-mission-filter").value,
       region: document.getElementById("sig-region-filter").value,
-      equipe: document.getElementById("sig-equipe-filter").value,
-      agent: document.getElementById("sig-agent-filter").value,
-      validation: document.getElementById("sig-validation-filter").value,
+      department: document.getElementById("sig-department-filter").value,
+      subprefecture: document.getElementById("sig-subprefecture-filter").value,
+      ministry: document.getElementById("sig-ministry-filter").value,
+      search: visitedSitesSearchInput?.value || "",
       from: document.getElementById("sig-date-from").value,
       to: document.getElementById("sig-date-to").value
     };
@@ -5635,11 +5757,49 @@
     const day = point.submitted_at.slice(0, 10);
     return (!criteria.mission || String(point.mission_id) === criteria.mission)
       && (!criteria.region || String(visitedSiteFieldValue(point, "modB/region") || point.nom_region || "") === criteria.region)
-      && (!criteria.equipe || String(point.equipe_id) === criteria.equipe)
-      && (!criteria.agent || String(point.agent_id) === criteria.agent)
-      && (!criteria.validation || point.statut_validation === criteria.validation)
+      && (!criteria.department || String(visitedSiteFieldValue(point, "modB/departement") || "") === criteria.department)
+      && (!criteria.subprefecture || String(visitedSiteFieldValue(point, "modB/sous_prefecture") || point.nom_sous_prefecture || "") === criteria.subprefecture)
+      && (!criteria.ministry || String(visitedSiteFieldValue(point, "modB/ministere") || "") === criteria.ministry)
+      && matchesVisitedSiteSearch(point, criteria.search)
       && (!criteria.from || day >= criteria.from)
       && (!criteria.to || day <= criteria.to);
+  }
+
+  function matchesVisitedSiteSearch(point, query) {
+    const terms = normalizeSearchText(query).split(" ").filter(Boolean);
+    if (!terms.length) {
+      return true;
+    }
+    const haystack = normalizeSearchText(visitedSiteSearchValues(point).join(" "));
+    return terms.every((term) => haystack.includes(term));
+  }
+
+  function visitedSiteSearchValues(point) {
+    return [
+      "modB/nom_officiel",
+      "modB/region",
+      "modB/departement",
+      "modB/sous_prefecture",
+      "modB/ministere",
+      "modB/type_infra",
+      "modB/sous_type",
+      "modB/commune",
+      "modB/milieu"
+    ].map((field) => resolvedVisitedSiteSearchValue(point, field));
+  }
+
+  function resolvedVisitedSiteSearchValue(point, field) {
+    const value = visitedSiteFieldValue(point, field);
+    return resolveAdministrativeChoice(field, value) || value || "";
+  }
+
+  function normalizeSearchText(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
   }
 
   function updateMetrics(visiblePoints) {
@@ -5699,71 +5859,10 @@
     updateSelectedSiteMarkerBounce();
     updateSiteMarkerLabels();
 
-    Promise.resolve(table.setData(visiblePoints)).then(updateSelectedSiteTableRowStyles);
+    syncVisitedSitesTable(visiblePoints);
     updateMetrics(visiblePoints);
     if (reframeMap) {
       fitToVisiblePoints(visiblePoints);
-    }
-  }
-
-  function resetSelect(select, label) {
-    select.replaceChildren(new Option(label, ""));
-    select.value = "";
-  }
-
-  function setMissionScopedFilters(options, selected = {}) {
-    const equipeSelect = document.getElementById("sig-equipe-filter");
-    const agentSelect = document.getElementById("sig-agent-filter");
-    resetSelect(equipeSelect, filterLabels.allTeams || t("team"));
-    resetSelect(agentSelect, filterLabels.allAgents || t("agent"));
-
-    (options.equipes || []).forEach(function (equipe) {
-      equipeSelect.add(new Option(equipe.nom_equipe, String(equipe.id)));
-    });
-    (options.agents || []).forEach(function (agent) {
-      const name = [agent.code_agent, [agent.prenoms, agent.nom].filter(Boolean).join(" ")]
-        .filter(Boolean)
-        .join(" - ");
-      agentSelect.add(new Option(name, String(agent.id)));
-    });
-
-    const enabled = Boolean(document.getElementById("sig-mission-filter").value);
-    equipeSelect.disabled = !enabled;
-    agentSelect.disabled = !enabled;
-    if (selected.equipe && Array.from(equipeSelect.options).some((option) => option.value === selected.equipe)) {
-      equipeSelect.value = selected.equipe;
-    }
-    if (selected.agent && Array.from(agentSelect.options).some((option) => option.value === selected.agent)) {
-      agentSelect.value = selected.agent;
-    }
-  }
-
-  async function loadMissionScopedFilters(missionId, options = {}) {
-    const reframeMap = options.reframeMap !== false;
-    const applyFilters = options.applyFilters !== false;
-    showLoading();
-    if (!missionId) {
-      setMissionScopedFilters({ equipes: [], agents: [] });
-      if (applyFilters) {
-        renderPoints(reframeMap);
-      }
-      hideLoading();
-      return;
-    }
-
-    try {
-      const response = await fetch(`/cartographie/options?mission_id=${encodeURIComponent(missionId)}`, {
-        headers: { Accept: "application/json" }
-      });
-      setMissionScopedFilters(response.ok ? await response.json() : { equipes: [], agents: [] }, {
-        equipe: options.equipe,
-        agent: options.agent
-      });
-      if (applyFilters) {
-        renderPoints(reframeMap);
-      }
-    } finally {
-      hideLoading();
     }
   }
 
@@ -5830,8 +5929,18 @@
       return;
     }
     document.getElementById("sig-mission-filter").value = criteria.mission || "";
-    document.getElementById("sig-region-filter").value = criteria.region || "";
-    document.getElementById("sig-validation-filter").value = criteria.validation || "";
+    updateAdministrativeFilterCascade({
+      region: criteria.region || "",
+      department: criteria.department || "",
+      subprefecture: criteria.subprefecture || ""
+    });
+    document.getElementById("sig-ministry-filter").value = criteria.ministry || "";
+    if (visitedSitesSearchInput) {
+      visitedSitesSearchInput.value = criteria.search || "";
+    }
+    if (visitedSitesSearchClear) {
+      visitedSitesSearchClear.hidden = !visitedSitesSearchInput?.value;
+    }
     document.getElementById("sig-date-from").value = criteria.from || "";
     document.getElementById("sig-date-to").value = criteria.to || "";
   }
@@ -5920,11 +6029,20 @@
     }
     if (!isVisible(point, filters())) {
       document.getElementById("sig-mission-filter").value = String(point.mission_id || "");
-      document.getElementById("sig-region-filter").value = "";
-      document.getElementById("sig-validation-filter").value = "";
+      updateAdministrativeFilterCascade({
+        region: "",
+        department: "",
+        subprefecture: ""
+      });
+      document.getElementById("sig-ministry-filter").value = "";
+      if (visitedSitesSearchInput) {
+        visitedSitesSearchInput.value = "";
+      }
+      if (visitedSitesSearchClear) {
+        visitedSitesSearchClear.hidden = true;
+      }
       document.getElementById("sig-date-from").value = "";
       document.getElementById("sig-date-to").value = "";
-      await loadMissionScopedFilters(point.mission_id || "", { reframeMap: false });
     }
     selectSite(point);
     flyToSubmission(point);
@@ -5940,11 +6058,6 @@
     try {
       restoreFilterValues(context.filters);
       restoreBaseLayer(context.map?.baseLayer);
-      await loadMissionScopedFilters(context.filters?.mission || "", {
-        reframeMap: false,
-        equipe: context.filters?.equipe,
-        agent: context.filters?.agent
-      });
       renderPoints(false);
       restoreLayout(context.layout);
       restoreMapView(context.map);
@@ -6015,6 +6128,33 @@
     }).join("");
   }
 
+  let visitedSitesSearchDebounce = null;
+
+  function scheduleVisitedSitesSearchFilter() {
+    if (visitedSitesSearchClear) {
+      visitedSitesSearchClear.hidden = !visitedSitesSearchInput?.value;
+    }
+    window.clearTimeout(visitedSitesSearchDebounce);
+    visitedSitesSearchDebounce = window.setTimeout(function () {
+      renderPoints(true);
+      saveCurrentCartographyContext();
+    }, 800);
+  }
+
+  function clearVisitedSitesSearch() {
+    if (!visitedSitesSearchInput) {
+      return;
+    }
+    visitedSitesSearchInput.value = "";
+    if (visitedSitesSearchClear) {
+      visitedSitesSearchClear.hidden = true;
+    }
+    window.clearTimeout(visitedSitesSearchDebounce);
+    renderPoints(true);
+    saveCurrentCartographyContext();
+    visitedSitesSearchInput.focus();
+  }
+
   document.getElementById("sig-filter-toggle")?.addEventListener("click", function () {
     const panel = document.getElementById("sig-filter-panel");
     setFilterPanelOpen(panel?.hidden !== false);
@@ -6023,9 +6163,30 @@
     const panel = document.getElementById("sig-summary-panel");
     setSummaryPanelOpen(panel?.hidden !== false);
   });
+  visitedSitesSearchInput?.addEventListener("input", scheduleVisitedSitesSearchFilter);
+  visitedSitesSearchInput?.addEventListener("search", function () {
+    if (!visitedSitesSearchInput.value) {
+      clearVisitedSitesSearch();
+    }
+  });
+  visitedSitesSearchClear?.addEventListener("click", clearVisitedSitesSearch);
   document.getElementById("sig-filters").addEventListener("change", function (event) {
     if (event.target.id === "sig-mission-filter") {
-      loadMissionScopedFilters(event.target.value, { reframeMap: false, applyFilters: false }).then(saveCurrentCartographyContext);
+      saveCurrentCartographyContext();
+    }
+    if (event.target.id === "sig-region-filter") {
+      updateAdministrativeFilterCascade({
+        region: event.target.value,
+        department: "",
+        subprefecture: ""
+      });
+    }
+    if (event.target.id === "sig-department-filter") {
+      updateAdministrativeFilterCascade({
+        region: document.getElementById("sig-region-filter").value,
+        department: event.target.value,
+        subprefecture: ""
+      });
     }
   });
   document.getElementById("sig-filters").addEventListener("submit", function (event) {
@@ -6040,7 +6201,18 @@
     userDefinedToolsWidth = null;
     workspace.style.removeProperty("--sig-tools-width");
     document.getElementById("sig-filters").reset();
-    setMissionScopedFilters({ equipes: [], agents: [] });
+    updateAdministrativeFilterCascade({
+      region: "",
+      department: "",
+      subprefecture: ""
+    });
+    if (visitedSitesSearchInput) {
+      visitedSitesSearchInput.value = "";
+    }
+    if (visitedSitesSearchClear) {
+      visitedSitesSearchClear.hidden = true;
+    }
+    window.clearTimeout(visitedSitesSearchDebounce);
     renderPoints(true);
     setFilterPanelOpen(false);
     window.setTimeout(function () {
@@ -6285,7 +6457,7 @@
         map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
       }
       if (!restored) {
-        setMissionScopedFilters({ equipes: [], agents: [] });
+        updateAdministrativeFilterCascade();
         renderPoints(false);
         saveCurrentCartographyContext();
       }

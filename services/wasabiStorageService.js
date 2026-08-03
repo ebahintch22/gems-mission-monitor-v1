@@ -1,7 +1,10 @@
 const crypto = require("node:crypto");
+const fs = require("node:fs");
 const path = require("node:path");
 
 const DEFAULT_SIGNED_URL_TTL_SECONDS = 900;
+const DEFAULT_UPLOAD_RETRIES = 3;
+const DEFAULT_UPLOAD_RETRY_DELAY_MS = 750;
 const STORAGE_PROVIDER = "wasabi";
 
 function getWasabiConfig(env = process.env) {
@@ -95,10 +98,46 @@ async function uploadBuffer({
   body,
   contentType = "application/octet-stream",
   env = process.env,
-  fetchImpl = fetch
+  fetchImpl = fetch,
+  retries = DEFAULT_UPLOAD_RETRIES,
+  retryDelayMs = DEFAULT_UPLOAD_RETRY_DELAY_MS
 } = {}) {
   const config = assertReadyConfig(getWasabiConfig(env));
   const buffer = Buffer.isBuffer(body) ? body : Buffer.from(body || "");
+  const maxAttempts = normalizeRetryAttempts(retries);
+  let lastError;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+    try {
+      return await putBufferOnce({
+        config,
+        objectKey,
+        buffer,
+        contentType,
+        fetchImpl
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !isRetriableUploadError(error)) {
+        break;
+      }
+      await delay(retryDelayMs * attempt);
+    }
+  }
+
+  if (lastError?.uploadAttempts === undefined) {
+    lastError.uploadAttempts = maxAttempts;
+  }
+  throw lastError;
+}
+
+async function putBufferOnce({
+  config,
+  objectKey,
+  buffer,
+  contentType,
+  fetchImpl
+}) {
   const endpoint = new URL(config.endpoint);
   const requestDate = amzDate(new Date());
   const dateStamp = requestDate.slice(0, 8);
@@ -138,23 +177,33 @@ async function uploadBuffer({
     `Signature=${signature}`
   ].join(", ");
 
-  const response = await fetchImpl(`${endpoint.origin}${canonicalUri}`, {
-    method: "PUT",
-    headers: {
-      Authorization: authorization,
-      "Content-Length": headers["content-length"],
-      "Content-Type": headers["content-type"],
-      "Host": headers.host,
-      "X-Amz-Content-Sha256": headers["x-amz-content-sha256"],
-      "X-Amz-Date": headers["x-amz-date"]
-    },
-    body: buffer
-  });
+  let response;
+  try {
+    response = await fetchImpl(`${endpoint.origin}${canonicalUri}`, {
+      method: "PUT",
+      headers: {
+        Authorization: authorization,
+        "Content-Length": headers["content-length"],
+        "Content-Type": headers["content-type"],
+        "Host": headers.host,
+        "X-Amz-Content-Sha256": headers["x-amz-content-sha256"],
+        "X-Amz-Date": headers["x-amz-date"]
+      },
+      body: buffer
+    });
+  } catch (error) {
+    const detail = formatNetworkError(error);
+    const uploadError = new Error(`Upload Wasabi impossible: ${detail}`);
+    uploadError.cause = error;
+    uploadError.retriable = true;
+    throw uploadError;
+  }
 
   if (!response.ok) {
     const message = typeof response.text === "function" ? await response.text() : response.statusText;
     const error = new Error(`Upload Wasabi impossible (${response.status}): ${message}`);
     error.statusCode = response.status;
+    error.retriable = response.status === 429 || response.status >= 500;
     throw error;
   }
 
@@ -163,6 +212,52 @@ async function uploadBuffer({
     object_key: objectKey,
     size_bytes: buffer.length,
     checksum_sha256: payloadHash
+  };
+}
+
+async function uploadFile({
+  filePath,
+  objectKey,
+  contentType,
+  env = process.env,
+  fetchImpl = fetch,
+  retries = DEFAULT_UPLOAD_RETRIES,
+  retryDelayMs = DEFAULT_UPLOAD_RETRY_DELAY_MS
+} = {}) {
+  if (!filePath) {
+    throw new Error("Le chemin du fichier local est obligatoire.");
+  }
+  const metadata = await inspectLocalFile(filePath, { contentType });
+  return uploadBuffer({
+    objectKey,
+    body: await fs.promises.readFile(filePath),
+    contentType: metadata.mime_type,
+    env,
+    fetchImpl,
+    retries,
+    retryDelayMs
+  });
+}
+
+async function inspectLocalFile(filePath, { contentType } = {}) {
+  if (!filePath) {
+    throw new Error("Le chemin du fichier local est obligatoire.");
+  }
+  const stat = await fs.promises.stat(filePath);
+  if (!stat.isFile()) {
+    throw new Error(`Le chemin ne pointe pas vers un fichier: ${filePath}`);
+  }
+  const buffer = await fs.promises.readFile(filePath);
+  const originalFilename = path.basename(filePath);
+  const mimeType = contentType || detectMimeTypeFromFilename(originalFilename);
+  return {
+    path: filePath,
+    original_filename: originalFilename,
+    stored_filename: sanitizeFileName(originalFilename),
+    mime_type: mimeType,
+    media_type: detectMediaType(mimeType, originalFilename),
+    size_bytes: stat.size,
+    checksum_sha256: checksumSha256(buffer)
   };
 }
 
@@ -185,8 +280,66 @@ function detectMediaType(mimeType, filename = "") {
   return "other";
 }
 
+function detectMimeTypeFromFilename(filename = "") {
+  const extension = path.extname(filename || "").toLowerCase();
+  const mimeByExtension = {
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".png": "image/png",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".bmp": "image/bmp",
+    ".tif": "image/tiff",
+    ".tiff": "image/tiff",
+    ".mp4": "video/mp4",
+    ".mov": "video/quicktime",
+    ".avi": "video/x-msvideo",
+    ".pdf": "application/pdf",
+    ".csv": "text/csv",
+    ".txt": "text/plain",
+    ".json": "application/json",
+    ".doc": "application/msword",
+    ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ".xls": "application/vnd.ms-excel",
+    ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ".ppt": "application/vnd.ms-powerpoint",
+    ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    ".zip": "application/zip"
+  };
+  return mimeByExtension[extension] || "application/octet-stream";
+}
+
 function checksumSha256(value) {
   return sha256Hex(Buffer.isBuffer(value) ? value : Buffer.from(value || ""));
+}
+
+function normalizeRetryAttempts(value) {
+  const attempts = Number(value);
+  if (!Number.isInteger(attempts) || attempts < 1) {
+    return 1;
+  }
+  return Math.min(attempts, 5);
+}
+
+function isRetriableUploadError(error) {
+  return Boolean(error?.retriable);
+}
+
+function delay(ms) {
+  const duration = Number(ms);
+  if (!duration || duration < 1) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => setTimeout(resolve, duration));
+}
+
+function formatNetworkError(error) {
+  const parts = [
+    error?.message,
+    error?.cause?.code,
+    error?.cause?.message
+  ].filter(Boolean);
+  return parts.join(" - ") || "erreur reseau inconnue";
 }
 
 function assertReadyConfig(config) {
@@ -270,12 +423,17 @@ function signingKey(secretAccessKey, dateStamp, region) {
 
 module.exports = {
   DEFAULT_SIGNED_URL_TTL_SECONDS,
+  DEFAULT_UPLOAD_RETRIES,
+  DEFAULT_UPLOAD_RETRY_DELAY_MS,
   checksumSha256,
   createMediaObjectKey,
   createPresignedUrl,
+  detectMimeTypeFromFilename,
   detectMediaType,
   getWasabiConfig,
   getWasabiStatus,
+  inspectLocalFile,
   sanitizeFileName,
-  uploadBuffer
+  uploadBuffer,
+  uploadFile
 };

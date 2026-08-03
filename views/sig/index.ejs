@@ -21,6 +21,14 @@
       <i class="fa-solid fa-xmark" aria-hidden="true"></i>
     </button>
     <div class="sig-pal-root-content" id="sig-pal-root-content">
+      <label class="sig-table-search sig-layer-header-search" id="sig-visited-sites-search-control" for="sig-visited-sites-search">
+        <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+        <input id="sig-visited-sites-search" type="search" placeholder="Rechercher un site" autocomplete="off">
+        <button class="sig-table-search-clear" id="sig-visited-sites-search-clear" type="button" aria-label="Effacer la recherche" hidden>
+          <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+      </label>
+
       <div class="panel sig-panel sig-filter-panel" id="sig-filter-panel" hidden>
         <h2><%= t("sig.tools.filters") %></h2>
         <form class="sig-filters" id="sig-filters">
@@ -43,24 +51,24 @@
             </select>
           </label>
           <label>
-            <%= t("sig.filters.team") %>
-            <select id="sig-equipe-filter" disabled>
-              <option value=""><%= t("sig.filters.allTeams") %></option>
+            <%= t("sig.site.fields.department") %>
+            <select id="sig-department-filter" disabled>
+              <option value="">Tous les départements</option>
             </select>
           </label>
           <label>
-            <%= t("sig.filters.agent") %>
-            <select id="sig-agent-filter" disabled>
-              <option value=""><%= t("sig.filters.allAgents") %></option>
+            <%= t("sig.site.fields.subpref") %>
+            <select id="sig-subprefecture-filter" disabled>
+              <option value="">Toutes les sous-préfectures</option>
             </select>
           </label>
           <label>
-            <%= t("sig.filters.validation") %>
-            <select id="sig-validation-filter">
-              <option value=""><%= t("sig.filters.allStatuses") %></option>
-              <option value="validee"><%= t("status.validee") %></option>
-              <option value="a_verifier"><%= t("status.a_verifier") %></option>
-              <option value="rejetee"><%= t("status.rejetee") %></option>
+            <%= t("sig.site.fields.ministry") %>
+            <select id="sig-ministry-filter">
+              <option value=""><%= t("sig.filters.allMinistries") %></option>
+              <% Object.entries(administrativeChoiceIndex?.ministere || {}).forEach(([code, label]) => { %>
+                <option value="<%= code %>"><%= label %></option>
+              <% }) %>
             </select>
           </label>
           <label>
@@ -93,16 +101,18 @@
       <div class="panel sig-panel sig-table-panel">
         <div class="panel-header">
           <h2 id="sig-table-title"><%= t("sig.table.title") %></h2>
-          <div class="sig-table-actions" role="toolbar" aria-label="<%= t("sig.rootActions.aria") %>">
-            <button class="icon-button" id="sig-summary-toggle" type="button" title="<%= t("sig.summary.toggle") %>" aria-label="<%= t("sig.summary.toggle") %>" aria-expanded="false" aria-controls="sig-summary-panel">
-              <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
-            </button>
-            <button class="icon-button" id="sig-filter-toggle" type="button" title="<%= t("sig.filters.open") %>" aria-label="<%= t("sig.filters.open") %>" aria-expanded="false" aria-controls="sig-filter-panel">
-              <i class="fa-solid fa-filter" aria-hidden="true"></i>
-            </button>
-            <button class="icon-button" id="sig-columns-open-inline" type="button" title="<%= t("sig.columns.title") %>" aria-label="<%= t("sig.columns.title") %>" aria-haspopup="dialog" aria-controls="sig-columns-modal">
-              <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
-            </button>
+          <div class="sig-table-header-controls">
+            <div class="sig-table-actions" role="toolbar" aria-label="<%= t("sig.rootActions.aria") %>">
+              <button class="icon-button" id="sig-summary-toggle" type="button" title="<%= t("sig.summary.toggle") %>" aria-label="<%= t("sig.summary.toggle") %>" aria-expanded="false" aria-controls="sig-summary-panel">
+                <i class="fa-solid fa-chart-simple" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" id="sig-filter-toggle" type="button" title="<%= t("sig.filters.open") %>" aria-label="<%= t("sig.filters.open") %>" aria-expanded="false" aria-controls="sig-filter-panel">
+                <i class="fa-solid fa-filter" aria-hidden="true"></i>
+              </button>
+              <button class="icon-button" id="sig-columns-open-inline" type="button" title="<%= t("sig.columns.title") %>" aria-label="<%= t("sig.columns.title") %>" aria-haspopup="dialog" aria-controls="sig-columns-modal">
+                <i class="fa-solid fa-table-columns" aria-hidden="true"></i>
+              </button>
+            </div>
           </div>
         </div>
         <div id="sig-table"></div>

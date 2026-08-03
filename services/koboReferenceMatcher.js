@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { extractKoboGeometryBatch } = require("./koboGeometryExtractor");
+const { extractKoboGeometryBatch, extractKoboGeometryBatchV2 } = require("./koboGeometryExtractor");
 
 const PROJECT_ROOT = path.resolve(__dirname, "..");
 const BATCHES_ROOT = path.join(PROJECT_ROOT, "KBase-docs", "kobo-geometry-extractions", "batches");
@@ -88,6 +88,57 @@ function runReferenceMatching(options = {}) {
 
 function runMatchingEngine({ koboData, sitePolygons, buildingFootprints, toleranceMeters, logger } = {}) {
   return processMatching(koboData, sitePolygons, buildingFootprints, { toleranceMeters, logger });
+}
+
+function runSiteReferenceMatchingV2(options = {}) {
+  const batchPath = resolveBatchPathForSiteOnly(options.batch);
+  const thresholds = { ...DEFAULT_THRESHOLDS, ...(options.thresholds || {}) };
+  const extractionPath = ensureExtractionOutputV2(batchPath, options);
+  const siteContoursPath = options.siteContours
+    ? path.resolve(PROJECT_ROOT, options.siteContours)
+    : findReferenceFile(batchPath, "contours_sites.geojson");
+
+  if (!siteContoursPath) {
+    throw new Error("Fichier contours_sites.geojson introuvable.");
+  }
+
+  const extractionPayload = readJson(extractionPath);
+  const results = Array.isArray(extractionPayload.results) ? extractionPayload.results : [];
+  const siteContours = readFeatureCollection(siteContoursPath, "contours_sites");
+  const siteReferenceFeatures = normalizeReferenceFeatures(siteContours, "site");
+  const siteMatches = matchSites(results, siteReferenceFeatures, thresholds);
+  const centroidLayer = buildBuildingCentroidLayerFromExtraction(results);
+  const outputDir = path.join(batchPath, "06_matching");
+  const centroidOutputPath = options.centroidOutput
+    ? path.resolve(PROJECT_ROOT, options.centroidOutput)
+    : path.join(outputDir, "centroid_batiment.geojson");
+  const csvOutputPath = options.csvOutput
+    ? path.resolve(PROJECT_ROOT, options.csvOutput)
+    : path.join(outputDir, "site_submission_matching.csv");
+
+  fs.mkdirSync(path.dirname(centroidOutputPath), { recursive: true });
+  fs.mkdirSync(path.dirname(csvOutputPath), { recursive: true });
+  writeJson(centroidOutputPath, centroidLayer);
+  fs.writeFileSync(csvOutputPath, buildSiteSubmissionMatchingCsv(siteMatches, results), "utf8");
+
+  return {
+    ok: true,
+    batchPath,
+    extractionPath,
+    siteContoursPath,
+    outputs: {
+      centroidOutputPath,
+      csvOutputPath
+    },
+    summary: {
+      submissions: siteMatches.length,
+      centroid_features: centroidLayer.features.length,
+      matched: siteMatches.filter((match) => match.status === "matched").length,
+      review: siteMatches.filter((match) => match.status === "review").length,
+      ambiguous: siteMatches.filter((match) => match.status === "ambiguous").length,
+      unmatched: siteMatches.filter((match) => match.status === "unmatched").length
+    }
+  };
 }
 
 function processMatching(koboData, sitePolygons, buildingFootprints, options = {}) {
@@ -216,6 +267,24 @@ function resolveBatchPath(batchName) {
   return batches[batches.length - 1];
 }
 
+function resolveBatchPathForSiteOnly(batchName) {
+  if (batchName) {
+    return resolveBatchPath(batchName);
+  }
+
+  const batches = fs.existsSync(BATCHES_ROOT)
+    ? fs.readdirSync(BATCHES_ROOT, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => path.join(BATCHES_ROOT, entry.name))
+      .filter((candidate) => findReferenceFile(candidate, "contours_sites.geojson"))
+      .sort()
+    : [];
+  if (!batches.length) {
+    throw new Error("Aucun batch avec contours_sites.geojson n'a ete trouve.");
+  }
+  return batches[batches.length - 1];
+}
+
 function ensureExtractionOutput(batchPath, options = {}) {
   if (options.extraction) {
     const extraction = path.resolve(PROJECT_ROOT, options.extraction);
@@ -247,6 +316,41 @@ function ensureExtractionOutput(batchPath, options = {}) {
   const extracted = extractKoboGeometryBatch(payload, strategy);
   const baseName = path.basename(sourcePath, path.extname(sourcePath));
   const outputPath = path.join(outputDir, `${baseName}-geometries-normalized.json`);
+  writeJson(outputPath, extracted);
+  return outputPath;
+}
+
+function ensureExtractionOutputV2(batchPath, options = {}) {
+  if (options.extraction) {
+    const extraction = path.resolve(PROJECT_ROOT, options.extraction);
+    if (!fs.existsSync(extraction)) {
+      throw new Error(`Fichier d'extraction introuvable: ${options.extraction}`);
+    }
+    return extraction;
+  }
+
+  const outputDir = path.join(batchPath, "02_output");
+  fs.mkdirSync(outputDir, { recursive: true });
+  const existingV2 = fs.readdirSync(outputDir, { withFileTypes: true })
+    .filter((entry) => entry.isFile() && /geometries-normalized-v2\.json$/i.test(entry.name))
+    .map((entry) => entry.name)
+    .sort();
+  if (existingV2.length) {
+    return path.join(outputDir, existingV2[existingV2.length - 1]);
+  }
+
+  const sourcePath = options.source
+    ? path.resolve(PROJECT_ROOT, options.source)
+    : findFirstJson(findBatchDir(batchPath, ["00_source", "00-source"]));
+  if (!sourcePath) {
+    throw new Error("Aucun fichier source Kobo n'a ete trouve pour generer l'extraction normalisee V2.");
+  }
+  const strategyPath = options.strategy ? path.resolve(PROJECT_ROOT, options.strategy) : DEFAULT_STRATEGY_PATH;
+  const payload = readJson(sourcePath);
+  const strategy = readJson(strategyPath);
+  const extracted = extractKoboGeometryBatchV2(payload, strategy);
+  const baseName = path.basename(sourcePath, path.extname(sourcePath));
+  const outputPath = path.join(outputDir, `${baseName}-geometries-normalized-v2.json`);
   writeJson(outputPath, extracted);
   return outputPath;
 }
@@ -848,6 +952,119 @@ function buildCentroidBatimentLayer(centroids) {
   };
 }
 
+function buildBuildingCentroidLayerFromExtraction(results) {
+  const features = [];
+  results.forEach((submission, submissionIndex) => {
+    const siteDescription = submission.site_description || {};
+    (submission.building_geometries || []).forEach((building, buildingIndex) => {
+      const centroid = building.properties?.centroid_point;
+      if (centroid?.type !== "Point" || !Array.isArray(centroid.coordinates)) {
+        return;
+      }
+      const buildingProperties = { ...(building.properties || {}) };
+      delete buildingProperties.centroid_point;
+      features.push({
+        type: "Feature",
+        properties: {
+          submission_index: submissionIndex,
+          building_index: buildingIndex,
+          submission_group_id: submission.source_submission_id || submission.kobo_id || `submission-${submissionIndex + 1}`,
+          source_submission_id: submission.source_submission_id || null,
+          kobo_id: submission.kobo_id || null,
+          form_version: submission.form_version || null,
+          site_official_name: siteDescription.official_name || null,
+          site_region: siteDescription.region || null,
+          site_locality: siteDescription.locality || null,
+          site_submitted_at: siteDescription.submitted_at || null,
+          source_field: building.source_field || null,
+          parser: building.parser || null,
+          repeat_path: building.repeat_path || null,
+          repeat_index: building.repeat_index ?? buildingIndex,
+          raw_value: building.raw_value ?? null,
+          requires_review: Boolean(building.requires_review),
+          quality_status: submission.geometry_quality_report?.status || null,
+          ...buildingProperties
+        },
+        geometry: {
+          type: "Point",
+          coordinates: [...centroid.coordinates]
+        }
+      });
+    });
+  });
+
+  return {
+    type: "FeatureCollection",
+    name: "centroid_batiment",
+    features
+  };
+}
+
+function buildSiteSubmissionMatchingCsv(siteMatches, results) {
+  const columns = [
+    "reference_site_code",
+    "reference_site_name",
+    "kobo__id",
+    "kobo_modA_fiche_id",
+    "kobo_modB_nom_officiel",
+    "match_status",
+    "score",
+    "overlap_ratio",
+    "reference_coverage_ratio"
+  ];
+  const rows = siteMatches.map((match) => {
+    const submission = results[match.submission_index] || {};
+    const referenceProperties = match.selected_reference?.properties || {};
+    return [
+      referenceProperties.site_code || "",
+      referenceProperties.site_name || "",
+      koboSubmissionId(submission),
+      koboFicheId(submission),
+      koboOfficialName(submission),
+      match.status,
+      match.score,
+      match.overlap_ratio,
+      match.reference_coverage_ratio
+    ];
+  });
+
+  return [
+    columns.join(","),
+    ...rows.map((row) => row.map(csvCell).join(","))
+  ].join("\n") + "\n";
+}
+
+function koboSubmissionId(submission) {
+  return submission.kobo_id
+    ?? submission._id
+    ?? submission.site_description?._id
+    ?? "";
+}
+
+function koboFicheId(submission) {
+  return submission["modA/fiche_id"]
+    ?? submission.site_description?.fiche_id
+    ?? submission.raw_data?.["modA/fiche_id"]
+    ?? submission.raw?.["modA/fiche_id"]
+    ?? "";
+}
+
+function koboOfficialName(submission) {
+  return submission["modB/nom_officiel"]
+    ?? submission.site_description?.official_name
+    ?? submission.raw_data?.["modB/nom_officiel"]
+    ?? submission.raw?.["modB/nom_officiel"]
+    ?? "";
+}
+
+function csvCell(value) {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  const text = String(value);
+  return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 function flattenFeatureProperties(properties, prefix = "") {
   return Object.entries(properties || {}).reduce((flat, [key, value]) => {
     const normalizedKey = normalizePropertyKey(prefix ? `${prefix}_${key}` : key);
@@ -1300,5 +1517,6 @@ module.exports = {
   processMatching,
   processMatchingOutputs,
   runMatchingEngine,
-  runReferenceMatching
+  runReferenceMatching,
+  runSiteReferenceMatchingV2
 };

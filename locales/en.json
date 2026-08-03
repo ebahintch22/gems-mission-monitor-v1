@@ -326,6 +326,7 @@
   "sig.filters.mission": "Mission",
   "sig.filters.allMissions": "All missions",
   "sig.filters.allRegions": "All regions",
+  "sig.filters.allMinistries": "All ministries",
   "sig.filters.team": "Team",
   "sig.filters.allTeams": "All teams",
   "sig.filters.agent": "Agent",

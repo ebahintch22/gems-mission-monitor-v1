@@ -63,8 +63,18 @@ exports.index = (req, res) => {
 };
 
 function buildAdministrativeChoiceIndex() {
-  return ["adm1_ci", "adm2_ci", "adm3_ci"].reduce((index, choiceListName) => {
+  return ["adm1_ci", "adm2_ci", "adm3_ci", "ministere", "secteur", "sous_type", "milieu"].reduce((index, choiceListName) => {
     const choices = loadChoiceList(DEFAULT_FORM_ID, choiceListName);
+    if (!index.__choices) {
+      index.__choices = {};
+    }
+    index.__choices[choiceListName] = Array.isArray(choices)
+      ? choices.map((choice) => ({
+        name: String(choice.name || ""),
+        label: choice.label || choice.name,
+        filters: choice.filters || {}
+      })).filter((choice) => choice.name)
+      : [];
     index[choiceListName] = Array.isArray(choices)
       ? choices.reduce((choiceMap, choice) => {
         const name = String(choice.name || "");

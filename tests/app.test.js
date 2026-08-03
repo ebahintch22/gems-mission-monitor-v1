@@ -14,6 +14,7 @@ const { importRoles } = require("../services/roleImportService");
 const { importAgents } = require("../services/agentImportService");
 const { seedSubmissions } = require("../services/submissionSeedService");
 const { listKoboAssets } = require("../services/koboSyncService");
+const { aggregateKoboSubmissionsToFile } = require("../services/koboSubmissionAggregateService");
 const { importSitesPlanningFromCsv } = require("../services/sitesPlanningImportService");
 const { buildSubmissionReport, resolveValue } = require("../services/submissionReportRenderer");
 const { displaySubmissionId } = require("../services/submissionIdentityService");
@@ -484,12 +485,14 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   const styleResponse = await request(app).get("/css/app.css");
   const viewerScriptResponse = await request(app).get("/js/kobo-json-viewer.js");
   const tabsScriptResponse = await request(app).get("/js/kobo-admin-tabs.js");
+  const mediaUploadScriptResponse = await request(app).get("/js/kobo-media-upload.js");
   const editorBundleResponse = await request(app).get("/vendor/vanilla-jsoneditor/standalone.js");
 
   assert.equal(response.status, 200);
   assert.equal(styleResponse.status, 200);
   assert.equal(viewerScriptResponse.status, 200);
   assert.equal(tabsScriptResponse.status, 200);
+  assert.equal(mediaUploadScriptResponse.status, 200);
   assert.equal(editorBundleResponse.status, 200);
   assert.match(response.text, /Administration KoboToolbox/);
   assert.match(response.text, /id="kobo-workspace"/);
@@ -501,6 +504,16 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(response.text, /data-kobo-section="config"/);
   assert.match(response.text, /data-kobo-section="sync"/);
   assert.match(response.text, /data-kobo-section="data"/);
+  assert.match(response.text, /action="\/parametrages\/kobo\/submissions\/aggregate"/);
+  assert.match(response.text, /data-kobo-media-upload-form/);
+  assert.match(response.text, /data-kobo-media-upload-progress/);
+  assert.match(response.text, /data-kobo-media-upload-cancel/);
+  assert.match(response.text, /Suspendre \/ Arreter/);
+  assert.match(response.text, /name="submission_index_from"/);
+  assert.match(response.text, /name="submission_index_to"/);
+  assert.match(response.text, /date de soumission croissante/);
+  assert.match(response.text, /Agrégation paginée des soumissions/);
+  assert.match(response.text, /Générer le fichier agrégé/);
   assert.match(response.text, /Voir les donnees/);
   assert.match(response.text, /Aucune reponse KoboToolbox/);
   assert.match(response.text, /Tester la connexion/);
@@ -528,6 +541,11 @@ test("GET /parametrages/kobo affiche l'administration KoboToolbox", async () => 
   assert.match(tabsScriptResponse.text, /data-kobo-section-target/);
   assert.match(tabsScriptResponse.text, /dataset\.initialSection/);
   assert.match(tabsScriptResponse.text, /aria-selected/);
+  assert.match(mediaUploadScriptResponse.text, /\/parametrages\/kobo\/media\/upload-local\/jobs/);
+  assert.match(mediaUploadScriptResponse.text, /\/cancel/);
+  assert.match(mediaUploadScriptResponse.text, /function cancelUploadJob\(\)/);
+  assert.match(mediaUploadScriptResponse.text, /cancelled: `Arrete/);
+  assert.match(mediaUploadScriptResponse.text, /data-kobo-media-upload-progress-bar/);
 });
 
 test("GET /parametrages/kobo exige kobo.manage", async () => {
@@ -566,6 +584,58 @@ test("listKoboAssets peut retourner le payload Kobo brut sur demande", async () 
   assert.equal(result.assets.length, 1);
   assert.equal(result.assets[0].uid, "asset-001");
   assert.equal(result.assets[0].deploymentStatus, "actif");
+});
+
+test("aggregateKoboSubmissionsToFile lit les pages Kobo et produit un fichier unique", async () => {
+  const outputDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "g2m-kobo-aggregate-"));
+  const firstUrl = "https://kobo.test/api/v2/assets/asset-001/data/?limit=10";
+  const secondUrl = "https://kobo.test/api/v2/assets/asset-001/data/?limit=10&page=2";
+  const pages = new Map([
+    [firstUrl, {
+      count: 3,
+      next: secondUrl,
+      results: [{ _id: 1 }, { _id: 2 }]
+    }],
+    [secondUrl, {
+      count: 3,
+      next: null,
+      results: [{ _id: 3 }]
+    }]
+  ]);
+  const client = {
+    apiToken: "test-token",
+    url(pathname, params) {
+      const url = new URL(`https://kobo.test/api/v2${pathname}`);
+      url.searchParams.set("limit", params.limit);
+      return url;
+    },
+    async fetchImpl(url) {
+      const payload = pages.get(String(url));
+      assert.ok(payload, `Page Kobo inattendue: ${url}`);
+      return {
+        ok: true,
+        async json() {
+          return payload;
+        }
+      };
+    }
+  };
+
+  const summary = await aggregateKoboSubmissionsToFile({
+    assetUid: "asset-001",
+    pageSize: 10,
+    outputDir,
+    fileName: "aggregate.json",
+    client
+  });
+  const aggregate = JSON.parse(await fs.promises.readFile(summary.outputPath, "utf8"));
+
+  assert.equal(summary.pagesRead, 2);
+  assert.equal(summary.submissionsRead, 3);
+  assert.equal(aggregate.count, 3);
+  assert.deepEqual(aggregate.results.map((submission) => submission._id), [1, 2, 3]);
+  assert.equal(aggregate.metadata.asset_uid, "asset-001");
+  assert.equal(aggregate.metadata.pages.length, 2);
 });
 
 test("GET /login affiche la page de connexion fermee", async () => {
@@ -2636,6 +2706,10 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /"adm1_ci"/);
   assert.match(response.text, /"adm2_ci"/);
   assert.match(response.text, /"adm3_ci"/);
+  assert.match(response.text, /"ministere"/);
+  assert.match(response.text, /"secteur"/);
+  assert.match(response.text, /"sous_type"/);
+  assert.match(response.text, /"milieu"/);
   assert.match(response.text, /Voir plus/);
   assert.match(response.text, /Synchronisation Kobo/);
   assert.match(response.text, /Couche Humanitaire/);
@@ -2662,11 +2736,24 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-geometry-import-input"/);
   assert.match(response.text, /id="sig-region-filter"/);
   assert.match(response.text, /<option value="CI01">District Autonome d&#39;Abidjan<\/option>/);
+  assert.match(response.text, /id="sig-department-filter" disabled/);
+  assert.match(response.text, /Tous les d.partements/);
+  assert.match(response.text, /id="sig-subprefecture-filter" disabled/);
+  assert.match(response.text, /Toutes les sous-pr.fectures/);
+  assert.match(response.text, /id="sig-ministry-filter"/);
+  assert.match(response.text, /Tous les ministères/);
+  assert.doesNotMatch(response.text, /id="sig-equipe-filter"/);
+  assert.doesNotMatch(response.text, /id="sig-agent-filter"/);
+  assert.doesNotMatch(response.text, /id="sig-validation-filter"/);
   assert.match(response.text, /sig-filter-wide/);
   assert.match(response.text, /id="sig-filter-panel" hidden/);
   assert.match(response.text, /id="sig-filter-toggle"/);
   assert.match(response.text, /id="sig-summary-panel" hidden/);
   assert.match(response.text, /id="sig-summary-toggle"/);
+  assert.match(response.text, /class="sig-table-search sig-layer-header-search" id="sig-visited-sites-search-control"/);
+  assert.match(response.text, /id="sig-visited-sites-search"/);
+  assert.match(response.text, /placeholder="Rechercher un site"/);
+  assert.match(response.text, /id="sig-visited-sites-search-clear"[\s\S]*aria-label="Effacer la recherche"/);
   assert.match(response.text, /id="sig-columns-modal"[\s\S]*role="dialog"/);
   assert.doesNotMatch(response.text, /id="sig-columns-open"/);
   assert.match(response.text, /id="sig-columns-open-inline"/);
@@ -2816,11 +2903,21 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /visitedSitesColumnPrefsKey = "g2m\.sig\.visitedSitesColumns\.v1"/);
   assert.match(scriptResponse.text, /visitedSitesMandatoryColumns = \["_id", "modB\/nom_officiel", "modB\/region", "modB\/ministere"\]/);
   assert.match(scriptResponse.text, /const administrativeChoices = JSON\.parse\(document\.getElementById\("sig-administrative-choices-data"\)\?\.textContent \|\| "\{\}"\)/);
+  assert.match(scriptResponse.text, /const administrativeChoiceLists = administrativeChoices\.__choices \|\| \{\}/);
   assert.match(scriptResponse.text, /field: "modB\/region"[\s\S]*formatter: administrativeChoiceFormatter/);
   assert.match(scriptResponse.text, /field: "modB\/departement"[\s\S]*formatter: administrativeChoiceFormatter/);
   assert.match(scriptResponse.text, /field: "modB\/sous_prefecture"[\s\S]*formatter: administrativeChoiceFormatter/);
+  assert.match(scriptResponse.text, /field: "modB\/ministere"[\s\S]*formatter: administrativeChoiceFormatter/);
   assert.match(scriptResponse.text, /function administrativeChoiceFormatter\(cell\)/);
   assert.match(scriptResponse.text, /function resolveAdministrativeChoice\(field, value\)/);
+  assert.match(scriptResponse.text, /"modB\/ministere": "ministere"/);
+  assert.match(scriptResponse.text, /"modB\/type_infra": "secteur"/);
+  assert.match(scriptResponse.text, /"modB\/sous_type": "sous_type"/);
+  assert.match(scriptResponse.text, /"modB\/milieu": "milieu"/);
+  assert.match(scriptResponse.text, /function filterAdministrativeChoices\(choiceListName, dependencyName, dependencyValue\)/);
+  assert.match(scriptResponse.text, /filterAdministrativeChoices\("adm2_ci", "region", region\)/);
+  assert.match(scriptResponse.text, /filterAdministrativeChoices\("adm3_ci", "dept", department\)/);
+  assert.match(scriptResponse.text, /function updateAdministrativeFilterCascade\(selected = \{\}\)/);
   assert.match(scriptResponse.text, /function buildVisitedSitesTableColumns\(\)/);
   assert.match(scriptResponse.text, /sorter: visitedSiteColumnSorter\(field\)/);
   assert.match(scriptResponse.text, /function visitedSiteColumnSorter\(field\)/);
@@ -2830,8 +2927,20 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function selectedVisitedSitesColumnFields\(\)/);
   assert.match(scriptResponse.text, /function openVisitedSitesColumnsModal\(\)/);
   assert.match(scriptResponse.text, /function renderVisitedSitesColumnsList\(\)/);
+  assert.match(scriptResponse.text, /const visitedSitesSearchInput = document\.getElementById\("sig-visited-sites-search"\)/);
+  assert.match(scriptResponse.text, /const visitedSitesSearchClear = document\.getElementById\("sig-visited-sites-search-clear"\)/);
+  assert.match(scriptResponse.text, /const visitedSitesSearchControl = document\.getElementById\("sig-visited-sites-search-control"\)/);
+  assert.match(scriptResponse.text, /const rootLayerHeader = layerBoxManager\.getLayer\("root"\)\?\.element\.querySelector\("\.layer-box-header"\)/);
+  assert.match(scriptResponse.text, /rootLayerHeader\.append\(visitedSitesSearchControl\)/);
+  assert.match(scriptResponse.text, /function matchesVisitedSiteSearch\(point, query\)/);
+  assert.match(scriptResponse.text, /function visitedSiteSearchValues\(point\)/);
+  assert.match(scriptResponse.text, /"modB\/nom_officiel"[\s\S]*"modB\/region"[\s\S]*"modB\/departement"[\s\S]*"modB\/sous_prefecture"[\s\S]*"modB\/ministere"[\s\S]*"modB\/type_infra"[\s\S]*"modB\/sous_type"[\s\S]*"modB\/commune"[\s\S]*"modB\/milieu"/);
+  assert.match(scriptResponse.text, /function clearVisitedSitesSearch\(\)/);
+  assert.match(scriptResponse.text, /window\.setTimeout\(function \(\) \{[\s\S]*renderPoints\(true\);[\s\S]*\}, 800\)/);
   assert.match(scriptResponse.text, /function visitedSiteFieldValue\(point, field\)/);
   assert.match(scriptResponse.text, /table\.setColumns\(buildVisitedSitesTableColumns\(\)\)/);
+  assert.match(scriptResponse.text, /function syncVisitedSitesTable\(visiblePoints = currentVisiblePoints\(\)\)/);
+  assert.match(scriptResponse.text, /syncVisitedSitesTable\(visiblePoints\)/);
   assert.match(scriptResponse.text, /rowFormatter\(row\)[\s\S]*is-selected-site/);
   assert.match(scriptResponse.text, /function siteNameFormatter\(cell\)/);
   assert.match(scriptResponse.text, /function visitedSiteDateFormatter\(cell\)/);
@@ -2844,8 +2953,17 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /document\.getElementById\("sig-filters"\)\.addEventListener\("submit"/);
   assert.match(scriptResponse.text, /setFilterPanelOpen\(false\)/);
   assert.match(scriptResponse.text, /region: document\.getElementById\("sig-region-filter"\)\.value/);
+  assert.match(scriptResponse.text, /department: document\.getElementById\("sig-department-filter"\)\.value/);
+  assert.match(scriptResponse.text, /subprefecture: document\.getElementById\("sig-subprefecture-filter"\)\.value/);
+  assert.match(scriptResponse.text, /ministry: document\.getElementById\("sig-ministry-filter"\)\.value/);
+  assert.match(scriptResponse.text, /search: visitedSitesSearchInput\?\.value \|\| ""/);
   assert.match(scriptResponse.text, /String\(visitedSiteFieldValue\(point, "modB\/region"\) \|\| point\.nom_region \|\| ""\) === criteria\.region/);
-  assert.match(scriptResponse.text, /document\.getElementById\("sig-region-filter"\)\.value = criteria\.region/);
+  assert.match(scriptResponse.text, /String\(visitedSiteFieldValue\(point, "modB\/departement"\) \|\| ""\) === criteria\.department/);
+  assert.match(scriptResponse.text, /String\(visitedSiteFieldValue\(point, "modB\/sous_prefecture"\) \|\| point\.nom_sous_prefecture \|\| ""\) === criteria\.subprefecture/);
+  assert.match(scriptResponse.text, /String\(visitedSiteFieldValue\(point, "modB\/ministere"\) \|\| ""\) === criteria\.ministry/);
+  assert.match(scriptResponse.text, /matchesVisitedSiteSearch\(point, criteria\.search\)/);
+  assert.match(scriptResponse.text, /updateAdministrativeFilterCascade\(\{[\s\S]*region: criteria\.region/);
+  assert.match(scriptResponse.text, /document\.getElementById\("sig-ministry-filter"\)\.value = criteria\.ministry/);
   assert.match(scriptResponse.text, /function parseImportedGeometry\(encodedGeometry\)/);
   assert.match(scriptResponse.text, /Types autorisés : POINT, LINE, POLYGON/);
   assert.match(scriptResponse.text, /POLYGON doit être fermé/);
@@ -2992,7 +3110,6 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /\/soumissions\/\$\{point\.id\}\/report\?embed=pal/);
   assert.match(scriptResponse.text, /async function openSubmissionFromQuery\(\)/);
   assert.match(scriptResponse.text, /new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)/);
-  assert.match(scriptResponse.text, /await loadMissionScopedFilters\(point\.mission_id \|\| "", \{ reframeMap: false \}\)/);
   assert.match(scriptResponse.text, /function openSitePopup\(point\)/);
   assert.match(scriptResponse.text, /openSitePopup\(point\)/);
   assert.doesNotMatch(scriptResponse.text, /async function openSubmissionFromQuery\(\)[\s\S]*showDecisionDetail\(point\)[\s\S]*return true;/);
@@ -3008,6 +3125,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /let selectedSiteId = null/);
   assert.match(scriptResponse.text, /const experimentalSiteLabelsEnabled = true/);
   assert.match(scriptResponse.text, /const siteLabelMinZoom = 14/);
+  assert.match(scriptResponse.text, /const siteLabelCollisionPadding = 4/);
   assert.match(scriptResponse.text, /let siteLabelCollisionFrame = null/);
   assert.match(scriptResponse.text, /const siteMarkersById = new Map\(\)/);
   assert.match(scriptResponse.text, /const markerBounceTimers = new WeakMap\(\)/);
@@ -3022,10 +3140,13 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function updateSiteMarkerLabel\(marker, point, selected = false\)/);
   assert.match(scriptResponse.text, /function resolveSiteLabelCollisions\(\)/);
   assert.match(scriptResponse.text, /if \(!map\.hasLayer\(marker\)\)/);
+  assert.match(scriptResponse.text, /const rect = siteLabelCollisionRect\(element\)/);
   assert.match(scriptResponse.text, /priority: siteLabelCollisionPriority\(markerKey\)/);
-  assert.match(scriptResponse.text, /\.sort\(\(a, b\) => a\.priority - b\.priority\)/);
+  assert.match(scriptResponse.text, /\.sort\(siteLabelCollisionSort\)/);
   assert.match(scriptResponse.text, /function siteLabelCollisionPriority\(markerKey\)/);
   assert.match(scriptResponse.text, /return markerKey === selectedSiteId \? 0 : 1/);
+  assert.match(scriptResponse.text, /function siteLabelCollisionSort\(left, right\)/);
+  assert.match(scriptResponse.text, /function siteLabelCollisionRect\(element\)/);
   assert.match(scriptResponse.text, /function siteLabelRectsCollide\(left, right\)/);
   assert.match(scriptResponse.text, /sig-site-label-hidden/);
   assert.match(scriptResponse.text, /marker\.bindTooltip\(siteLabelHtml\(label\)/);
@@ -3085,7 +3206,6 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.doesNotMatch(scriptResponse.text, /toolsWidth: toolsPanel\.getBoundingClientRect\(\)\.width/);
   assert.match(scriptResponse.text, /map\.on\("moveend zoomend", saveCurrentCartographyContext\)/);
   assert.match(scriptResponse.text, /map\.on\("baselayerchange"/);
-  assert.match(scriptResponse.text, /loadMissionScopedFilters\(event\.target\.value, \{ reframeMap: false, applyFilters: false \}\)\.then\(saveCurrentCartographyContext\)/);
   assert.match(scriptResponse.text, /workspace\.classList\.toggle\("is-tools-open", open\)/);
   assert.match(scriptResponse.text, /toolsToggle\.addEventListener\("click"/);
   assert.match(scriptResponse.text, /toolsClose\.addEventListener\("click"/);
@@ -3128,6 +3248,23 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.layer-box-header\s*\{[\s\S]*flex: 0 0 var\(--header-height\)/);
   assert.match(styleResponse.text, /\.sig-pal-root-content\s*\{[\s\S]*grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styleResponse.text, /\.sig-pal-root-content\s*\{[\s\S]*min-width: 0/);
+  assert.match(styleResponse.text, /\.sig-table-header-controls\s*\{[\s\S]*justify-content: flex-end/);
+  assert.match(styleResponse.text, /\.sig-table-search\s*\{[\s\S]*flex: 0 1 260px/);
+  assert.match(styleResponse.text, /\.sig-table-search\s*\{[\s\S]*border-radius: 999px/);
+  assert.match(styleResponse.text, /\.sig-table-search\s*\{[\s\S]*position: relative/);
+  assert.match(styleResponse.text, /\.sig-table-search\s*\{[\s\S]*white-space: nowrap/);
+  assert.match(styleResponse.text, /\.sig-table-search > i\s*\{[\s\S]*left: 12px/);
+  assert.match(styleResponse.text, /\.sig-table-search > i\s*\{[\s\S]*top: 50%/);
+  assert.match(styleResponse.text, /\.sig-table-search input\s*\{[\s\S]*text-overflow: ellipsis/);
+  assert.match(styleResponse.text, /\.sig-table-search input\s*\{[\s\S]*text-align: right/);
+  assert.match(styleResponse.text, /\.sig-table-search input\s*\{[\s\S]*font-size: calc\(var\(--font-small\) \* 1\.6\)/);
+  assert.match(styleResponse.text, /\.sig-table-search input::-webkit-search-cancel-button,\s*\.sig-table-search input::-webkit-search-decoration\s*\{[\s\S]*display: none/);
+  assert.match(styleResponse.text, /\.sig-table-search-clear\s*\{[\s\S]*width: 22px/);
+  assert.match(styleResponse.text, /\.sig-table-search-clear\s*\{[\s\S]*right: 8px/);
+  assert.match(styleResponse.text, /\.sig-table-search-clear\s*\{[\s\S]*font-size: calc\(var\(--font-small\) \* 1\.6\)/);
+  assert.match(styleResponse.text, /\.sig-layer-header-search\s*\{[\s\S]*background: #f3f4f6/);
+  assert.match(styleResponse.text, /\.sig-layer-header-search\s*\{[\s\S]*flex: 0 1 65%/);
+  assert.match(styleResponse.text, /\.layer-box-header \.sig-layer-header-search\s*\{[\s\S]*max-width: calc\(100% - 140px\)/);
   assert.match(styleResponse.text, /\.sig-filter-wide\s*\{[\s\S]*grid-column: 1 \/ -1/);
   assert.match(styleResponse.text, /\.layer-box\s*\{[\s\S]*min-width: 0/);
   assert.match(styleResponse.text, /\.layer-box-content\s*\{[\s\S]*overflow-x: hidden/);
@@ -3206,6 +3343,25 @@ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries 
   const testAssetPath = path.join(testAssetDir, "photo-test.jpg");
   fs.mkdirSync(testAssetDir, { recursive: true });
   fs.writeFileSync(testAssetPath, Buffer.from([0xff, 0xd8, 0xff, 0xd9]));
+  const media = MediaFile.create({
+    id: "media-kobo-review-test",
+    bucket: "g2m-media-test",
+    object_key: "media/test/2026/08/media-kobo-review-test/original/photo-wasabi.jpg",
+    original_filename: "photo-wasabi.jpg",
+    stored_filename: "photo-wasabi.jpg",
+    mime_type: "image/jpeg",
+    media_type: "image",
+    size_bytes: 24,
+    checksum_sha256: "wasabi-photo-checksum",
+    source: "kobo",
+    visibility: "private"
+  });
+  MediaFile.createLink({
+    media_file_id: media.id,
+    entity_type: "submission",
+    entity_ref: "submission-test",
+    role: "photo_kobo"
+  });
 
   const gisCookie = await loginTestUser({
     email: "gis.kobo-geometries-review@g2m.test",
@@ -3283,6 +3439,8 @@ test("GET /cartographie/extractions-kobo affiche la revue dediee des geometries 
   assert.match(response.text, /id="kobo-geometry-review-catalog"/);
   assert.match(response.text, /id="kobo-geometry-review-assets"/);
   assert.match(response.text, /photo-test\.jpg/);
+  assert.match(response.text, /photo-wasabi\.jpg/);
+  assert.match(response.text, /\/media\/media-kobo-review-test\/thumbnail/);
   assert.match(response.text, /<section class="kobo-geometry-review-map-pane"[\s\S]*<div class="kobo-geometry-review-map" id="kobo-geometry-review-map"><\/div>[\s\S]*<\/section>/);
   assert.match(response.text, /id="kobo-geometry-json-viewer"/);
   assert.match(response.text, /\/js\/kobo-geometries-review\.js/);

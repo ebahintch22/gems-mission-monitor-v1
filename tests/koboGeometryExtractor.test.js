@@ -8,6 +8,7 @@ const test = require("node:test");
 const {
   extractKoboGeometries,
   extractKoboGeometryBatch,
+  extractKoboGeometryBatchV2,
   parseKoboGeopointString,
   parseSemicolonCoordinateSequencePolygon,
   parseWktOrManualCoordinates
@@ -172,6 +173,52 @@ test("extractKoboGeometries parcourt le repeat batiment sans lire coins_bat a la
     Math.abs(extracted.building_geometries[0].properties.centroid_point.coordinates[1] - 5.3333333333) < 0.000001,
     true
   );
+});
+
+test("extractKoboGeometryBatchV2 ajoute les attributs Kobo bruts des batiments", () => {
+  const submission = {
+    _id: 11,
+    __version__: "vCdxj9y4NiufyZHpxVJ33f",
+    batiment: [
+      {
+        "batiment/num_bat": "1",
+        "batiment/bat_nom": "Administration ",
+        "batiment/bat_statut": "principal",
+        "batiment/est_principal": "1",
+        "batiment/bat_precaire": "non",
+        "batiment/bat_etages": "1",
+        "batiment/bat_nb_pieces": "14",
+        "batiment/bat_vocation": "admin",
+        "batiment/bat_services": "Secrétariat ,bureau d'économat, Bureau du chef d'établissement, Bureau ACE.",
+        "batiment/bat_occupants": "4",
+        "batiment/coins_bat_manuel": "POINT (-5.603432 9.491681)",
+        "batiment/bat_elec": "oui",
+        "batiment/lan": "non"
+      }
+    ]
+  };
+
+  const legacy = extractKoboGeometryBatch({ results: [submission] }, strategy);
+  const v2 = extractKoboGeometryBatchV2({ results: [submission] }, strategy);
+  const legacyProperties = legacy.results[0].building_geometries[0].properties;
+  const v2Properties = v2.results[0].building_geometries[0].properties;
+
+  assert.equal(legacy.schema_version, "1.2.0");
+  assert.equal(v2.schema_version, "2.0.0");
+  assert.equal(legacyProperties["batiment/est_principal"], undefined);
+  assert.equal(v2Properties["batiment/num_bat"], "1");
+  assert.equal(v2Properties["batiment/bat_nom"], "Administration ");
+  assert.equal(v2Properties["batiment/bat_statut"], "principal");
+  assert.equal(v2Properties["batiment/est_principal"], "1");
+  assert.equal(v2Properties["batiment/bat_precaire"], "non");
+  assert.equal(v2Properties["batiment/bat_etages"], "1");
+  assert.equal(v2Properties["batiment/bat_nb_pieces"], "14");
+  assert.equal(v2Properties["batiment/bat_vocation"], "admin");
+  assert.equal(v2Properties["batiment/bat_services"], "Secrétariat ,bureau d'économat, Bureau du chef d'établissement, Bureau ACE.");
+  assert.equal(v2Properties["batiment/bat_occupants"], "4");
+  assert.equal(v2Properties["batiment/coins_bat_manuel"], "POINT (-5.603432 9.491681)");
+  assert.equal(v2Properties["batiment/bat_elec"], "oui");
+  assert.equal(v2Properties["batiment/lan"], "non");
 });
 
 test("extractKoboGeometries applique la priorite manuelle de la version recente", () => {

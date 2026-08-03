@@ -171,6 +171,7 @@
           <% } %>
         </section>
       <% } %>
+
     </section>
 
     <section class="kobo-section" data-kobo-section="advanced-sync" aria-labelledby="kobo-section-advanced-sync-title" hidden>
@@ -245,6 +246,41 @@
           </div>
         </form>
       </div>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Agrégation paginée des soumissions</h2>
+        </div>
+        <form action="/parametrages/kobo/submissions/aggregate" method="post" class="kobo-sync-form">
+          <label>UID du formulaire
+            <input name="asset_uid" required value="<%= aggregateValues.asset_uid %>" placeholder="<%= t("common.placeholderExample", { example: "aBcDeF123" }) %>">
+          </label>
+          <label>Taille de page
+            <input type="number" name="page_size" min="10" max="1000" step="10" value="<%= aggregateValues.page_size %>">
+          </label>
+          <label>Nombre maximum de pages
+            <input type="number" name="max_pages" min="1" step="1" value="<%= aggregateValues.max_pages %>" placeholder="Tout lire">
+          </label>
+          <label>Nom du fichier JSON
+            <input name="file_name" value="<%= aggregateValues.file_name %>" placeholder="Nom automatique">
+          </label>
+          <p class="form-note">La commande lit les pages Kobo via l'attribut <code>next</code> et agrège les soumissions brutes dans un fichier JSON unique sans écrire en base.</p>
+          <div class="form-actions">
+            <button class="button secondary" type="submit">
+              <i class="fa-solid fa-file-import" aria-hidden="true"></i>
+              Générer le fichier agrégé
+            </button>
+          </div>
+        </form>
+        <% if (aggregateSummary) { %>
+          <div class="kobo-summary">
+            <div><span>Pages lues</span><strong><%= aggregateSummary.pagesRead %></strong></div>
+            <div><span>Soumissions agrégées</span><strong><%= aggregateSummary.submissionsRead %></strong></div>
+            <div><span>Fichier</span><strong><code><%= aggregateSummary.fileName %></code></strong></div>
+          </div>
+          <p class="form-note">Chemin local : <code><%= aggregateSummary.outputPath %></code></p>
+        <% } %>
+      </section>
 
       <section class="panel">
         <div class="panel-header">
@@ -400,6 +436,142 @@
           <% } %>
         </section>
       <% } %>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Televersement du depot local vers Wasabi</h2>
+          <span class="status status-suspendu" data-kobo-media-upload-status>Idle</span>
+        </div>
+        <form action="/parametrages/kobo/media/upload-local" method="post" class="kobo-sync-form" data-kobo-media-upload-form>
+          <label>Formulaire Kobo
+            <input name="asset_uid" value="<%= mediaValues.asset_uid %>" placeholder="<%= t("common.placeholderExample", { example: "aBcDeF123" }) %>">
+          </label>
+          <label>Soumission Kobo
+            <input name="submission_id" value="<%= mediaValues.submission_id %>" placeholder="Optionnel">
+          </label>
+          <label>Plage de soumissions - debut
+            <input type="number" name="submission_index_from" min="1" value="<%= mediaValues.submission_index_from %>" placeholder="Ex. 1">
+          </label>
+          <label>Plage de soumissions - fin
+            <input type="number" name="submission_index_to" min="1" value="<%= mediaValues.submission_index_to %>" placeholder="Ex. 500">
+          </label>
+          <label>Depot local
+            <input name="download_root" value="<%= mediaValues.download_root %>" required>
+          </label>
+          <p class="form-hint sig-filter-wide">
+            La plage est appliquee apres tri des soumissions par date de soumission croissante, puis par identifiant Kobo. Si une soumission Kobo exacte est renseignee, elle est prioritaire.
+          </p>
+          <label class="checkbox-label">
+            <input type="checkbox" name="dry_run" <%= mediaValues.dry_run ? "checked" : "" %>>
+            Auditer seulement, sans televerser vers Wasabi
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="delete_local_after_upload" <%= mediaValues.delete_local_after_upload ? "checked" : "" %>>
+            Supprimer les fichiers locaux apres televersement reussi
+          </label>
+          <div class="form-actions">
+            <button class="button button-primary" type="submit">
+              <i class="fa-solid fa-cloud-arrow-up" aria-hidden="true"></i>
+              Lancer le televersement
+            </button>
+            <button class="button secondary" type="button" data-kobo-media-upload-cancel hidden>
+              <i class="fa-solid fa-circle-pause" aria-hidden="true"></i>
+              Suspendre / Arreter
+            </button>
+            <a class="button secondary" href="#" data-kobo-media-upload-manifest-link hidden target="_blank" rel="noreferrer">
+              <i class="fa-solid fa-file-code" aria-hidden="true"></i>
+              Voir le manifeste
+            </a>
+          </div>
+          <div class="kobo-media-progress" data-kobo-media-upload-progress hidden>
+            <progress value="0" max="100" data-kobo-media-upload-progress-bar></progress>
+            <p role="status" aria-live="polite" data-kobo-media-upload-progress-text>
+              Televersement realise a 0 % (0 fichier sur 0 traite)
+            </p>
+          </div>
+        </form>
+      </section>
+
+      <% if (mediaLocalUploadSummary) { %>
+        <section class="panel">
+          <h2>Resultat du televersement local</h2>
+          <div class="kobo-summary">
+            <div><span>Fichiers</span><strong><%= mediaLocalUploadSummary.requested %></strong></div>
+            <div><span>Televerses</span><strong><%= mediaLocalUploadSummary.uploaded %></strong></div>
+            <div><span>Ignores</span><strong><%= mediaLocalUploadSummary.skipped %></strong></div>
+            <div><span>Erreurs</span><strong><%= mediaLocalUploadSummary.errors.length %></strong></div>
+          </div>
+          <p class="form-hint"><code><%= mediaLocalUploadSummary.downloadRoot %></code></p>
+          <% if (mediaLocalUploadSummary.files.length) { %>
+            <table class="simple-table">
+              <thead>
+                <tr>
+                  <th>Statut</th>
+                  <th>Soumission</th>
+                  <th>Fichier</th>
+                  <th>Media</th>
+                </tr>
+              </thead>
+              <tbody>
+                <% mediaLocalUploadSummary.files.slice(0, 50).forEach((file) => { %>
+                  <tr>
+                    <td><%= file.status %></td>
+                    <td><%= file.submission_id || "-" %></td>
+                    <td><code><%= file.path %></code></td>
+                    <td><%= file.media_file_id || "" %></td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          <% } %>
+          <% if (mediaLocalUploadSummary.errors.length) { %>
+            <ul class="kobo-error-list">
+              <% mediaLocalUploadSummary.errors.slice(0, 20).forEach((entry) => { %>
+                <li><%= entry.filename || entry.path %> : <%= entry.error %></li>
+              <% }) %>
+            </ul>
+          <% } %>
+        </section>
+      <% } %>
+
+      <section class="panel">
+        <div class="panel-header">
+          <h2>Derniers televersements locaux</h2>
+          <span class="sig-count"><%= mediaLocalUploadManifests.length %></span>
+        </div>
+        <% if (mediaLocalUploadManifests.length) { %>
+          <table class="simple-table">
+            <thead>
+              <tr>
+                <th>Lot</th>
+                <th>Statut</th>
+                <th>Fichiers</th>
+                <th>Televerses</th>
+                <th>Ignores</th>
+                <th>Erreurs</th>
+                <th>Manifeste</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% mediaLocalUploadManifests.forEach((manifest) => { %>
+                <tr>
+                  <td><code><%= manifest.job_id %></code></td>
+                  <td><%= manifest.status %></td>
+                  <td><%= manifest.requested %></td>
+                  <td><%= manifest.uploaded %></td>
+                  <td><%= manifest.skipped %></td>
+                  <td><%= manifest.errors.length %></td>
+                  <td><a href="/parametrages/kobo/media/upload-local/<%= encodeURIComponent(manifest.job_id) %>/manifest" target="_blank" rel="noreferrer">Ouvrir</a></td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        <% } else { %>
+          <div class="empty-state">
+            <p>Aucun manifeste de televersement local.</p>
+          </div>
+        <% } %>
+      </section>
     </section>
 
     <section class="kobo-section" data-kobo-section="data" aria-labelledby="kobo-section-data-title" hidden>
@@ -470,5 +642,6 @@
 <% } %>
 <script src="/js/kobo-admin-tabs.js"></script>
 <script src="/js/kobo-media-download.js"></script>
+<script src="/js/kobo-media-upload.js"></script>
 <script src="/js/kobo-advanced-sync.js"></script>
 <%- include("../partials/footer") %>

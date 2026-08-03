@@ -4,7 +4,12 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const test = require("node:test");
-const { processMatching, processMatchingOutputs, runReferenceMatching } = require("../services/koboReferenceMatcher");
+const {
+  processMatching,
+  processMatchingOutputs,
+  runReferenceMatching,
+  runSiteReferenceMatchingV2
+} = require("../services/koboReferenceMatcher");
 
 test("runReferenceMatching classe les appariements batiments A B C et D", () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "g2m-reference-matching-"));
@@ -267,6 +272,86 @@ test("match-kobo-reference-layers --kobo-points genere un centroid_batiment par 
   assert.equal(cliResult.koboPointsSource, "building_centroids_from_extraction");
   assert.equal(centroids.features.length, 3);
   assert.deepEqual(centroids.features.map((feature) => feature.properties.building_number), ["A1", "B1", "C1"]);
+});
+
+test("match-kobo-reference-layers-v2 apparie seulement les sites et exporte les centroides V2", () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "g2m-reference-matching-v2-"));
+  const batchPath = path.join(tmp, "batch-test");
+  const sourceDir = path.join(batchPath, "05_reference_layers", "sources");
+  const outputDir = path.join(batchPath, "02_output");
+  fs.mkdirSync(sourceDir, { recursive: true });
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(path.join(sourceDir, "contours_sites.geojson"), JSON.stringify(featureCollection([
+    polygonFeature("site-1", { site_code: "G2M-001", site_name: "Site reference" }, [
+      [-4.002, 5.002],
+      [-3.998, 5.002],
+      [-3.998, 4.998],
+      [-4.002, 4.998],
+      [-4.002, 5.002]
+    ])
+  ])), "utf8");
+  fs.writeFileSync(path.join(outputDir, "kobo-geometries-normalized-v2.json"), JSON.stringify({
+    schema_name: "g2m_kobo_geometry_extraction_output",
+    schema_version: "2.0.0",
+    results: [{
+      source_submission_id: "uuid-1",
+      kobo_id: 777,
+      "modA/fiche_id": "PADCI-001",
+      site_description: { official_name: "Site Kobo" },
+      site_geometry: {
+        geometry: {
+          type: "Polygon",
+          coordinates: [[
+            [-4.002, 5.002],
+            [-3.998, 5.002],
+            [-3.998, 4.998],
+            [-4.002, 4.998],
+            [-4.002, 5.002]
+          ]]
+        }
+      },
+      building_geometries: [
+        {
+          source_field: "batiment/coins_bat_manuel",
+          repeat_index: 0,
+          properties: {
+            building_number: "1",
+            "batiment/num_bat": "1",
+            "batiment/bat_nom": "Administration",
+            "batiment/lan": "non",
+            centroid_point: {
+              type: "Point",
+              coordinates: [-4.00065, 5.00065]
+            }
+          }
+        }
+      ],
+      geometry_quality_report: { status: "ok" }
+    }]
+  }), "utf8");
+
+  const result = runSiteReferenceMatchingV2({ batch: batchPath });
+  const centroids = JSON.parse(fs.readFileSync(result.outputs.centroidOutputPath, "utf8"));
+  const csv = fs.readFileSync(result.outputs.csvOutputPath, "utf8");
+  const stdout = execFileSync(process.execPath, [
+    path.join(__dirname, "..", "scripts", "match-kobo-reference-layers-v2.mjs"),
+    "--batch",
+    batchPath
+  ], {
+    cwd: path.join(__dirname, ".."),
+    encoding: "utf8"
+  });
+  const cliResult = JSON.parse(stdout);
+
+  assert.equal(result.summary.matched, 1);
+  assert.equal(centroids.features.length, 1);
+  assert.equal(centroids.features[0].properties["batiment/num_bat"], "1");
+  assert.equal(centroids.features[0].properties["batiment/bat_nom"], "Administration");
+  assert.equal(centroids.features[0].properties["batiment/lan"], "non");
+  assert.match(csv, /reference_site_code,reference_site_name,kobo__id,kobo_modA_fiche_id,kobo_modB_nom_officiel/);
+  assert.match(csv, /G2M-001,Site reference,777,PADCI-001,Site Kobo/);
+  assert.equal(cliResult.summary.centroid_features, 1);
+  assert.equal(fs.existsSync(path.join(sourceDir, "emprises_batiments.geojson")), false);
 });
 
 function featureCollection(features) {

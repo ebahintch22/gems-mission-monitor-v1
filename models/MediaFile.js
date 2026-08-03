@@ -61,6 +61,29 @@ class MediaFile {
     `).get(id);
   }
 
+  static findLinkedByChecksum({ checksum_sha256, entity_type, entity_ref, role } = {}) {
+    if (!checksum_sha256 || !entity_type || !entity_ref || !role) {
+      return null;
+    }
+    return db.prepare(`
+      SELECT mf.*
+      FROM media_files mf
+      JOIN media_links ml ON ml.media_file_id = mf.id
+      WHERE mf.checksum_sha256 = @checksum_sha256
+        AND ml.entity_type = @entity_type
+        AND ml.entity_ref = @entity_ref
+        AND ml.role = @role
+        AND mf.deleted_at IS NULL
+      ORDER BY mf.created_at DESC
+      LIMIT 1
+    `).get({
+      checksum_sha256,
+      entity_type,
+      entity_ref,
+      role
+    });
+  }
+
   static createLink(input = {}) {
     const result = db.prepare(`
       INSERT INTO media_links (
@@ -90,6 +113,34 @@ class MediaFile {
       sort_order: Number(input.sort_order) || 0
     });
     return result.lastInsertRowid;
+  }
+
+  static findLink(input = {}) {
+    return db.prepare(`
+      SELECT *
+      FROM media_links
+      WHERE media_file_id = @media_file_id
+        AND entity_type = @entity_type
+        AND role = @role
+        AND (@entity_id IS NULL OR entity_id = @entity_id)
+        AND (@entity_ref IS NULL OR entity_ref = @entity_ref)
+      ORDER BY id
+      LIMIT 1
+    `).get({
+      media_file_id: input.media_file_id,
+      entity_type: input.entity_type,
+      entity_id: input.entity_id || null,
+      entity_ref: input.entity_ref || null,
+      role: input.role
+    });
+  }
+
+  static createLinkIfMissing(input = {}) {
+    const existing = this.findLink(input);
+    if (existing) {
+      return existing.id;
+    }
+    return this.createLink(input);
   }
 
   static listForEntity({ entity_type, entity_id, entity_ref } = {}) {

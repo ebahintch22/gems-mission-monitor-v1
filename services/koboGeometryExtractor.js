@@ -7,7 +7,23 @@ const COTE_IVOIRE_BOUNDS = {
   maxLatitude: 10.5
 };
 
-function extractKoboGeometries(submission, config) {
+const RAW_BUILDING_ATTRIBUTE_FIELDS_V2 = [
+  "batiment/num_bat",
+  "batiment/bat_nom",
+  "batiment/bat_statut",
+  "batiment/est_principal",
+  "batiment/bat_precaire",
+  "batiment/bat_etages",
+  "batiment/bat_nb_pieces",
+  "batiment/bat_vocation",
+  "batiment/bat_services",
+  "batiment/bat_occupants",
+  "batiment/coins_bat_manuel",
+  "batiment/bat_elec",
+  "batiment/lan"
+];
+
+function extractKoboGeometries(submission, config, options = {}) {
   const versionField = config.version_field || "__version__";
   const formVersion = valueAtPath(submission, versionField) || null;
   const strategyId = formVersion && config.strategies[formVersion]
@@ -26,9 +42,9 @@ function extractKoboGeometries(submission, config) {
     strategy_id: strategyId,
     site_description: extractSiteDescription(submission),
     site_geometry: extractSingleGeometry(submission, strategy.site_geometry, report),
-    building_geometries: extractRepeatGeometries(submission, strategy.building_geometries, report),
+    building_geometries: extractRepeatGeometries(submission, strategy.building_geometries, report, options),
     raccordement_geometry: raccordementGeometry,
-    pylone_geometries: extractRepeatGeometries(submission, strategy.pylone_geometries, report),
+    pylone_geometries: extractRepeatGeometries(submission, strategy.pylone_geometries, report, options),
     geometry_quality_report: report
   };
 
@@ -62,7 +78,7 @@ function extractSiteDescription(submission) {
   };
 }
 
-function extractKoboGeometryBatch(payload, config) {
+function extractKoboGeometryBatch(payload, config, options = {}) {
   const submissions = Array.isArray(payload)
     ? payload
     : Array.isArray(payload?.response?.results)
@@ -73,11 +89,18 @@ function extractKoboGeometryBatch(payload, config) {
 
   return {
     schema_name: "g2m_kobo_geometry_extraction_output",
-    schema_version: "1.2.0",
+    schema_version: options.schemaVersion || "1.2.0",
     source_count: submissions.length,
     extracted_count: submissions.length,
-    results: submissions.map((submission) => extractKoboGeometries(submission, config))
+    results: submissions.map((submission) => extractKoboGeometries(submission, config, options))
   };
+}
+
+function extractKoboGeometryBatchV2(payload, config) {
+  return extractKoboGeometryBatch(payload, config, {
+    includeRawBuildingAttributesV2: true,
+    schemaVersion: "2.0.0"
+  });
 }
 
 function extractSingleGeometry(source, section, report) {
@@ -98,7 +121,7 @@ function extractSingleGeometry(source, section, report) {
   return null;
 }
 
-function extractRepeatGeometries(source, section, report) {
+function extractRepeatGeometries(source, section, report, options = {}) {
   if (!section) {
     return [];
   }
@@ -117,7 +140,7 @@ function extractRepeatGeometries(source, section, report) {
 
   return rows.map((row, index) => {
     const extracted = section.output_property === "building_geometries"
-      ? extractBuildingGeometry(row, section, report)
+      ? extractBuildingGeometry(row, section, report, options)
       : extractSingleGeometry(row, section, report);
     if (!extracted) {
       report.warnings.push({
@@ -139,9 +162,9 @@ function extractRepeatGeometries(source, section, report) {
   }).filter(Boolean);
 }
 
-function extractBuildingGeometry(row, section, report) {
+function extractBuildingGeometry(row, section, report, options = {}) {
   let fallbackWithCentroid = null;
-  const buildingProperties = extractBuildingProperties(row);
+  const buildingProperties = extractBuildingProperties(row, options);
 
   for (const candidate of sortedCandidates(section.source_priority)) {
     const rawValue = valueAtPath(row, candidate.field);
@@ -186,8 +209,8 @@ function extractBuildingGeometry(row, section, report) {
   return fallbackWithCentroid;
 }
 
-function extractBuildingProperties(row) {
-  return {
+function extractBuildingProperties(row, options = {}) {
+  const properties = {
     building_number: valueOrNull(valueAtPath(row, "batiment/num_bat")),
     building_name: valueOrNull(valueAtPath(row, "batiment/bat_nom")),
     building_status: valueOrNull(valueAtPath(row, "batiment/bat_statut")),
@@ -201,6 +224,14 @@ function extractBuildingProperties(row) {
     building_active_equipment: valueOrNull(valueAtPath(row, "batiment/equip_actifs")),
     building_equipment_detail: valueOrNull(valueAtPath(row, "batiment/equip_detail"))
   };
+
+  if (options.includeRawBuildingAttributesV2) {
+    RAW_BUILDING_ATTRIBUTE_FIELDS_V2.forEach((field) => {
+      properties[field] = valueOrNull(valueAtPath(row, field));
+    });
+  }
+
+  return properties;
 }
 
 function extractPyloneProperties(row) {
@@ -848,6 +879,7 @@ module.exports = {
   COTE_IVOIRE_BOUNDS,
   extractKoboGeometries,
   extractKoboGeometryBatch,
+  extractKoboGeometryBatchV2,
   parseDecimalNumber,
   parseKoboGeopointString,
   parseManualTextPolygon,

@@ -1,5 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
+const MediaFile = require("../models/MediaFile");
 const { extractKoboGeometryBatch } = require("./koboGeometryExtractor");
 const { DEFAULT_FORM_ID, loadChoiceList, loadMapping } = require("./formMappingService");
 
@@ -283,10 +284,17 @@ function buildKoboGeometryReviewAssetIndex(options = {}) {
   const root = options.root || KOBO_ASSETS_ROOT;
   const bySubmissionId = {};
 
-  if (!fs.existsSync(root)) {
-    return { root, total: 0, bySubmissionId };
+  if (fs.existsSync(root)) {
+    appendLocalAssetIndex({ root, bySubmissionId });
   }
 
+  appendDatabaseMediaIndex({ bySubmissionId });
+
+  const total = Object.values(bySubmissionId).reduce((sum, images) => sum + images.length, 0);
+  return { root, total, bySubmissionId };
+}
+
+function appendLocalAssetIndex({ root, bySubmissionId }) {
   for (const assetEntry of fs.readdirSync(root, { withFileTypes: true })) {
     if (!assetEntry.isDirectory()) {
       continue;
@@ -305,6 +313,7 @@ function buildKoboGeometryReviewAssetIndex(options = {}) {
           const filePath = path.join(submissionDir, entry.name);
           const stat = fs.statSync(filePath);
           return {
+            source: "local",
             asset_uid: assetUid,
             submission_id: submissionId,
             filename: entry.name,
@@ -323,9 +332,29 @@ function buildKoboGeometryReviewAssetIndex(options = {}) {
       }
     }
   }
+}
 
-  const total = Object.values(bySubmissionId).reduce((sum, images) => sum + images.length, 0);
-  return { root, total, bySubmissionId };
+function appendDatabaseMediaIndex({ bySubmissionId }) {
+  const medias = MediaFile.listForEntity({ entity_type: "submission" })
+    .filter((media) => media.media_type === "image" && media.entity_ref);
+
+  medias.forEach((media) => {
+    const submissionId = String(media.entity_ref || "");
+    bySubmissionId[submissionId] = bySubmissionId[submissionId] || [];
+    bySubmissionId[submissionId].push({
+      source: "wasabi",
+      media_file_id: media.id,
+      asset_uid: "",
+      submission_id: submissionId,
+      filename: media.original_filename,
+      size_bytes: media.size_bytes,
+      role: media.role,
+      caption: media.caption,
+      url: `/media/${encodeURIComponent(media.id)}/view`,
+      thumbnail_url: `/media/${encodeURIComponent(media.id)}/thumbnail`,
+      download_url: `/media/${encodeURIComponent(media.id)}/download`
+    });
+  });
 }
 
 function resolveKoboGeometryReviewAssetPath({ assetUid, submissionId, filename, root = KOBO_ASSETS_ROOT } = {}) {

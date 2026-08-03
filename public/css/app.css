@@ -2179,6 +2179,104 @@ h2 {
   gap: 6px;
 }
 
+.sig-table-header-controls {
+  align-items: center;
+  display: flex;
+  flex: 1 1 auto;
+  gap: 8px;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.sig-table-search {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--muted);
+  display: block;
+  flex: 0 1 260px;
+  max-width: 320px;
+  min-width: 180px;
+  min-height: 30px;
+  position: relative;
+  white-space: nowrap;
+  padding: 0;
+}
+
+.sig-table-search > i {
+  left: 12px;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.sig-table-search:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.14);
+}
+
+.sig-table-search input {
+  background: transparent;
+  border: 0;
+  color: var(--text);
+  font-size: calc(var(--font-small) * 1.6);
+  height: 100%;
+  min-width: 0;
+  outline: none;
+  padding: 0 38px 0 34px;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+}
+
+.sig-table-search input::-webkit-search-cancel-button,
+.sig-table-search input::-webkit-search-decoration {
+  appearance: none;
+  display: none;
+}
+
+.sig-table-search-clear {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: calc(var(--font-small) * 1.6);
+  height: 22px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+}
+
+.sig-table-search-clear:hover,
+.sig-table-search-clear:focus {
+  color: var(--primary);
+  outline: none;
+}
+
+.sig-layer-header-search {
+  background: #f3f4f6;
+  flex: 0 1 65%;
+  margin-left: auto;
+  max-width: none;
+  min-width: min(65%, 220px);
+}
+
+.layer-box-header .sig-layer-header-search {
+  height: calc(var(--header-height, 48px) - 14px);
+  max-width: calc(100% - 140px);
+  overflow: hidden;
+}
+
 .sig-filter-wide {
   grid-column: 1 / -1;
 }
@@ -3719,6 +3817,26 @@ h2 {
 .kobo-dry-run {
   align-self: end;
   min-height: 40px;
+}
+
+.kobo-media-progress {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  grid-column: 1 / -1;
+  padding: 12px;
+}
+
+.kobo-media-progress progress {
+  display: block;
+  height: 12px;
+  width: 100%;
+}
+
+.kobo-media-progress p {
+  color: var(--muted);
+  font-size: var(--font-small);
+  margin: 8px 0 0;
 }
 
 .kobo-summary {

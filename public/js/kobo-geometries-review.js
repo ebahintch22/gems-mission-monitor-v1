@@ -780,14 +780,14 @@
     const photos = localPhotosForSubmission(result);
     if (!photos.length) {
       return renderSectionDetail("Photos", [
-        fieldLine("Photos locales", 0),
-        `<p class="form-hint">Aucune photo locale rattachee a cette soumission dans data/kobo-assets.</p>`
+        fieldLine("Photos rattachees", 0),
+        `<p class="form-hint">Aucune photo rattachee a cette soumission.</p>`
       ]);
     }
 
     return `<article class="kobo-submission-detail-card">
       <h3>Photos</h3>
-      <p class="kobo-submission-photo-summary">${photos.length} photo(s) locale(s) rattachee(s) a cette soumission.</p>
+      <p class="kobo-submission-photo-summary">${photos.length} photo(s) rattachee(s) a cette soumission.</p>
       <div class="kobo-submission-photo-grid">
         ${photos.map(renderPhotoTile).join("")}
       </div>
@@ -795,9 +795,11 @@
   }
 
   function renderPhotoTile(photo) {
+    const imageUrl = photo.thumbnail_url || photo.url;
     return `<a class="kobo-submission-photo-tile" href="${escapeHtml(photo.url)}" target="_blank" rel="noopener">
-      <img src="${escapeHtml(photo.url)}" alt="${escapeHtml(photo.filename || "Photo Kobo")}" loading="lazy">
+      <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(photo.filename || "Photo Kobo")}" loading="lazy">
       <span>${escapeHtml(photo.filename || "Photo Kobo")}</span>
+      ${photo.source ? `<small>${escapeHtml(photo.source)}</small>` : ""}
       ${photo.size_bytes ? `<em>${escapeHtml(formatBytes(photo.size_bytes))}</em>` : ""}
     </a>`;
   }
@@ -819,7 +821,7 @@
     const seen = new Set();
     ids.forEach((id) => {
       (bySubmissionId[id] || []).forEach((photo) => {
-        const key = `${photo.asset_uid}/${photo.submission_id}/${photo.filename}`;
+        const key = photo.media_file_id || `${photo.asset_uid}/${photo.submission_id}/${photo.filename}`;
         if (!seen.has(key)) {
           seen.add(key);
           photos.push(photo);

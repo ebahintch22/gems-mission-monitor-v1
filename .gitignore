@@ -13,6 +13,7 @@ node_modules/
 Kbase-docs/*
 KBase-docs/
 data/kobo-assets/
+data/kobo-aggregates/
 # =========================
 # Bases SQLite runtime
 # =========================
