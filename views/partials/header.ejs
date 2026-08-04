@@ -30,6 +30,9 @@
       <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
       <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
     <% } %>
+    <% (typeof extraStyles !== "undefined" ? extraStyles : []).forEach((href) => { %>
+      <link rel="stylesheet" href="<%= href %>">
+    <% }) %>
     </head>
   <body>
     <%
@@ -37,7 +40,7 @@
       const can = (permission) => permissionSet.has(permission);
       const showInfographicsNav = can("infographics.read");
       const showSiteSearch = currentUser && can("infographics.read");
-      const showSitesPlanningNav = can("sites.planning.read");
+      const showSitesPlanningNav = false;
       const showVisualizationNav = can("sig.read") || showInfographicsNav || showSitesPlanningNav;
       const showSettingsNav = can("missions.read")
         || can("teams.read")
@@ -114,10 +117,6 @@
                 <a href="/cartographie" role="menuitem">
                   <i class="fa-solid fa-map-location-dot" aria-hidden="true"></i>
                   <span><%= t("nav.cartography") %></span>
-                </a>
-                <a href="/cartographie/extractions-kobo" role="menuitem">
-                  <i class="fa-solid fa-sitemap" aria-hidden="true"></i>
-                  <span><%= t("nav.koboSubmissionExplorer") %></span>
                 </a>
               <% } %>
               <% if (showSitesPlanningNav) { %>
@@ -197,7 +196,7 @@
             </div>
           </div>
         <% } %>
-        <% if (typeof koboQuickSync !== "undefined" && koboQuickSync.visible) { %>
+        <% if (false && typeof koboQuickSync !== "undefined" && koboQuickSync.visible) { %>
           <a
             class="nav-button nav-icon-button nav-kobo-sync <%= koboQuickSync.enabled ? "" : "is-disabled" %>"
             href="<%= koboQuickSync.enabled ? koboQuickSync.href : "#" %>"

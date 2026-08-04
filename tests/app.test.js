@@ -326,19 +326,27 @@ test("la navigation affiche seulement les liens autorises", async () => {
     role: "partenaire"
   });
 
-  const adminResponse = await request(app).get("/").set("Cookie", adminCookie);
+  const adminHomeResponse = await request(app).get("/").set("Cookie", adminCookie);
+  const adminResponse = await request(app).get("/cartographie").set("Cookie", adminCookie);
   const agentResponse = await request(app).get("/").set("Cookie", agentCookie);
   const partnerResponse = await request(app).get("/").set("Cookie", partnerCookie);
   const adminNavigation = adminResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
   const agentNavigation = agentResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
   const partnerNavigation = partnerResponse.text.match(/<nav id="site-nav" aria-label="Navigation principale">[\s\S]*?<\/nav>/)[0];
 
+  assert.equal(adminHomeResponse.status, 302);
+  assert.equal(adminHomeResponse.headers.location, "/cartographie");
   assert.match(adminNavigation, /Visualisation/);
   assert.match(adminNavigation, /id="site-search-open"/);
   assert.match(adminNavigation, /fa-solid fa-magnifying-glass/);
   assert.match(adminNavigation, /fa-solid fa-eye/);
   assert.match(adminNavigation, /href="\/cartographie" role="menuitem"[\s\S]*fa-map-location-dot[\s\S]*Cartographie/);
-  assert.match(adminNavigation, /href="\/cartographie\/extractions-kobo" role="menuitem"[\s\S]*fa-sitemap[\s\S]*Exploration soumissions Kobo/);
+  assert.doesNotMatch(adminNavigation, /href="\/cartographie\/extractions-kobo"/);
+  assert.doesNotMatch(adminNavigation, /Exploration soumissions Kobo/);
+  assert.doesNotMatch(adminNavigation, /href="\/sites"/);
+  assert.doesNotMatch(adminNavigation, /Sites Ã  visiter/);
+  assert.doesNotMatch(adminNavigation, /data-kobo-light-open/);
+  assert.doesNotMatch(adminNavigation, /Synchroniser KoboToolbox/);
   assert.match(adminNavigation, /class="nav-menu-panel-title">Infographie/);
   assert.match(adminNavigation, /href="\/infographies\/mission-globale"[\s\S]*fa-chart-pie[\s\S]*Mission globale/);
   assert.match(adminNavigation, /href="\/infographies\/par-superviseur"[\s\S]*fa-user-tie[\s\S]*Par superviseur/);
@@ -1527,7 +1535,7 @@ test("POST /admin/settings persiste la mission d'accueil globale", async () => {
   assert.match(invalidResponse.text, /mission d&#39;accueil selectionnee est invalide/);
 });
 
-test("GET /missions/:id/dashboard affiche le dashboard mission et l'accueil connecte l'utilise", async () => {
+test("GET /missions/:id/dashboard affiche le dashboard mission et l'accueil connecte ouvre la cartographie", async () => {
   const coordinatorCookie = await loginTestUser({
     email: "coordinateur.mission-dashboard@g2m.test",
     role: "coordinateur"
@@ -1559,9 +1567,8 @@ test("GET /missions/:id/dashboard affiche le dashboard mission et l'accueil conn
   assert.match(response.text, /Agents affectés/);
   assert.match(response.text, /Soumissions/);
   assert.match(response.text, /Aucune soumission/);
-  assert.equal(homeResponse.status, 200);
-  assert.match(homeResponse.text, /Mission d&#39;accueil/);
-  assert.match(homeResponse.text, /Mission pilote/);
+  assert.equal(homeResponse.status, 302);
+  assert.equal(homeResponse.headers.location, "/cartographie");
 });
 
 test("modification des attributs editables d'une mission", async () => {
@@ -2991,9 +2998,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /\/js\/layer-box-manager\.js/);
   assert.match(response.text, /\/js\/bootstrap5-treeview-lite\.js/);
   assert.match(response.text, /\/js\/cartographie\.js/);
-  assert.match(response.text, /id="sig-geometry-import-open"/);
+  assert.doesNotMatch(response.text, /id="sig-geometry-import-open"/);
   assert.match(response.text, /id="sig-buildings-open"/);
-  assert.match(response.text, /id="sig-sites-planning-open"/);
+  assert.doesNotMatch(response.text, /id="sig-sites-planning-open"/);
   assert.doesNotMatch(coordinatorResponse.text, /id="sig-buildings-open"/);
   assert.doesNotMatch(coordinatorResponse.text, /id="sig-sites-planning-open"/);
   assert.match(response.text, /id="sig-measure-toggle"/);
@@ -3032,6 +3039,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(response.text, /id="sig-geometry-import-config-data"/);
   assert.match(response.text, /"markerBounceDurationMs":\d+/);
   assert.match(response.text, /"siteLabelWrapLength":\d+/);
+  assert.match(response.text, /Fiche detaillee/);
   assert.match(layerScriptResponse.text, /class LayerBoxManager/);
   assert.match(layerScriptResponse.text, /renderToLayer\(id, content, options = \{\}\)/);
   assert.match(layerScriptResponse.text, /activateLayer\(id\)/);
@@ -3181,6 +3189,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /g2m:site-search-center-map/);
   assert.match(scriptResponse.text, /map\.flyTo\(\[latitude, longitude\], Math\.max\(map\.getZoom\(\), 16\)/);
   assert.match(scriptResponse.text, /visitedSitesColumnPrefsKey = "g2m\.sig\.visitedSitesColumns\.v1"/);
+  assert.match(scriptResponse.text, /CartographieSessionState\.clear\(\)/);
+  assert.match(scriptResponse.text, /new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)/);
   assert.match(scriptResponse.text, /visitedSitesMandatoryColumns = \["_id", "modB\/nom_officiel", "modB\/region", "modB\/ministere"\]/);
   assert.match(scriptResponse.text, /const administrativeChoices = JSON\.parse\(document\.getElementById\("sig-administrative-choices-data"\)\?\.textContent \|\| "\{\}"\)/);
   assert.match(scriptResponse.text, /const administrativeChoiceLists = administrativeChoices\.__choices \|\| \{\}/);
@@ -3220,6 +3230,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function visitedSiteFieldValue\(point, field\)/);
   assert.match(scriptResponse.text, /table\.setColumns\(buildVisitedSitesTableColumns\(\)\)/);
   assert.match(scriptResponse.text, /function syncVisitedSitesTable\(visiblePoints = currentVisiblePoints\(\)\)/);
+  assert.match(scriptResponse.text, /data: points/);
+  assert.match(scriptResponse.text, /function resetStartupVisitedSitesFilters\(\)/);
+  assert.match(scriptResponse.text, /syncVisitedSitesTable\(currentVisiblePoints\(\)\)/);
   assert.match(scriptResponse.text, /syncVisitedSitesTable\(visiblePoints\)/);
   assert.match(scriptResponse.text, /rowFormatter\(row\)[\s\S]*is-selected-site/);
   assert.match(scriptResponse.text, /has-spatial-reference/);
@@ -3393,6 +3406,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /async function openSubmissionFromQuery\(\)/);
   assert.match(scriptResponse.text, /new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)/);
   assert.match(scriptResponse.text, /function openSitePopup\(point\)/);
+  assert.match(scriptResponse.text, /interactiveDetailLink\.href = `\/submissions\/\$\{point\.id\}\/view`/);
+  assert.match(scriptResponse.text, /sig-popup-detail-view/);
   assert.match(scriptResponse.text, /openSitePopup\(point\)/);
   assert.doesNotMatch(scriptResponse.text, /async function openSubmissionFromQuery\(\)[\s\S]*showDecisionDetail\(point\)[\s\S]*return true;/);
   assert.match(scriptResponse.text, /const hasSubmissionQuery = Boolean\(new URLSearchParams\(window\.location\.search\)\.get\("submission_id"\)\)/);
@@ -3553,6 +3568,9 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.layer-box-content\s*\{[\s\S]*overflow-y: auto/);
   assert.match(styleResponse.text, /\.sig-panel\s*\{[\s\S]*max-width: 100%/);
   assert.match(styleResponse.text, /\.sig-table-panel\s*\{[\s\S]*overflow: hidden/);
+  assert.match(styleResponse.text, /\.sig-popup-actions\s*\{[\s\S]*display: flex/);
+  assert.match(styleResponse.text, /\.sig-popup-detail-view\s*\{[\s\S]*background: #facc15/);
+  assert.match(styleResponse.text, /\.sig-popup-detail-view:hover,[\s\S]*background: #eab308/);
   assert.match(styleResponse.text, /#sig-table \.tabulator-row\.has-spatial-reference\s*\{[\s\S]*background: #d9fbe8/);
   assert.match(styleResponse.text, /#sig-table \.tabulator-row\.has-spatial-reference\.is-selected-site\s*\{[\s\S]*border-left-color: #22c55e/);
   assert.match(styleResponse.text, /\.site-identification-body\s*\{[\s\S]*overflow-y: auto/);
@@ -3613,7 +3631,7 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.doesNotMatch(styleResponse.text, /\.site-footer/);
   assert.match(scriptResponse.text, /createPane\("territoryPane"\)/);
   assert.match(scriptResponse.text, /createPane\("collectionPointsPane"\)/);
-  assert.match(scriptResponse.text, /"collectionPointsPane"\)\.style\.zIndex = 450/);
+  assert.match(scriptResponse.text, /"collectionPointsPane"\)\.style\.zIndex = 490/);
   assert.match(scriptResponse.text, /function fitToVisiblePoints\(visiblePoints\)/);
   assert.match(scriptResponse.text, /new ResizeObserver\(function \(\)/);
   assert.match(scriptResponse.text, /clampGeometryOverlayToMapPane\(\)/);
@@ -4120,6 +4138,24 @@ test("GET /soumissions/:id/detail affiche la fiche decisionnelle et exige infogr
   assert.match(response.text, /Module F[\s\S]*Internet/);
   assert.match(response.text, /id="submission-detail-map"/);
   assert.match(response.text, /leaflet@1\.9\.4/);
+});
+
+test("GET /submissions/:id/view affiche la fiche detaillee interactive", async () => {
+  const cookie = await loginTestUser({
+    email: "interactive.submission@g2m.test",
+    role: "specialiste_gis"
+  });
+  const row = db.prepare("SELECT id FROM soumissions_collecte ORDER BY id DESC LIMIT 1").get();
+  const response = await request(app)
+    .get(`/submissions/${row.id}/view`)
+    .set("Cookie", cookie);
+
+  assert.equal(response.status, 200);
+  assert.match(response.text, /Dossier technique PADCI/);
+  assert.match(response.text, /data-submission-detail/);
+  assert.match(response.text, /data-theme-switcher/);
+  assert.match(response.text, /submission-detail-data/);
+  assert.match(response.text, /\/js\/submission-map\.js/);
 });
 
 test("le moteur V1 de rapport resout les chemins, fallbacks et formats", () => {

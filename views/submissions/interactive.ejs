@@ -1,0 +1,27 @@
+<%- include("../partials/header", {
+  title,
+  mapAssets: true,
+  extraStyles: ["/css/submission-detail.css"]
+}) %>
+
+<main class="interactive-submission" data-submission-detail>
+  <%- include("partials/header", { view, submission }) %>
+  <%- include("partials/sidebar", { view }) %>
+
+  <div class="submission-content">
+    <% view.sections.forEach((section) => { %>
+      <%- include("partials/section-card", { section, view }) %>
+    <% }) %>
+  </div>
+</main>
+
+<script id="submission-detail-data" type="application/json"><%- JSON.stringify({
+  map: view.map,
+  title: view.header.title
+}).replace(/</g, "\\u003c") %></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="/js/theme-switcher.js"></script>
+<script src="/js/submission-map.js"></script>
+<script src="/js/submission-detail.js"></script>
+
+<%- include("../partials/footer") %>

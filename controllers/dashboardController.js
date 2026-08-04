@@ -3,6 +3,10 @@ const Setting = require("../models/Setting");
 const { getMissionDashboard } = require("../services/missionDashboardService");
 
 exports.index = (req, res) => {
+  if (req.currentUser && req.permissions?.has("sig.read")) {
+    return res.redirect("/cartographie");
+  }
+
   const defaultMissionId = Number(Setting.rawValue("app.default_mission_id"));
   if (
     req.currentUser

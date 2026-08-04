@@ -359,6 +359,7 @@
   "sig.site.unlinkedAgent": "Unlinked agent",
   "sig.site.noTeam": "No team",
   "sig.popup.more": "View more",
+  "sig.popup.interactiveDetail": "Detailed sheet",
   "sig.decisionDetail.title": "Decision sheet",
   "sig.site.validation": "Validation: {{status}}",
   "sig.site.sections.identification": "Identification",

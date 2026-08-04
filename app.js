@@ -56,6 +56,7 @@ app.use("/cartographie", sigRoutes);
 app.use("/sites", sitesPlanningRoutes);
 app.use("/infographies", infographieRoutes);
 app.use("/soumissions", submissionRoutes);
+app.use("/submissions", submissionRoutes);
 app.use("/media", mediaRoutes);
 app.use("/parametrages/kobo", koboAdminRoutes);
 app.use("/api/sites", sitesPlanningApiRoutes);

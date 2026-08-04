@@ -1,0 +1,22 @@
+<aside class="submission-sidebar" aria-label="Sommaire de la fiche">
+  <button class="submission-sidebar-toggle" type="button" data-sidebar-toggle aria-expanded="true">
+    <i class="fa-solid fa-bars-staggered" aria-hidden="true"></i>
+    <span>Sommaire</span>
+  </button>
+  <nav class="submission-toc" data-submission-toc>
+    <% view.sections.forEach((section) => { %>
+      <a href="#section-<%= section.id %>" data-section-link="<%= section.id %>">
+        <i class="fa-solid <%= section.icon %>" aria-hidden="true"></i>
+        <span><%= section.title %></span>
+      </a>
+    <% }) %>
+  </nav>
+</aside>
+<label class="submission-mobile-nav">
+  <span>Section</span>
+  <select data-mobile-section-nav>
+    <% view.sections.forEach((section) => { %>
+      <option value="section-<%= section.id %>"><%= section.title %></option>
+    <% }) %>
+  </select>
+</label>

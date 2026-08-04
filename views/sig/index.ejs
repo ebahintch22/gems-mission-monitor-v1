@@ -170,26 +170,6 @@
         <i class="fa-solid fa-building" aria-hidden="true"></i>
       </button>
       <% } %>
-      <% if (permissions && permissions.has("sites.planning.read")) { %>
-      <button
-        class="sig-map-tool"
-        id="sig-sites-planning-open"
-        type="button"
-        title="Sites &agrave; visiter"
-        aria-label="Sites &agrave; visiter"
-      >
-        <i class="fa-solid fa-list-check" aria-hidden="true"></i>
-      </button>
-      <% } %>
-      <button
-        class="sig-map-tool"
-        id="sig-geometry-import-open"
-        type="button"
-        title="Importer des géométries"
-        aria-label="Importer des géométries"
-      >
-        <i class="fa-solid fa-draw-polygon" aria-hidden="true"></i>
-      </button>
       <button
         class="sig-map-tool"
         id="sig-measure-toggle"
@@ -284,6 +264,7 @@
     unlinkedAgent: t("sig.site.unlinkedAgent"),
     noTeam: t("sig.site.noTeam"),
     popupMore: t("sig.popup.more"),
+    interactiveDetail: t("sig.popup.interactiveDetail"),
     decisionDetailTitle: t("sig.decisionDetail.title"),
     validationPrefix: t("sig.site.validation", { status: "{{status}}" }),
     identification: t("sig.site.sections.identification"),

@@ -2532,10 +2532,29 @@ h2 {
   padding-bottom: 16px;
 }
 
+.sig-popup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 7px;
+}
+
 .sig-popup-more {
   display: inline-block;
   font-weight: 700;
-  margin-top: 7px;
+}
+
+.sig-popup-detail-view {
+  background: #facc15;
+  border-radius: 4px;
+  color: #3d3129;
+  padding: 4px 8px;
+}
+
+.sig-popup-detail-view:hover,
+.sig-popup-detail-view:focus {
+  background: #eab308;
+  color: #3d3129;
 }
 
 .decision-detail-layer {

@@ -1,6 +1,7 @@
 const SoumissionCollecte = require("../models/SoumissionCollecte");
 const { buildSubmissionReport } = require("../services/submissionReportRenderer");
 const { buildSubmissionDetail } = require("../services/submissionViewService");
+const { buildInteractiveSubmissionView } = require("../services/submission-detail-view.service");
 const { buildSubmissionDiagnostic } = require("../services/submissionDiagnosticService");
 
 exports.detail = (req, res) => {
@@ -18,6 +19,25 @@ exports.detail = (req, res) => {
   return res.render("soumissions/detail", {
     title: `Soumission ${submission.display_submission_id || submission.source_submission_id}`,
     detail
+  });
+};
+
+exports.interactiveView = (req, res) => {
+  const submission = SoumissionCollecte.findById(req.params.id);
+
+  if (!submission) {
+    return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
+  }
+  if (submission.mission_archived === 1 && req.currentUser?.role !== "admin") {
+    return res.status(404).render("errors/404", { title: req.t("errors.404.title") });
+  }
+
+  const view = buildInteractiveSubmissionView(submission);
+
+  return res.render("submissions/interactive", {
+    title: `Fiche detaillee ${submission.display_submission_id || submission.source_submission_id}`,
+    submission,
+    view
   });
 };
 

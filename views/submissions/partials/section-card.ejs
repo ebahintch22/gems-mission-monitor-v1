@@ -1,0 +1,75 @@
+<section class="submission-section-card" id="section-<%= section.id %>" data-section-id="<%= section.id %>">
+  <header>
+    <h2><i class="fa-solid <%= section.icon %>" aria-hidden="true"></i><span><%= section.title %></span></h2>
+  </header>
+  <% const sectionAlerts = view.qualityAlerts.filter((alert) => alert.section === section.id); %>
+  <% if (sectionAlerts.length) { %>
+    <div class="submission-alert-list">
+      <% sectionAlerts.forEach((alert) => { %>
+        <a class="submission-alert is-<%= alert.severity %>" href="#section-<%= alert.section %>">
+          <strong><%= alert.code %></strong>
+          <span><%= alert.message %></span>
+        </a>
+      <% }) %>
+    </div>
+  <% } %>
+  <% if (section.type === "overview") { %>
+    <div class="submission-kpi-grid">
+      <% view.kpis.forEach((field) => { %>
+        <article class="submission-kpi">
+          <span><%= field.label %></span>
+          <strong><%- field.html %></strong>
+        </article>
+      <% }) %>
+    </div>
+    <% if (view.qualityAlerts.length) { %>
+      <div class="submission-alert-list">
+        <% view.qualityAlerts.slice(0, 6).forEach((alert) => { %>
+          <a class="submission-alert is-<%= alert.severity %>" href="#section-<%= alert.section %>">
+            <strong><%= alert.code %></strong>
+            <span><%= alert.message %></span>
+          </a>
+        <% }) %>
+      </div>
+    <% } %>
+  <% } else if (section.type === "map") { %>
+    <div id="submission-detail-map" class="interactive-submission-map" aria-label="Carte de la soumission"></div>
+    <dl class="submission-field-grid">
+      <% (section.fields || []).forEach((field) => { %>
+        <dt><%= field.label %></dt>
+        <dd><%- field.html %></dd>
+      <% }) %>
+    </dl>
+  <% } else if (section.type === "repeat") { %>
+    <% if (!section.items.length) { %>
+      <p class="submission-empty">Aucune donnee repetee.</p>
+    <% } %>
+    <div class="submission-repeat-list">
+      <% section.items.forEach((item) => { %>
+        <%- include("repeat-card", { item, section, view }) %>
+      <% }) %>
+    </div>
+  <% } else if (section.type === "media") { %>
+    <%- include("media-gallery", { view }) %>
+  <% } else { %>
+    <dl class="submission-field-grid">
+      <% (section.fields || []).forEach((field) => { %>
+        <dt id="field-<%= section.id %>-<%= field.key.replace(/[^a-zA-Z0-9_-]/g, "-") %>"><%= field.label %></dt>
+        <dd><%- field.html %></dd>
+      <% }) %>
+    </dl>
+    <% (section.repeats || []).forEach((repeat) => { %>
+      <section class="submission-section-repeat">
+        <h3><%= repeat.title %></h3>
+        <% if (!repeat.items.length) { %>
+          <p class="submission-empty">Aucun element renseigne.</p>
+        <% } %>
+        <div class="submission-repeat-list">
+          <% repeat.items.forEach((item) => { %>
+            <%- include("repeat-card", { item, section: repeat, view }) %>
+          <% }) %>
+        </div>
+      </section>
+    <% }) %>
+  <% } %>
+</section>

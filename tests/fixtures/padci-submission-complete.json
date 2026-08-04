@@ -1,0 +1,100 @@
+{
+  "_id": "fixture-001",
+  "_uuid": "uuid-fixture-001",
+  "__version__": "2026060404v12",
+  "_submission_time": "2026-07-15T09:30:00.000Z",
+  "_submitted_by": "agent.fixture",
+  "_status": "submitted_via_web",
+  "start": "2026-07-15T08:20:00.000Z",
+  "end": "2026-07-15T09:30:00.000Z",
+  "modA/fiche_id": "FICHE-001",
+  "modA/gps_site": "10.4960562 -6.4097407 386.4 4.48",
+  "modA/gps_centre": "10.496102 -6.408425 386.4 5",
+  "modB/nom_officiel": "Site PADCI anonymise",
+  "modB/region": "CI01",
+  "modB/departement": "CI0101",
+  "modB/sous_prefecture": "CI010101",
+  "modB/commune": "Commune test",
+  "modB/quartier": "Quartier test",
+  "modB/type_infra": "education",
+  "modB/sous_type": "lycee",
+  "modB/statut_fonct": "fonctionnel",
+  "modB/milieu": "urbain",
+  "modB/annee_creation": 1998,
+  "modB/superficie": 53534.278656,
+  "modB/photo_entree": "entree-site.jpg",
+  "modB/emprise_site": "POLYGON (-6.409877 10.496655; -6.409486 10.495051; -6.408112 10.495502; -6.409877 10.496655)",
+  "modC/nb_batiments": 2,
+  "modC/personnel": 42,
+  "modC/nb_lits": 0,
+  "modC/patients_jour": 0,
+  "modD/electricite": "oui",
+  "modD/source_elec": "reseau solaire",
+  "modD/qualite_courant": "instable",
+  "modD/mise_terre": "non",
+  "modE/operateurs": "orange mtn",
+  "modE/pylone": "oui",
+  "modE/nb_pylones": 1,
+  "modE/pylone_rep": [
+    {
+      "type_pylone": "treillis",
+      "operateur": "orange",
+      "gps_pylone": "10.497 -6.410 0 5",
+      "dist_pylone": 500
+    }
+  ],
+  "modF/internet": "oui",
+  "modF/operateur_rep": [
+    {
+      "operateur": "orange",
+      "lien_rep": [
+        {
+          "position": "10.4962 -6.4098 0 6",
+          "technologie": "fibre",
+          "statut": "actif",
+          "bat_arrivee": "Batiment A",
+          "debit_souscrit": 999,
+          "cout_mensuel": 35000,
+          "payeur": "etat",
+          "usage": "administration pedagogie",
+          "equipements": "routeur switch"
+        }
+      ]
+    }
+  ],
+  "modH/fibre_proche": "oui",
+  "modH/gps_raccord": "10.4964 -6.4089 0 5",
+  "batiment": [
+    {
+      "num_bat": 1,
+      "bat_nom": "Batiment A",
+      "bat_statut": "utilise",
+      "occupants": 20,
+      "superficie": 250,
+      "coins_bat": "POLYGON (-6.4098 10.4965; -6.4097 10.4965; -6.4097 10.4964; -6.4098 10.4965)",
+      "photo_bat": "batiment-a.jpg"
+    },
+    {
+      "num_bat": 2,
+      "bat_nom": "Batiment B",
+      "bat_statut": "utilise",
+      "occupants": 18,
+      "superficie": 180,
+      "coins_bat": "POLYGON (-6.4095 10.4963; -6.4094 10.4963; -6.4094 10.4962; -6.4095 10.4963)"
+    }
+  ],
+  "_attachments": [
+    {
+      "filename": "entree-site.jpg",
+      "question_xpath": "modB/photo_entree",
+      "download_medium_url": "https://example.test/media/entree-medium.jpg",
+      "download_large_url": "https://example.test/media/entree-large.jpg"
+    },
+    {
+      "filename": "batiment-a.jpg",
+      "question_xpath": "batiment/photo_bat",
+      "download_medium_url": "https://example.test/media/batiment-a-medium.jpg",
+      "download_large_url": "https://example.test/media/batiment-a-large.jpg"
+    }
+  ]
+}

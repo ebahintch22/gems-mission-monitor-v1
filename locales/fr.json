@@ -359,6 +359,7 @@
   "sig.site.unlinkedAgent": "Agent non rattaché",
   "sig.site.noTeam": "Sans équipe",
   "sig.popup.more": "Voir plus",
+  "sig.popup.interactiveDetail": "Fiche detaillee",
   "sig.decisionDetail.title": "Fiche décisionnelle",
   "sig.site.validation": "Validation : {{status}}",
   "sig.site.sections.identification": "Identification",

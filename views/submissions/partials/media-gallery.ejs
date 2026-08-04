@@ -1,0 +1,25 @@
+<div class="submission-media-gallery">
+  <% view.mediaGallery.categories.forEach((category) => { %>
+    <section class="submission-media-category">
+      <h3><%= category.title %></h3>
+      <% if (!category.items.length) { %>
+        <p class="submission-empty">Aucun media rapproche.</p>
+      <% } %>
+      <div class="submission-media-grid">
+        <% category.items.forEach((item) => { %>
+          <button class="submission-media-item" type="button" data-media-large="<%= item.largeUrl %>" data-media-caption="<%= item.caption %>">
+            <img src="<%= item.thumbnailUrl %>" alt="<%= item.caption %>" loading="lazy" onerror="this.closest('.submission-media-item').classList.add('is-missing')">
+            <span><%= item.caption %></span>
+          </button>
+        <% }) %>
+      </div>
+    </section>
+  <% }) %>
+</div>
+<div class="submission-media-modal" data-media-modal hidden role="dialog" aria-modal="true" aria-label="Media">
+  <button type="button" class="submission-media-close" data-media-close aria-label="Fermer"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+  <figure>
+    <img src="" alt="">
+    <figcaption></figcaption>
+  </figure>
+</div>

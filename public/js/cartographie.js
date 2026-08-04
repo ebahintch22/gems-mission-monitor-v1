@@ -67,6 +67,9 @@
       }
     }
   };
+  if (!new URLSearchParams(window.location.search).get("submission_id")) {
+    CartographieSessionState.clear();
+  }
   const savedContext = CartographieSessionState.load();
   let isRestoringContext = false;
   let activeBaseLayerName = t("layerRoad");
@@ -114,7 +117,7 @@
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
-  map.getPane("collectionPointsPane").style.zIndex = 450;
+  map.getPane("collectionPointsPane").style.zIndex = 490;
   map.createPane("spatialReferencePane");
   map.getPane("spatialReferencePane").style.zIndex = 470;
   map.getPane("spatialReferencePane").style.pointerEvents = "auto";
@@ -3018,7 +3021,7 @@
   }
 
   const table = new Tabulator("#sig-table", {
-    data: [],
+    data: points,
     height: "100%",
     layout: "fitColumns",
     placeholder: t("tableEmpty"),
@@ -4152,7 +4155,9 @@
     const locality = document.createElement("div");
     const date = document.createElement("div");
     const status = document.createElement("div");
+    const actions = document.createElement("div");
     const moreLink = document.createElement("a");
+    const interactiveDetailLink = document.createElement("a");
 
     heading.textContent = point.display_submission_id || point.source_submission_id;
     agent.textContent = `${point.code_agent || t("unlinkedAgent")} - ${point.nom_equipe || t("noTeam")}`;
@@ -4170,7 +4175,12 @@
       event.preventDefault();
       showDecisionDetail(point);
     });
-    content.append(heading, agent, locality, date, status, moreLink);
+    interactiveDetailLink.href = `/submissions/${point.id}/view`;
+    interactiveDetailLink.textContent = t("interactiveDetail");
+    interactiveDetailLink.className = "sig-popup-more sig-popup-detail-view";
+    actions.className = "sig-popup-actions";
+    actions.append(moreLink, interactiveDetailLink);
+    content.append(heading, agent, locality, date, status, actions);
     return content;
   }
 
@@ -6025,6 +6035,22 @@
     };
   }
 
+  function resetStartupVisitedSitesFilters() {
+    document.getElementById("sig-filters")?.reset();
+    updateAdministrativeFilterCascade({
+      region: "",
+      department: "",
+      subprefecture: ""
+    });
+    if (visitedSitesSearchInput) {
+      visitedSitesSearchInput.value = "";
+    }
+    if (visitedSitesSearchClear) {
+      visitedSitesSearchClear.hidden = true;
+    }
+    window.clearTimeout(visitedSitesSearchDebounce);
+  }
+
   function currentVisiblePoints() {
     const criteria = filters();
     return points.filter(function (point) {
@@ -6736,9 +6762,12 @@
         map.fitBounds(territoryLayer.getBounds(), { padding: [12, 12] });
       }
       if (!restored) {
-        updateAdministrativeFilterCascade();
+        resetStartupVisitedSitesFilters();
         renderPoints(false);
         saveCurrentCartographyContext();
+        window.setTimeout(function () {
+          syncVisitedSitesTable(currentVisiblePoints());
+        }, 0);
       }
     } finally {
       hideLoading();

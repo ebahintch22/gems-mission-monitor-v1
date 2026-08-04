@@ -1,0 +1,37 @@
+<article class="submission-repeat-card" id="<%= item.id %>">
+  <button class="submission-repeat-header" type="button" data-repeat-toggle aria-expanded="false">
+    <span><%= item.title %></span>
+    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+  </button>
+  <div class="submission-repeat-body">
+    <dl class="submission-field-grid">
+      <% item.fields.forEach((field) => { %>
+        <dt><%= field.label %></dt>
+        <dd><%- field.html %></dd>
+      <% }) %>
+    </dl>
+    <% (item.nestedRepeats || []).forEach((nested) => { %>
+      <section class="submission-nested-repeat">
+        <h3><%= nested.title %></h3>
+        <% if (!nested.items.length) { %>
+          <p class="submission-empty">Aucun element renseigne.</p>
+        <% } %>
+        <% nested.items.forEach((nestedItem) => { %>
+          <article class="submission-nested-card">
+            <h4><%= nestedItem.title %></h4>
+            <dl class="submission-field-grid">
+              <% nestedItem.fields.forEach((field) => { %>
+                <dt><%= field.label %></dt>
+                <dd><%- field.html %></dd>
+              <% }) %>
+            </dl>
+          </article>
+        <% }) %>
+      </section>
+    <% }) %>
+    <button class="button submission-map-locate" type="button" data-map-feature="<%= item.id %>">
+      <i class="fa-solid fa-location-crosshairs" aria-hidden="true"></i>
+      <span>Localiser sur la carte</span>
+    </button>
+  </div>
+</article>
