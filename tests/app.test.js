@@ -22,6 +22,7 @@ const { hashToken } = require("../services/tokenService");
 const { hashPassword } = require("../services/passwordService");
 const MediaFile = require("../models/MediaFile");
 const SpatialReferenceFeature = require("../models/SpatialReferenceFeature");
+const SoumissionCollecte = require("../models/SoumissionCollecte");
 
 const roleCsv = [
   "Role;Label;description",
@@ -2722,6 +2723,14 @@ test("GET /api/sites/spatial-reference charge seulement les entites rattachees a
   assert.equal(bySiteCodeResponse.status, 200);
   assert.equal(bySiteCodeResponse.body.site_contours.features.length, 1);
   assert.equal(bySiteCodeResponse.body.building_extents.features.length, 1);
+  assert.equal(
+    JSON.parse(bySiteCodeResponse.body.site_contours.features[0].properties.raw_properties_json).site_code,
+    "g2m-ref-001"
+  );
+  assert.equal(
+    JSON.parse(bySiteCodeResponse.body.building_extents.features[0].properties.raw_properties_json).building_code,
+    "BAT-001"
+  );
   assert.equal(bySiteCodeResponse.body.network_points.features.length, 0);
   assert.equal(byKoboResponse.status, 200);
   assert.equal(byKoboResponse.body.network_points.features.length, 1);
@@ -2781,6 +2790,123 @@ test("GET /api/sites/spatial-reference utilise kobo_id pour les trois groupes d'
   assert.equal(response.body.counts.site_contours, 1);
   assert.equal(response.body.counts.building_extents, 1);
   assert.equal(response.body.counts.network_points, 1);
+});
+
+test("mapPoints marque comme integres seulement les sites visites ayant des batiments spatiaux", () => {
+  const missionId = db.prepare(`
+    INSERT INTO missions (
+      name, region, status, start_date, end_date, collectors,
+      kobo_asset_uid, latitude, longitude
+    ) VALUES (
+      ?, ?, 'en_cours', ?, ?, 1, ?, ?, ?
+    )
+  `).run(
+    "Mission integration spatiale visites",
+    "Region integration spatiale",
+    "2026-07-01",
+    "2026-07-31",
+    "ASSET-SPATIAL-VISITED",
+    5.34,
+    -4.02
+  ).lastInsertRowid;
+  SoumissionCollecte.insertKobo({
+    source: "kobo",
+    source_submission_id: "visited-spatial-001",
+    kobo_asset_uid: "asset-spatial-reference-test",
+    mission_id: missionId,
+    equipe_id: null,
+    agent_id: null,
+    assignment_id: null,
+    sous_prefecture_id: null,
+    code_agent_source: null,
+    submitted_at: "2026-07-01T10:00:00.000Z",
+    latitude: 5.34,
+    longitude: -4.02,
+    precision_m: null,
+    statut_validation: "validee",
+    anomaly_count: 0,
+    formulaire_type: "kobo",
+    raw_data_json: JSON.stringify({
+      _id: "visited-spatial-001",
+      "modB/nom_officiel": "Site visite integre spatialement"
+    })
+  });
+  SoumissionCollecte.insertKobo({
+    source: "kobo",
+    source_submission_id: "visited-spatial-002",
+    kobo_asset_uid: "asset-spatial-reference-test",
+    mission_id: missionId,
+    equipe_id: null,
+    agent_id: null,
+    assignment_id: null,
+    sous_prefecture_id: null,
+    code_agent_source: null,
+    submitted_at: "2026-07-01T11:00:00.000Z",
+    latitude: 5.35,
+    longitude: -4.03,
+    precision_m: null,
+    statut_validation: "validee",
+    anomaly_count: 0,
+    formulaire_type: "kobo",
+    raw_data_json: JSON.stringify({
+      _id: "visited-spatial-002",
+      "modB/nom_officiel": "Site visite sans integration spatiale"
+    })
+  });
+  SoumissionCollecte.insertKobo({
+    source: "kobo",
+    source_submission_id: "visited-spatial-network-only",
+    kobo_asset_uid: "asset-spatial-reference-test",
+    mission_id: missionId,
+    equipe_id: null,
+    agent_id: null,
+    assignment_id: null,
+    sous_prefecture_id: null,
+    code_agent_source: null,
+    submitted_at: "2026-07-01T12:00:00.000Z",
+    latitude: 5.36,
+    longitude: -4.04,
+    precision_m: null,
+    statut_validation: "validee",
+    anomaly_count: 0,
+    formulaire_type: "kobo",
+    raw_data_json: JSON.stringify({
+      _id: "visited-spatial-network-only",
+      "modB/nom_officiel": "Site visite avec noeud seul"
+    })
+  });
+  SpatialReferenceFeature.importFeatureCollection("network_point", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { kobo_id: "visited-spatial-001", nature_point: "pylone" },
+      geometry: { type: "Point", coordinates: [-4.02, 5.34] }
+    }, {
+      type: "Feature",
+      properties: { kobo_id: "visited-spatial-network-only", nature_point: "pylone" },
+      geometry: { type: "Point", coordinates: [-4.04, 5.36] }
+    }]
+  }, { replaceType: false });
+  SpatialReferenceFeature.importFeatureCollection("building_extent", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { site_code: "visited-site-001", kobo_id: "visited-spatial-001", bat_num: 1 },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[-4.021, 5.339], [-4.02, 5.339], [-4.02, 5.34], [-4.021, 5.339]]]
+      }
+    }]
+  }, { replaceType: false });
+
+  const rows = SoumissionCollecte.mapPoints();
+  const integrated = rows.find((row) => row.source_submission_id === "visited-spatial-001");
+  const missing = rows.find((row) => row.source_submission_id === "visited-spatial-002");
+  const networkOnly = rows.find((row) => row.source_submission_id === "visited-spatial-network-only");
+
+  assert.equal(integrated.has_spatial_reference, 1);
+  assert.equal(missing.has_spatial_reference, 0);
+  assert.equal(networkOnly.has_spatial_reference, 0);
 });
 
 test("GET /cartographie expose l'espace SIG et ses points cartographiques", async () => {
@@ -3027,6 +3153,14 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function spatialReferenceSiteContourStyle\(\)/);
   assert.match(scriptResponse.text, /function spatialReferenceBuildingStyle\(\)/);
   assert.match(scriptResponse.text, /function spatialReferenceNetworkPointLayer\(feature, latlng\)/);
+  assert.match(scriptResponse.text, /function spatialReferencePopupRows\(entityType, props\)/);
+  assert.match(scriptResponse.text, /map\.createPane\("spatialReferencePane"\)/);
+  assert.match(scriptResponse.text, /pane: "spatialReferencePane"/);
+  assert.match(scriptResponse.text, /featureLayer\.openPopup\(event\.latlng\)/);
+  assert.match(scriptResponse.text, /\["site_name", "Site"\]/);
+  assert.match(scriptResponse.text, /\["bat_num", "Batiment"\]/);
+  assert.match(scriptResponse.text, /\["geolink", "Geolink"\]/);
+  assert.match(scriptResponse.text, /\["nature_point", "Nature"\]/);
   assert.match(scriptResponse.text, /fa-tower-broadcast/);
   assert.match(scriptResponse.text, /nature_point/);
   assert.match(scriptResponse.text, /function bindPlanningOsmBuildingPopup\(feature, layer\)/);
@@ -3088,6 +3222,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /function syncVisitedSitesTable\(visiblePoints = currentVisiblePoints\(\)\)/);
   assert.match(scriptResponse.text, /syncVisitedSitesTable\(visiblePoints\)/);
   assert.match(scriptResponse.text, /rowFormatter\(row\)[\s\S]*is-selected-site/);
+  assert.match(scriptResponse.text, /has-spatial-reference/);
+  assert.match(scriptResponse.text, /function hasSpatialReference\(point\)/);
   assert.match(scriptResponse.text, /function siteNameFormatter\(cell\)/);
   assert.match(scriptResponse.text, /function visitedSiteDateFormatter\(cell\)/);
   assert.match(scriptResponse.text, /function setSummaryPanelOpen\(open\)/);
@@ -3417,6 +3553,8 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(styleResponse.text, /\.layer-box-content\s*\{[\s\S]*overflow-y: auto/);
   assert.match(styleResponse.text, /\.sig-panel\s*\{[\s\S]*max-width: 100%/);
   assert.match(styleResponse.text, /\.sig-table-panel\s*\{[\s\S]*overflow: hidden/);
+  assert.match(styleResponse.text, /#sig-table \.tabulator-row\.has-spatial-reference\s*\{[\s\S]*background: #d9fbe8/);
+  assert.match(styleResponse.text, /#sig-table \.tabulator-row\.has-spatial-reference\.is-selected-site\s*\{[\s\S]*border-left-color: #22c55e/);
   assert.match(styleResponse.text, /\.site-identification-body\s*\{[\s\S]*overflow-y: auto/);
   assert.match(styleResponse.text, /\.g2m-loading-overlay\s*\{[\s\S]*position: absolute/);
   assert.match(styleResponse.text, /\.g2m-loading-spinner\s*\{[\s\S]*animation: g2m-spin/);

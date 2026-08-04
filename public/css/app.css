@@ -2341,6 +2341,24 @@ h2 {
   color: #7dd3fc;
 }
 
+#sig-table .tabulator-row.has-spatial-reference {
+  background: #d9fbe8;
+  border-left: 4px solid #16a34a;
+}
+
+#sig-table .tabulator-row.has-spatial-reference:hover {
+  background: #c6f6d9;
+}
+
+#sig-table .tabulator-row.has-spatial-reference .tabulator-cell {
+  background: transparent;
+}
+
+#sig-table .tabulator-row.has-spatial-reference.is-selected-site {
+  background: #0f2f5f;
+  border-left-color: #22c55e;
+}
+
 #sig-table .tabulator-row.is-selected-site .tabulator-cell {
   background: transparent;
   color: #7dd3fc;

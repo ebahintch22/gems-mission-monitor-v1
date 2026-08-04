@@ -185,6 +185,7 @@ function rowToFeature(row) {
       ...(parseJson(row.properties_json) || {}),
       reference_feature_id: row.id,
       entity_type: row.entity_type,
+      raw_properties_json: row.properties_json,
       site_code: row.site_code,
       kobo_id: row.kobo_id,
       source_feature_id: row.source_feature_id

@@ -115,6 +115,9 @@
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
   map.getPane("collectionPointsPane").style.zIndex = 450;
+  map.createPane("spatialReferencePane");
+  map.getPane("spatialReferencePane").style.zIndex = 470;
+  map.getPane("spatialReferencePane").style.pointerEvents = "auto";
   const clusterToggle = document.getElementById("sig-cluster-toggle");
   const collectionLayer = L.layerGroup().addTo(map);
   const importedGeometryLayer = L.geoJSON(null, {
@@ -2605,16 +2608,19 @@
     planningSpatialReferenceLayers = { siteContours: null, buildingExtents: null, networkPoints: null };
     planningSpatialReferenceLayers.siteContours = addSpatialReferenceGeoJson(payload.site_contours, {
       style: spatialReferenceSiteContourStyle,
+      entityType: "site_contour",
       label: "Contour site",
       siteName: context.siteName
     });
     planningSpatialReferenceLayers.buildingExtents = addSpatialReferenceGeoJson(payload.building_extents, {
       style: spatialReferenceBuildingStyle,
+      entityType: "building_extent",
       label: "Emprise bâtiment",
       siteName: context.siteName
     });
     planningSpatialReferenceLayers.networkPoints = addSpatialReferenceGeoJson(payload.network_points, {
       pointToLayer: spatialReferenceNetworkPointLayer,
+      entityType: "network_point",
       label: "Noeud reseau",
       siteName: context.siteName
     });
@@ -2625,6 +2631,8 @@
       return null;
     }
     const layer = L.geoJSON(collection, {
+      interactive: true,
+      pane: "spatialReferencePane",
       style: options.style,
       pointToLayer(feature, latlng) {
         return typeof options.pointToLayer === "function"
@@ -2641,20 +2649,74 @@
         bindSpatialReferencePopup(feature, featureLayer, options);
       }
     }).addTo(spatialReferenceFocusLayer);
+    layer.eachLayer((featureLayer) => {
+      featureLayer.on("click", (event) => {
+        featureLayer.openPopup(event.latlng);
+        L.DomEvent.stopPropagation(event);
+      });
+      if (typeof featureLayer.bringToFront === "function") {
+        featureLayer.bringToFront();
+      }
+    });
     return layer;
   }
 
   function bindSpatialReferencePopup(feature, layer, options = {}) {
     const props = feature.properties || {};
+    const rows = spatialReferencePopupRows(options.entityType || props.entity_type, props);
     layer.bindPopup([
       `<strong>${escapeHtml(options.label || props.entity_type || "Entite")}</strong>`,
-      props.site_code ? `Site code : ${escapeHtml(props.site_code)}` : "",
-      props.kobo_id ? `Kobo ID : ${escapeHtml(props.kobo_id)}` : "",
-      props.building_code ? `Batiment : ${escapeHtml(props.building_code)}` : "",
-      props.nature_point ? `Type : ${escapeHtml(props.nature_point)}` : "",
-      props.name ? `Nom : ${escapeHtml(props.name)}` : "",
-      options.siteName ? `Site : ${escapeHtml(options.siteName)}` : ""
+      ...rows
     ].filter(Boolean).join("<br>"));
+  }
+
+  function spatialReferencePopupRows(entityType, props) {
+    const fieldsByType = {
+      site_contour: [
+        ["site_name", "Site"],
+        ["region", "Region"],
+        ["ministere", "Ministere"],
+        ["superficie", "Superficie"],
+        ["kobo_id", "Kobo ID"],
+        ["site_code", "Site code"]
+      ],
+      building_extent: [
+        ["site_name", "Site"],
+        ["bat_num", "Batiment"],
+        ["superficie", "Superficie"],
+        ["geolink", "Geolink"],
+        ["numbatkobo", "Numero Kobo"],
+        ["numbatmap", "Numero carto"],
+        ["site_code", "Site code"],
+        ["kobo_id", "Kobo ID"]
+      ],
+      network_point: [
+        ["nature_point", "Nature"],
+        ["nom_officiel", "Nom officiel"],
+        ["operateur", "Operateur"]
+      ]
+    };
+    const fields = fieldsByType[entityType] || [
+      ["site_code", "Site code"],
+      ["kobo_id", "Kobo ID"],
+      ["name", "Nom"]
+    ];
+    return fields.map(([key, label]) => spatialReferencePopupRow(props, key, label)).filter(Boolean);
+  }
+
+  function spatialReferencePopupRow(props, key, label) {
+    const value = props?.[key];
+    if (value === undefined || value === null || String(value).trim() === "") {
+      return "";
+    }
+    return `${escapeHtml(label)} : ${escapeHtml(formatSpatialReferencePopupValue(value))}`;
+  }
+
+  function formatSpatialReferencePopupValue(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return new Intl.NumberFormat(locale, { maximumFractionDigits: 2 }).format(value);
+    }
+    return String(value);
   }
 
   function spatialReferenceBounds() {
@@ -2962,7 +3024,9 @@
     placeholder: t("tableEmpty"),
     columns: buildVisitedSitesTableColumns(),
     rowFormatter(row) {
-      row.getElement().classList.toggle("is-selected-site", siteMarkerKey(row.getData()) === selectedSiteId);
+      const point = row.getData();
+      row.getElement().classList.toggle("has-spatial-reference", hasSpatialReference(point));
+      row.getElement().classList.toggle("is-selected-site", siteMarkerKey(point) === selectedSiteId);
     }
   });
   let lastVisitedSitesRows = [];
@@ -3545,8 +3609,14 @@
       return;
     }
     table.getRows().forEach(function (row) {
-      row.getElement().classList.toggle("is-selected-site", siteMarkerKey(row.getData()) === selectedSiteId);
+      const point = row.getData();
+      row.getElement().classList.toggle("has-spatial-reference", hasSpatialReference(point));
+      row.getElement().classList.toggle("is-selected-site", siteMarkerKey(point) === selectedSiteId);
     });
+  }
+
+  function hasSpatialReference(point) {
+    return point?.has_spatial_reference === 1 || point?.has_spatial_reference === true;
   }
 
   function parseTabSeparatedCsv(text) {

@@ -39,6 +39,18 @@ class SoumissionCollecte {
         s.submitted_at,
         s.latitude, s.longitude, s.precision_m,
         s.statut_validation, s.anomaly_count, s.raw_data_json,
+        EXISTS (
+          SELECT 1
+          FROM spatial_reference_features srf
+          WHERE srf.kobo_id IS NOT NULL
+            AND srf.kobo_id <> ''
+            AND srf.entity_type = 'building_extent'
+            AND srf.kobo_id = COALESCE(
+              CAST(json_extract(s.raw_data_json, '$._id') AS TEXT),
+              s.source_submission_id,
+              CAST(s.id AS TEXT)
+            )
+        ) AS has_spatial_reference,
         m.archived AS mission_archived,
         a.code_agent, a.nom AS agent_nom, a.prenoms AS agent_prenoms,
         e.nom_equipe, m.name AS mission_name,
