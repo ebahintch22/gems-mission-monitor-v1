@@ -21,6 +21,7 @@ const { displaySubmissionId } = require("../services/submissionIdentityService")
 const { hashToken } = require("../services/tokenService");
 const { hashPassword } = require("../services/passwordService");
 const MediaFile = require("../models/MediaFile");
+const SpatialReferenceFeature = require("../models/SpatialReferenceFeature");
 
 const roleCsv = [
   "Role;Label;description",
@@ -1135,6 +1136,18 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
         "map.osm_building_stroke_weight": "5",
         "map.osm_building_dash_style": "dotted",
         "map.osm_building_fill_opacity": "0.45",
+        "map.spatial_site_contour_stroke_color": "#00ffff",
+        "map.spatial_site_contour_fill_color": "#ffffff",
+        "map.spatial_site_contour_stroke_weight": "3",
+        "map.spatial_site_contour_fill_opacity": "0.22",
+        "map.spatial_building_stroke_color": "#dc2626",
+        "map.spatial_building_fill_color": "#facc15",
+        "map.spatial_building_stroke_weight": "2",
+        "map.spatial_building_fill_opacity": "0.34",
+        "map.spatial_network_pylone_color": "#dc2626",
+        "map.spatial_network_chamber_fill_color": "#facc15",
+        "map.spatial_network_chamber_stroke_color": "#dc2626",
+        "map.spatial_network_chamber_radius": "8",
         "alerts.anomaly_threshold": "5",
         "search.site_fields": ["nom_officiel", "region"],
         "search.site_limit": "7",
@@ -1163,6 +1176,9 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   const persistedSiteContourOpacity = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.site_contour_fill_opacity");
   const persistedBuildingColor = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.osm_building_stroke_color");
   const persistedBuildingDash = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.osm_building_dash_style");
+  const persistedSpatialContourColor = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.spatial_site_contour_stroke_color");
+  const persistedSpatialBuildingFill = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.spatial_building_fill_color");
+  const persistedSpatialNetworkRadius = db.prepare("SELECT value FROM settings WHERE key = ?").get("map.spatial_network_chamber_radius");
   assert.equal(persistedName.value, "G2M Test");
   assert.equal(persistedSecret.value, "secret-smtp-test");
   assert.deepEqual(JSON.parse(persistedSearchFields.value), ["nom_officiel", "region"]);
@@ -1174,6 +1190,9 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   assert.equal(persistedSiteContourOpacity.value, "0.35");
   assert.equal(persistedBuildingColor.value, "#654321");
   assert.equal(persistedBuildingDash.value, "dotted");
+  assert.equal(persistedSpatialContourColor.value, "#00ffff");
+  assert.equal(persistedSpatialBuildingFill.value, "#facc15");
+  assert.equal(persistedSpatialNetworkRadius.value, "8");
 
   const formResponse = await request(app)
     .get("/admin/settings")
@@ -1192,6 +1211,11 @@ test("POST /admin/settings persiste les parametres et masque les secrets", async
   assert.match(formResponse.text, /name="settings\[map\.site_contour_fill_opacity\]"/);
   assert.match(formResponse.text, /name="settings\[map\.osm_building_stroke_color\]"/);
   assert.match(formResponse.text, /name="settings\[map\.osm_building_dash_style\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.spatial_site_contour_stroke_color\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.spatial_site_contour_fill_color\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.spatial_building_fill_color\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.spatial_network_pylone_color\]"/);
+  assert.match(formResponse.text, /name="settings\[map\.spatial_network_chamber_radius\]"/);
   assert.match(formResponse.text, /Duree du rebond des marqueurs/);
   assert.match(formResponse.text, /Etiquettes de site - longueur de ligne/);
   assert.match(formResponse.text, /Contours de site - couleur/);
@@ -2643,6 +2667,122 @@ test("le module sites a visiter importe par lot les emprises batiments OSM et le
   }
 });
 
+test("GET /api/sites/spatial-reference charge seulement les entites rattachees au site", async () => {
+  const cookie = await loginTestUser({
+    email: "gis.spatial-reference@g2m.test",
+    role: "specialiste_gis"
+  });
+  SpatialReferenceFeature.importFeatureCollection("site_contour", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { site_code: "g2m-ref-001", name: "Site reference" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[-4.02, 5.34], [-4.01, 5.34], [-4.01, 5.35], [-4.02, 5.34]]]
+      }
+    }, {
+      type: "Feature",
+      properties: { site_code: "g2m-ref-002" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[-5.02, 6.34], [-5.01, 6.34], [-5.01, 6.35], [-5.02, 6.34]]]
+      }
+    }]
+  }, { replaceType: true });
+  SpatialReferenceFeature.importFeatureCollection("building_extent", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { site_code: "g2m-ref-001", building_code: "BAT-001" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[-4.019, 5.341], [-4.018, 5.341], [-4.018, 5.342], [-4.019, 5.341]]]
+      }
+    }]
+  }, { replaceType: true });
+  SpatialReferenceFeature.importFeatureCollection("network_point", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { kobo_id: "submission-ref-001", operator: "Fibre" },
+      geometry: { type: "Point", coordinates: [-4.018, 5.342] }
+    }]
+  }, { replaceType: true });
+
+  const bySiteCodeResponse = await request(app)
+    .get("/api/sites/spatial-reference")
+    .query({ site_code: "g2m-ref-001" })
+    .set("Cookie", cookie);
+  const byKoboResponse = await request(app)
+    .get("/api/sites/spatial-reference")
+    .query({ kobo_id: "submission-ref-001" })
+    .set("Cookie", cookie);
+
+  assert.equal(bySiteCodeResponse.status, 200);
+  assert.equal(bySiteCodeResponse.body.site_contours.features.length, 1);
+  assert.equal(bySiteCodeResponse.body.building_extents.features.length, 1);
+  assert.equal(bySiteCodeResponse.body.network_points.features.length, 0);
+  assert.equal(byKoboResponse.status, 200);
+  assert.equal(byKoboResponse.body.network_points.features.length, 1);
+});
+
+test("GET /api/sites/spatial-reference utilise kobo_id pour les trois groupes d'entites", async () => {
+  const cookie = await loginTestUser({
+    email: "gis.spatial-reference-kobo-id@g2m.test",
+    role: "specialiste_gis"
+  });
+  SpatialReferenceFeature.importFeatureCollection("site_contour", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: {
+        site_code: "g2m-ref-kobo",
+        kobo_id: "kobo-spatial-001",
+        site_name: "Hopital General Public de Yopougon-Attie",
+        localite: "YOPOUGON"
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[-4.12, 5.34], [-4.11, 5.34], [-4.11, 5.35], [-4.12, 5.34]]]
+      }
+    }]
+  }, { replaceType: true });
+  SpatialReferenceFeature.importFeatureCollection("building_extent", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: { site_code: "g2m-ref-kobo", kobo_id: "kobo-spatial-001", building_code: "BAT-FB-001" },
+      geometry: {
+        type: "Polygon",
+        coordinates: [[[-4.119, 5.341], [-4.118, 5.341], [-4.118, 5.342], [-4.119, 5.341]]]
+      }
+    }]
+  }, { replaceType: true });
+  SpatialReferenceFeature.importFeatureCollection("network_point", {
+    type: "FeatureCollection",
+    features: [{
+      type: "Feature",
+      properties: {
+        kobo_id: "kobo-spatial-001",
+        nom_officiel: "HOPITAL GENERAL YOPOUGON ATTIE",
+        localite: "YOPOUGON"
+      },
+      geometry: { type: "Point", coordinates: [-4.118, 5.342] }
+    }]
+  }, { replaceType: true });
+
+  const response = await request(app)
+    .get("/api/sites/spatial-reference")
+    .query({ kobo_id: "kobo-spatial-001" })
+    .set("Cookie", cookie);
+
+  assert.equal(response.status, 200);
+  assert.equal(response.body.counts.site_contours, 1);
+  assert.equal(response.body.counts.building_extents, 1);
+  assert.equal(response.body.counts.network_points, 1);
+});
+
 test("GET /cartographie expose l'espace SIG et ses points cartographiques", async () => {
   const gisCookie = await loginTestUser({
     email: "gis.cartographie@g2m.test",
@@ -2883,6 +3023,12 @@ test("GET /cartographie expose l'espace SIG et ses points cartographiques", asyn
   assert.match(scriptResponse.text, /let planningOsmBuildingsLayer = null/);
   assert.match(scriptResponse.text, /selectedPlanningSite\.emprise_bat_osm\?\.type === "FeatureCollection"/);
   assert.match(scriptResponse.text, /function planningOsmBuildingStyle\(\)/);
+  assert.match(scriptResponse.text, /const spatialReferenceStylePrefs = \{/);
+  assert.match(scriptResponse.text, /function spatialReferenceSiteContourStyle\(\)/);
+  assert.match(scriptResponse.text, /function spatialReferenceBuildingStyle\(\)/);
+  assert.match(scriptResponse.text, /function spatialReferenceNetworkPointLayer\(feature, latlng\)/);
+  assert.match(scriptResponse.text, /fa-tower-broadcast/);
+  assert.match(scriptResponse.text, /nature_point/);
   assert.match(scriptResponse.text, /function bindPlanningOsmBuildingPopup\(feature, layer\)/);
   assert.match(scriptResponse.text, /function planningOsmBuildingCount\(site\)/);
   assert.match(scriptResponse.text, /fetch\(`\/api\/sites\/\$\{encodeURIComponent\(siteId\)\}\/location`/);

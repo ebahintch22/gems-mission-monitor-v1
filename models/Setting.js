@@ -14,6 +14,18 @@ const editableKeys = [
   "map.osm_building_stroke_weight",
   "map.osm_building_dash_style",
   "map.osm_building_fill_opacity",
+  "map.spatial_site_contour_stroke_color",
+  "map.spatial_site_contour_fill_color",
+  "map.spatial_site_contour_stroke_weight",
+  "map.spatial_site_contour_fill_opacity",
+  "map.spatial_building_stroke_color",
+  "map.spatial_building_fill_color",
+  "map.spatial_building_stroke_weight",
+  "map.spatial_building_fill_opacity",
+  "map.spatial_network_pylone_color",
+  "map.spatial_network_chamber_fill_color",
+  "map.spatial_network_chamber_stroke_color",
+  "map.spatial_network_chamber_radius",
   "alerts.anomaly_threshold",
   "search.site_fields",
   "search.site_limit",
@@ -171,7 +183,7 @@ function normalizeValue(setting, value) {
     return String(length);
   }
 
-  if (setting.key.endsWith("_stroke_color")) {
+  if (setting.key.endsWith("_color")) {
     const color = String(value ?? "").trim();
     if (!/^#[0-9a-f]{6}$/i.test(color)) {
       throw new Error("invalid_color");
@@ -201,6 +213,14 @@ function normalizeValue(setting, value) {
       throw new Error("invalid_opacity");
     }
     return String(opacity);
+  }
+
+  if (setting.key === "map.spatial_network_chamber_radius") {
+    const radius = Number(String(value ?? "").trim());
+    if (!Number.isInteger(radius) || radius < 4 || radius > 16) {
+      throw new Error("invalid_number");
+    }
+    return String(radius);
   }
 
   if (setting.key === "app.default_mission_id") {

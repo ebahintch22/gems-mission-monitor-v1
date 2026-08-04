@@ -43,7 +43,7 @@
                 <option value="floating" <%= setting.value === "floating" ? "selected" : "" %>>Fenetre flottante</option>
                 <option value="layerbox" <%= setting.value === "layerbox" ? "selected" : "" %>>LayerBox - Resultat de l'importation</option>
               </select>
-            <% } else if (setting.key.endsWith("_stroke_color")) { %>
+            <% } else if (setting.key.endsWith("_color")) { %>
               <input
                 type="color"
                 name="settings[<%= setting.key %>]"

@@ -8,6 +8,7 @@ const router = express.Router();
 router.use(requireAuth);
 router.get("/", requirePermission("sites.planning.read"), sitesPlanningController.index);
 router.get("/stats", requirePermission("sites.planning.read"), sitesPlanningController.stats);
+router.get("/spatial-reference", requirePermission("sig.read"), sitesPlanningController.spatialReference);
 router.post("/import", requirePermission("sites.planning.manage"), sitesPlanningController.importCsv);
 router.post("/buildings/osm-preview", requirePermission("sites.planning.manage"), sitesPlanningController.previewOsmBuildingExtents);
 router.post("/buildings/osm-save", requirePermission("sites.planning.manage"), sitesPlanningController.saveOsmBuildingExtents);

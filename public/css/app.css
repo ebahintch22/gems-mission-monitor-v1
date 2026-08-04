@@ -2851,6 +2851,24 @@ h2 {
   width: 6px;
 }
 
+.spatial-reference-pylone-icon {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  display: flex;
+  font-size: 20px;
+  justify-content: center;
+  line-height: 1;
+}
+
+.spatial-reference-pylone-icon span {
+  text-shadow:
+    0 1px 2px rgba(255, 255, 255, 0.95),
+    0 -1px 2px rgba(255, 255, 255, 0.95),
+    1px 0 2px rgba(255, 255, 255, 0.95),
+    -1px 0 2px rgba(255, 255, 255, 0.95);
+}
+
 .sig-geometry-clear-inline {
   align-items: center;
   background: #fff;

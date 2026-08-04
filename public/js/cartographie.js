@@ -89,6 +89,28 @@
     dashStyle: "dashed",
     fillOpacity: 0.28
   });
+  const spatialReferenceStylePrefs = {
+    siteContour: loadConfiguredMapFeatureStyle(geometryImportConfig.spatialReferenceStyle?.siteContour, {
+      strokeColor: "#00ffff",
+      fillColor: "#ffffff",
+      strokeWeight: 3,
+      dashStyle: "solid",
+      fillOpacity: 0.22
+    }),
+    buildingExtent: loadConfiguredMapFeatureStyle(geometryImportConfig.spatialReferenceStyle?.buildingExtent, {
+      strokeColor: "#dc2626",
+      fillColor: "#facc15",
+      strokeWeight: 2,
+      dashStyle: "solid",
+      fillOpacity: 0.34
+    }),
+    network: {
+      pyloneColor: geometryImportConfig.spatialReferenceStyle?.network?.pyloneColor || "#dc2626",
+      chamberFillColor: geometryImportConfig.spatialReferenceStyle?.network?.chamberFillColor || "#facc15",
+      chamberStrokeColor: geometryImportConfig.spatialReferenceStyle?.network?.chamberStrokeColor || "#dc2626",
+      chamberRadius: Number(geometryImportConfig.spatialReferenceStyle?.network?.chamberRadius) || 7
+    }
+  };
   map.createPane("territoryPane");
   map.getPane("territoryPane").style.zIndex = 410;
   map.createPane("collectionPointsPane");
@@ -126,6 +148,7 @@
   const printExtentLayer = L.layerGroup().addTo(map);
   const measureLayer = L.layerGroup().addTo(map);
   const sitesPlanningGeometryLayer = L.layerGroup().addTo(map);
+  const spatialReferenceFocusLayer = L.layerGroup().addTo(map);
   const osmSelectionLayer = L.geoJSON(null, {
     style: {
       color: "#6f42c1",
@@ -224,6 +247,8 @@
   let planningReferenceMarker = null;
   let planningContourLayer = null;
   let planningOsmBuildingsLayer = null;
+  let planningSpatialReferenceLayers = { siteContours: null, buildingExtents: null, networkPoints: null };
+  let spatialReferenceRequestToken = 0;
   let planningDraftLayer = null;
   let planningDraftPointGeo = null;
   let planningDraftPolygonGeo = null;
@@ -466,8 +491,12 @@
       dashStyle: defaults.dashStyle
     });
     const fillOpacity = Number(prefs?.fillOpacity);
+    const fillColor = /^#[0-9a-f]{6}$/i.test(prefs?.fillColor || "")
+      ? prefs.fillColor
+      : defaults.fillColor || defaults.strokeColor;
     return {
       ...strokeStyle,
+      fillColor,
       fillOpacity: Number.isFinite(fillOpacity) && fillOpacity >= 0 && fillOpacity <= 1
         ? fillOpacity
         : defaults.fillOpacity
@@ -479,7 +508,7 @@
       color: prefs.strokeColor,
       dashArray: dashArrayForStyle(prefs.dashStyle),
       fill: true,
-      fillColor: prefs.strokeColor,
+      fillColor: prefs.fillColor || prefs.strokeColor,
       fillOpacity: prefs.fillOpacity,
       opacity: 1,
       weight: prefs.strokeWeight
@@ -1919,6 +1948,7 @@
     }
     selectedPlanningSite = site;
     renderSelectedPlanningSiteGeometry();
+    loadSpatialReferenceForFocus({ siteCode: site.code, siteName: site.site_name });
     updatePlanningLocationActions();
     refreshSitesPlanningRowStyles();
     const matchingPoint = findSubmissionPointForPlanningSite(site);
@@ -2472,9 +2502,11 @@
 
   function renderSelectedPlanningSiteGeometry() {
     sitesPlanningGeometryLayer.clearLayers();
+    spatialReferenceFocusLayer.clearLayers();
     planningReferenceMarker = null;
     planningContourLayer = null;
     planningOsmBuildingsLayer = null;
+    planningSpatialReferenceLayers = { siteContours: null, buildingExtents: null, networkPoints: null };
     planningDraftLayer = null;
     if (!selectedPlanningSite) {
       return;
@@ -2499,6 +2531,11 @@
   }
 
   function zoomToPlanningSiteGeometry(site) {
+    const referenceBounds = spatialReferenceBounds();
+    if (referenceBounds?.isValid()) {
+      map.fitBounds(referenceBounds, { padding: [30, 30], maxZoom: 18 });
+      return;
+    }
     if (site.polygon_geo?.type === "Polygon" && planningContourLayer?.getBounds?.().isValid()) {
       map.fitBounds(planningContourLayer.getBounds(), { padding: [30, 30], maxZoom: 18 });
       return;
@@ -2515,7 +2552,121 @@
   function hasPlanningSiteMapGeometry(site) {
     return site?.polygon_geo?.type === "Polygon"
       || site?.point_geo?.type === "Point"
-      || site?.emprise_bat_osm?.type === "FeatureCollection";
+      || site?.emprise_bat_osm?.type === "FeatureCollection"
+      || spatialReferenceBounds()?.isValid();
+  }
+
+  function loadSpatialReferenceForFocus(context = {}) {
+    const params = new URLSearchParams();
+    if (context.siteCode) {
+      params.set("site_code", context.siteCode);
+    }
+    if (context.koboId) {
+      params.set("kobo_id", context.koboId);
+    }
+    if (!params.toString()) {
+      return Promise.resolve(null);
+    }
+
+    const token = ++spatialReferenceRequestToken;
+    return fetch(`/api/sites/spatial-reference?${params.toString()}`, {
+      headers: { "Accept": "application/json" }
+    })
+      .then((response) => response.json().then((payload) => ({ response, payload })))
+      .then(({ response, payload }) => {
+        if (token !== spatialReferenceRequestToken) {
+          return null;
+        }
+        if (!response.ok || !payload.ok) {
+          throw new Error(payload.error || "spatial_reference_load_failed");
+        }
+        renderSpatialReferenceFocus(payload, context);
+        if (selectedPlanningSite && context.siteCode && selectedPlanningSite.code === context.siteCode) {
+          zoomToPlanningSiteGeometry(selectedPlanningSite);
+        } else {
+          const bounds = spatialReferenceBounds();
+          if (bounds?.isValid()) {
+            map.fitBounds(bounds, { padding: [30, 30], maxZoom: 18 });
+          }
+        }
+        return payload;
+      })
+      .catch(() => {
+        if (token === spatialReferenceRequestToken) {
+          spatialReferenceFocusLayer.clearLayers();
+          planningSpatialReferenceLayers = { siteContours: null, buildingExtents: null, networkPoints: null };
+        }
+        return null;
+      });
+  }
+
+  function renderSpatialReferenceFocus(payload, context = {}) {
+    spatialReferenceFocusLayer.clearLayers();
+    planningSpatialReferenceLayers = { siteContours: null, buildingExtents: null, networkPoints: null };
+    planningSpatialReferenceLayers.siteContours = addSpatialReferenceGeoJson(payload.site_contours, {
+      style: spatialReferenceSiteContourStyle,
+      label: "Contour site",
+      siteName: context.siteName
+    });
+    planningSpatialReferenceLayers.buildingExtents = addSpatialReferenceGeoJson(payload.building_extents, {
+      style: spatialReferenceBuildingStyle,
+      label: "Emprise bâtiment",
+      siteName: context.siteName
+    });
+    planningSpatialReferenceLayers.networkPoints = addSpatialReferenceGeoJson(payload.network_points, {
+      pointToLayer: spatialReferenceNetworkPointLayer,
+      label: "Noeud reseau",
+      siteName: context.siteName
+    });
+  }
+
+  function addSpatialReferenceGeoJson(collection, options = {}) {
+    if (collection?.type !== "FeatureCollection" || !Array.isArray(collection.features) || !collection.features.length) {
+      return null;
+    }
+    const layer = L.geoJSON(collection, {
+      style: options.style,
+      pointToLayer(feature, latlng) {
+        return typeof options.pointToLayer === "function"
+          ? options.pointToLayer(feature, latlng)
+          : L.circleMarker(latlng, {
+            color: options.pointColor || "#0f766e",
+            fillColor: options.pointColor || "#0f766e",
+            fillOpacity: 0.9,
+            radius: 7,
+            weight: 2
+          });
+      },
+      onEachFeature(feature, featureLayer) {
+        bindSpatialReferencePopup(feature, featureLayer, options);
+      }
+    }).addTo(spatialReferenceFocusLayer);
+    return layer;
+  }
+
+  function bindSpatialReferencePopup(feature, layer, options = {}) {
+    const props = feature.properties || {};
+    layer.bindPopup([
+      `<strong>${escapeHtml(options.label || props.entity_type || "Entite")}</strong>`,
+      props.site_code ? `Site code : ${escapeHtml(props.site_code)}` : "",
+      props.kobo_id ? `Kobo ID : ${escapeHtml(props.kobo_id)}` : "",
+      props.building_code ? `Batiment : ${escapeHtml(props.building_code)}` : "",
+      props.nature_point ? `Type : ${escapeHtml(props.nature_point)}` : "",
+      props.name ? `Nom : ${escapeHtml(props.name)}` : "",
+      options.siteName ? `Site : ${escapeHtml(options.siteName)}` : ""
+    ].filter(Boolean).join("<br>"));
+  }
+
+  function spatialReferenceBounds() {
+    const bounds = L.latLngBounds([]);
+    spatialReferenceFocusLayer.eachLayer((layer) => {
+      if (typeof layer.getBounds === "function" && layer.getBounds().isValid()) {
+        bounds.extend(layer.getBounds());
+      } else if (typeof layer.getLatLng === "function") {
+        bounds.extend(layer.getLatLng());
+      }
+    });
+    return bounds;
   }
 
   function planningOsmBuildingStyle() {
@@ -2524,6 +2675,46 @@
 
   function planningSiteContourStyle() {
     return mapFeatureStyle(siteContourStylePrefs);
+  }
+
+  function spatialReferenceSiteContourStyle() {
+    return mapFeatureStyle(spatialReferenceStylePrefs.siteContour);
+  }
+
+  function spatialReferenceBuildingStyle() {
+    return mapFeatureStyle(spatialReferenceStylePrefs.buildingExtent);
+  }
+
+  function spatialReferenceNetworkPointLayer(feature, latlng) {
+    if (isSpatialReferencePylone(feature)) {
+      return L.marker(latlng, {
+        icon: spatialReferencePyloneIcon()
+      });
+    }
+    return L.circleMarker(latlng, {
+      color: spatialReferenceStylePrefs.network.chamberStrokeColor,
+      fillColor: spatialReferenceStylePrefs.network.chamberFillColor,
+      fillOpacity: 0.95,
+      radius: spatialReferenceStylePrefs.network.chamberRadius,
+      weight: 2
+    });
+  }
+
+  function spatialReferencePyloneIcon() {
+    const color = spatialReferenceStylePrefs.network.pyloneColor;
+    return L.divIcon({
+      className: "spatial-reference-pylone-icon",
+      html: `<span style="color:${escapeHtml(color)}"><i class="fa-solid fa-tower-broadcast" aria-hidden="true"></i></span>`,
+      iconSize: [24, 24],
+      iconAnchor: [12, 12],
+      popupAnchor: [0, -12]
+    });
+  }
+
+  function isSpatialReferencePylone(feature) {
+    return String(feature?.properties?.nature_point || "")
+      .toLowerCase()
+      .includes("pylone");
   }
 
   function bindPlanningOsmBuildingPopup(feature, layer) {
@@ -3323,12 +3514,30 @@
       updateSelectedSiteMarkerBounce();
       updateSiteMarkerLabels();
       updateSelectedSiteTableRowStyles();
+      loadSpatialReferenceForVisitedSite(pointOrId);
       return;
     }
     selectedSiteId = nextSiteId;
     updateSelectedSiteMarkerBounce();
     updateSiteMarkerLabels();
     updateSelectedSiteTableRowStyles();
+    loadSpatialReferenceForVisitedSite(pointOrId);
+  }
+
+  function loadSpatialReferenceForVisitedSite(pointOrId) {
+    if (!pointOrId || typeof pointOrId !== "object") {
+      return;
+    }
+    const raw = rawData(pointOrId);
+    const koboId = rawValue(raw, "_id")
+      || rawValue(raw, "id")
+      || rawValue(raw, "kobo_id")
+      || pointOrId.display_submission_id
+      || pointOrId.source_submission_id;
+    loadSpatialReferenceForFocus({
+      koboId,
+      siteName: rawValue(raw, "modB.nom_officiel") || rawValue(raw, "modB/nom_officiel") || pointOrId.display_submission_id
+    });
   }
 
   function updateSelectedSiteTableRowStyles() {

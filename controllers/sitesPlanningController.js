@@ -1,5 +1,6 @@
 const SitesPlanning = require("../models/SitesPlanning");
 const BuildingFeatureV2 = require("../models/BuildingFeatureV2");
+const SpatialReferenceFeature = require("../models/SpatialReferenceFeature");
 const { DEFAULT_PLANNING_CSV_PATH, importSitesPlanningFromCsv } = require("../services/sitesPlanningImportService");
 const { fetchOsmBuildings } = require("../services/osmBuildingImportService");
 
@@ -131,6 +132,19 @@ exports.buildingsPlan = (req, res) => {
     res.json({ ok: true, ...result });
   } catch (error) {
     const statusCode = error.message === "site_planning_not_found" ? 404 : 400;
+    res.status(statusCode).json({ ok: false, error: error.message });
+  }
+};
+
+exports.spatialReference = (req, res) => {
+  try {
+    const result = SpatialReferenceFeature.collectionsForSite({
+      site_code: req.query.site_code || req.query.siteCode,
+      kobo_id: req.query.kobo_id || req.query.koboId
+    });
+    res.json({ ok: true, ...result });
+  } catch (error) {
+    const statusCode = error.message === "site_reference_identifier_required" ? 400 : 500;
     res.status(statusCode).json({ ok: false, error: error.message });
   }
 };

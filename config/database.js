@@ -747,6 +747,32 @@ db.exec(`
   CREATE INDEX IF NOT EXISTS idx_building_features_v2_bbox
     ON building_features_v2(bbox_min_lon, bbox_min_lat, bbox_max_lon, bbox_max_lat);
 
+  CREATE TABLE IF NOT EXISTS spatial_reference_features (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entity_type TEXT NOT NULL
+      CHECK (entity_type IN ('site_contour', 'building_extent', 'network_point')),
+    site_code TEXT COLLATE NOCASE,
+    kobo_id TEXT COLLATE NOCASE,
+    source_feature_id TEXT,
+    geometry_type TEXT NOT NULL
+      CHECK (geometry_type IN ('Point', 'Polygon', 'MultiPolygon')),
+    geometry_geojson TEXT NOT NULL,
+    properties_json TEXT,
+    geometry_hash TEXT NOT NULL,
+    source_path TEXT,
+    imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_spatial_reference_entity_site
+    ON spatial_reference_features(entity_type, site_code);
+
+  CREATE INDEX IF NOT EXISTS idx_spatial_reference_entity_kobo
+    ON spatial_reference_features(entity_type, kobo_id);
+
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_spatial_reference_unique_hash
+    ON spatial_reference_features(entity_type, site_code, kobo_id, geometry_hash);
+
   CREATE TABLE IF NOT EXISTS sites_planning (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     code TEXT NOT NULL DEFAULT '',
@@ -1028,6 +1054,102 @@ function seedDefaultSettings() {
       group_name: "map",
       label: "Emprises batiments - opacite du remplissage",
       description: "Opacite du remplissage des emprises de batiments, entre 0 et 1."
+    },
+    {
+      key: "map.spatial_site_contour_stroke_color",
+      value: "#00ffff",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - contours site - bordure",
+      description: "Couleur de bordure des contours de sites importes."
+    },
+    {
+      key: "map.spatial_site_contour_fill_color",
+      value: "#ffffff",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - contours site - fond",
+      description: "Couleur de remplissage des contours de sites importes."
+    },
+    {
+      key: "map.spatial_site_contour_stroke_weight",
+      value: "3",
+      type: "number",
+      group_name: "map",
+      label: "Reference spatiale - contours site - epaisseur",
+      description: "Epaisseur de bordure des contours de sites importes."
+    },
+    {
+      key: "map.spatial_site_contour_fill_opacity",
+      value: "0.22",
+      type: "number",
+      group_name: "map",
+      label: "Reference spatiale - contours site - opacite",
+      description: "Opacite du fond blanc des contours de sites importes."
+    },
+    {
+      key: "map.spatial_building_stroke_color",
+      value: "#dc2626",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - batiments - bordure",
+      description: "Couleur de bordure des emprises batiments importees."
+    },
+    {
+      key: "map.spatial_building_fill_color",
+      value: "#facc15",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - batiments - fond",
+      description: "Couleur de remplissage des emprises batiments importees."
+    },
+    {
+      key: "map.spatial_building_stroke_weight",
+      value: "2",
+      type: "number",
+      group_name: "map",
+      label: "Reference spatiale - batiments - epaisseur",
+      description: "Epaisseur de bordure des emprises batiments importees."
+    },
+    {
+      key: "map.spatial_building_fill_opacity",
+      value: "0.34",
+      type: "number",
+      group_name: "map",
+      label: "Reference spatiale - batiments - opacite",
+      description: "Opacite du fond jaune des emprises batiments importees."
+    },
+    {
+      key: "map.spatial_network_pylone_color",
+      value: "#dc2626",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - pylones - couleur",
+      description: "Couleur de l'icone des pylones."
+    },
+    {
+      key: "map.spatial_network_chamber_fill_color",
+      value: "#facc15",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - chambres - fond",
+      description: "Couleur de remplissage des chambres de raccordement."
+    },
+    {
+      key: "map.spatial_network_chamber_stroke_color",
+      value: "#dc2626",
+      type: "string",
+      group_name: "map",
+      label: "Reference spatiale - chambres - bordure",
+      description: "Couleur de bordure des chambres de raccordement."
+    },
+    {
+      key: "map.spatial_network_chamber_radius",
+      value: "7",
+      type: "number",
+      group_name: "map",
+      label: "Reference spatiale - chambres - rayon",
+      description: "Rayon d'affichage des chambres de raccordement, de 4 a 16 pixels."
     },
     {
       key: "alerts.anomaly_threshold",

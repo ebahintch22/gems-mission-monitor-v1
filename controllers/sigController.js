@@ -56,7 +56,39 @@ exports.index = (req, res) => {
         strokeWeight: 2,
         dashStyle: "dashed",
         fillOpacity: 0.28
-      })
+      }),
+      spatialReferenceStyle: {
+        siteContour: normalizeMapFeatureStyle({
+          strokeColor: Setting.rawValue("map.spatial_site_contour_stroke_color"),
+          fillColor: Setting.rawValue("map.spatial_site_contour_fill_color"),
+          strokeWeight: Setting.rawValue("map.spatial_site_contour_stroke_weight"),
+          fillOpacity: Setting.rawValue("map.spatial_site_contour_fill_opacity")
+        }, {
+          strokeColor: "#00ffff",
+          fillColor: "#ffffff",
+          strokeWeight: 3,
+          dashStyle: "solid",
+          fillOpacity: 0.22
+        }),
+        buildingExtent: normalizeMapFeatureStyle({
+          strokeColor: Setting.rawValue("map.spatial_building_stroke_color"),
+          fillColor: Setting.rawValue("map.spatial_building_fill_color"),
+          strokeWeight: Setting.rawValue("map.spatial_building_stroke_weight"),
+          fillOpacity: Setting.rawValue("map.spatial_building_fill_opacity")
+        }, {
+          strokeColor: "#dc2626",
+          fillColor: "#facc15",
+          strokeWeight: 2,
+          dashStyle: "solid",
+          fillOpacity: 0.34
+        }),
+        network: {
+          pyloneColor: normalizeColor(Setting.rawValue("map.spatial_network_pylone_color"), "#dc2626"),
+          chamberFillColor: normalizeColor(Setting.rawValue("map.spatial_network_chamber_fill_color"), "#facc15"),
+          chamberStrokeColor: normalizeColor(Setting.rawValue("map.spatial_network_chamber_stroke_color"), "#dc2626"),
+          chamberRadius: normalizeInteger(Setting.rawValue("map.spatial_network_chamber_radius"), 7, 4, 16)
+        }
+      }
     },
     filters: SoumissionCollecte.mapFilters()
   });
@@ -235,6 +267,7 @@ function normalizeMapFeatureStyle(input, defaults) {
   const fillOpacity = Number(input.fillOpacity);
   return {
     strokeColor: /^#[0-9a-f]{6}$/i.test(input.strokeColor || "") ? input.strokeColor : defaults.strokeColor,
+    fillColor: /^#[0-9a-f]{6}$/i.test(input.fillColor || "") ? input.fillColor : defaults.fillColor || defaults.strokeColor,
     strokeWeight: Number.isInteger(strokeWeight) && strokeWeight >= 1 && strokeWeight <= 12
       ? strokeWeight
       : defaults.strokeWeight,
@@ -245,4 +278,13 @@ function normalizeMapFeatureStyle(input, defaults) {
       ? fillOpacity
       : defaults.fillOpacity
   };
+}
+
+function normalizeColor(value, fallback) {
+  return /^#[0-9a-f]{6}$/i.test(value || "") ? value : fallback;
+}
+
+function normalizeInteger(value, fallback, min, max) {
+  const parsed = Number(value);
+  return Number.isInteger(parsed) && parsed >= min && parsed <= max ? parsed : fallback;
 }
