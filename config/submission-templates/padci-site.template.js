@@ -192,11 +192,13 @@ module.exports = {
         { key: "num_bat", label: "Numero", type: "integer" },
         { key: "bat_nom", label: "Nom" },
         { key: "bat_statut", label: "Statut", type: "choice" },
-        { key: "occupants", label: "Occupants", type: "integer" },
+        { key: "bat_occupants", label: "Occupants", type: "integer" },
+        { key: "surface_bat", label: "Surface au sol", type: "area" },
         { key: "coins_bat", label: "Geometrie", type: "wktPolygon" },
-        { key: "elec_bat", label: "Electricite", type: "choice" },
-        { key: "cablage", label: "Cablage", type: "choice" },
-        { key: "parc_info", label: "Parc informatique", type: "integer" }
+        { key: "bat_elec", label: "Electricite", type: "choice" },
+        { key: "cablage", label: "Cablage", type: "multiChoice" },
+        { key: "pc_fixes", label: "PC fixes", type: "integer" },
+        { key: "pc_portables", label: "Portables / tablettes", type: "integer" }
       ]
     },
     {
@@ -204,16 +206,21 @@ module.exports = {
       title: "Besoins",
       icon: "fa-list-check",
       fields: [
-        { key: "modN/appli_metier_list", label: "Applications metier", type: "multiChoice" },
-        { key: "modN/profil_usage", label: "Profil d'usage", type: "choice" },
-        { key: "modN/services_pub", label: "Services publics numeriques", type: "multiChoice" },
-        { key: "modN/type_co_souhait", label: "Connexion souhaitee", type: "choice" },
-        { key: "modN/qos", label: "Qualite attendue", type: "choice" },
-        { key: "modN/sensibilite", label: "Sensibilite", type: "choice" },
-        { key: "modN/freins", label: "Freins", type: "multiChoice" },
+        { key: "modK/appli_metier", label: "Applications metier", type: "multiChoice" },
+        { key: "modK/appli_metier_autres", label: "Autres applications", type: "longText" },
+        { key: "modK/appli_loc", label: "Localisation des applications", type: "choice" },
+        { key: "modK/profil_usage", label: "Profil d'usage", type: "multiChoice" },
+        { key: "modK/services_pub", label: "Services publics numeriques", type: "multiChoice" },
+        { key: "modK/besoins_exprimes", label: "Besoins exprimes", type: "longText" },
+        { key: "modK/type_co_souhait", label: "Connexion souhaitee", type: "choice" },
+        { key: "modK/justif_souhait", label: "Justification", type: "longText" },
+        { key: "modK/qos", label: "Qualite attendue", type: "choice" },
+        { key: "modK/sensibilite", label: "Sensibilite", type: "choice" },
+        { key: "modK/freins", label: "Freins", type: "multiChoice" },
+        { key: "modN/solutions", label: "Solutions envisageables", type: "multiChoice" },
         { key: "modN/travaux", label: "Travaux recommandes", type: "multiChoice" },
         { key: "modN/priorite", label: "Priorite", type: "status" },
-        { key: "modN/commentaire_final", label: "Commentaire final", type: "longText" }
+        { key: "modN/commentaire", label: "Commentaire final", type: "longText" }
       ]
     },
     {

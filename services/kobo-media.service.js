@@ -1,11 +1,12 @@
 const path = require("node:path");
 
-function buildMediaGallery(rawData = {}, mediaConfig = {}) {
+function buildMediaGallery(rawData = {}, mediaConfig = {}, options = {}) {
   const attachments = Array.isArray(rawData._attachments) ? rawData._attachments : [];
   const declarations = collectDeclaredMedia(rawData);
+  const wasabiIndex = buildWasabiIndex(options.wasabiMedia || []);
   const categories = (mediaConfig.categories || []).map((category) => ({
     ...category,
-    items: matchCategoryMedia(category, declarations, attachments)
+    items: matchCategoryMedia(category, declarations, attachments, wasabiIndex)
   }));
   const matched = new Set(categories.flatMap((category) => category.items.map((item) => item.attachmentName)));
   const uncategorized = attachments
@@ -13,7 +14,8 @@ function buildMediaGallery(rawData = {}, mediaConfig = {}) {
     .map((attachment) => mediaItem({
       category: "Autres medias",
       declaration: null,
-      attachment
+      attachment,
+      wasabiMedia: findWasabiForAttachment({ attachment, wasabiIndex })
     }));
   return {
     categories: [
@@ -24,13 +26,18 @@ function buildMediaGallery(rawData = {}, mediaConfig = {}) {
   };
 }
 
-function matchCategoryMedia(category, declarations, attachments) {
+function matchCategoryMedia(category, declarations, attachments, wasabiIndex) {
   const fields = new Set(category.fields || []);
   return declarations
     .filter((declaration) => fields.has(declaration.path) || [...fields].some((field) => declaration.path.endsWith(`/${field}`)))
     .map((declaration) => {
       const attachment = findAttachmentForDeclaration(declaration, attachments);
-      return attachment ? mediaItem({ category: category.title, declaration, attachment }) : null;
+      return attachment ? mediaItem({
+        category: category.title,
+        declaration,
+        attachment,
+        wasabiMedia: findWasabiForAttachment({ declaration, attachment, wasabiIndex })
+      }) : null;
     })
     .filter(Boolean);
 }
@@ -75,16 +82,19 @@ function findAttachmentForDeclaration(declaration, attachments = []) {
   });
 }
 
-function mediaItem({ category, declaration, attachment }) {
+function mediaItem({ category, declaration, attachment, wasabiMedia }) {
   const name = attachmentName(attachment);
+  const wasabiMediaId = wasabiMedia?.media_file_id || wasabiMedia?.id;
   return {
     category,
     field: declaration?.indexedPath || attachment.question_xpath || "",
     fileName: name,
     attachmentName: name,
     caption: declaration?.indexedPath || attachment.question_xpath || name,
-    thumbnailUrl: attachment.download_medium_url || attachment.download_url || attachment.url || "",
-    largeUrl: attachment.download_large_url || attachment.download_url || attachment.url || ""
+    source: wasabiMediaId ? "wasabi" : "kobo",
+    mediaFileId: wasabiMediaId || "",
+    thumbnailUrl: wasabiMediaId ? `/media/${encodeURIComponent(wasabiMediaId)}/thumbnail` : attachment.download_medium_url || attachment.download_url || attachment.url || "",
+    largeUrl: wasabiMediaId ? `/media/${encodeURIComponent(wasabiMediaId)}/view` : attachment.download_large_url || attachment.download_url || attachment.url || ""
   };
 }
 
@@ -94,6 +104,51 @@ function attachmentName(attachment = {}) {
 
 function basename(value) {
   return path.basename(String(value || "")).toLowerCase();
+}
+
+function buildWasabiIndex(rows = []) {
+  return (Array.isArray(rows) ? rows : []).reduce((index, row) => {
+    [
+      row.question_xpath,
+      row.attachment_filename,
+      row.media_file_basename,
+      row.original_filename,
+      basename(row.attachment_filename),
+      basename(row.media_file_basename),
+      basename(row.original_filename)
+    ].filter(Boolean).forEach((key) => {
+      index.set(normalizeKey(key), row);
+    });
+    return index;
+  }, new Map());
+}
+
+function findWasabiForAttachment({ declaration, attachment, wasabiIndex } = {}) {
+  if (!wasabiIndex?.size) {
+    return null;
+  }
+  const candidates = [
+    declaration?.path,
+    declaration?.indexedPath?.replace(/\[\d+\]/g, ""),
+    declaration?.basename,
+    attachment?.question_xpath,
+    attachment?.question,
+    attachmentName(attachment),
+    attachment?.media_file_basename,
+    basename(attachmentName(attachment)),
+    basename(attachment?.media_file_basename)
+  ].filter(Boolean);
+  for (const candidate of candidates) {
+    const row = wasabiIndex.get(normalizeKey(candidate));
+    if (row) {
+      return row;
+    }
+  }
+  return null;
+}
+
+function normalizeKey(value) {
+  return String(value || "").trim().toLowerCase();
 }
 
 function looksLikeMediaField(fieldPath, value) {
@@ -106,6 +161,8 @@ function looksLikeMediaField(fieldPath, value) {
 
 module.exports = {
   buildMediaGallery,
+  buildWasabiIndex,
   collectDeclaredMedia,
-  findAttachmentForDeclaration
+  findAttachmentForDeclaration,
+  findWasabiForAttachment
 };

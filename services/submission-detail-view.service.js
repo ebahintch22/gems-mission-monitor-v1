@@ -3,6 +3,7 @@ const { DEFAULT_FORM_ID, loadChoiceList, loadMapping } = require("./formMappingS
 const { buildMediaGallery } = require("./kobo-media.service");
 const { parseGeometry } = require("./geometry.service");
 const { buildSubmissionQualityAlerts } = require("./submission-quality.service");
+const KoboMediaAttachment = require("../models/KoboMediaAttachment");
 const SpatialReferenceFeature = require("../models/SpatialReferenceFeature");
 
 const MISSING_VALUE = "Non renseigne";
@@ -16,7 +17,9 @@ function buildInteractiveSubmissionView(record, options = {}) {
   const computed = buildComputedValues(rawData, spatialReference);
   const header = buildHeader(config, context, choiceIndex);
   const sections = (config.sections || []).map((section) => buildSection(section, context, choiceIndex, computed));
-  const mediaGallery = buildMediaGallery(rawData, config.media);
+  enrichBuildingSectionFromSpatialReference(sections, spatialReference, choiceIndex);
+  const wasabiMedia = buildWasabiMediaReference(rawData, record, options);
+  const mediaGallery = buildMediaGallery(rawData, config.media, { wasabiMedia });
   const map = buildMapPayload(rawData, record, sections, spatialReference);
   const qualityAlerts = buildSubmissionQualityAlerts({ rawData, sections, mediaGallery, spatialReference });
 
@@ -30,11 +33,28 @@ function buildInteractiveSubmissionView(record, options = {}) {
     kpis: (config.kpis || []).map((field) => buildField(field, context, choiceIndex, computed)),
     sections,
     mediaGallery,
+    wasabiMedia,
     map,
     spatialReference,
     qualityAlerts,
     technical: buildTechnicalData(rawData, record)
   };
+}
+
+function buildWasabiMediaReference(rawData, record, options = {}) {
+  const provider = options.koboMediaAttachmentProvider || KoboMediaAttachment;
+  if (!provider?.listForSubmission) {
+    return [];
+  }
+  try {
+    return provider.listForSubmission({
+      kobo_asset_uid: record.kobo_asset_uid,
+      source_submission_id: record.source_submission_id || readValue(rawData, "_id") || readValue(rawData, "_uuid"),
+      submission_id: record.id
+    });
+  } catch {
+    return [];
+  }
 }
 
 function buildHeader(config, context, choiceIndex) {
@@ -87,6 +107,47 @@ function buildRepeatItems(section, context, choiceIndex) {
       items: buildRepeatItems(nested, item, choiceIndex)
     }))
   }));
+}
+
+function enrichBuildingSectionFromSpatialReference(sections, spatialReference, choiceIndex) {
+  const buildingSection = sections.find((section) => section.id === "buildings");
+  const spatialBuildings = spatialReference.building_extents?.features || [];
+  if (!buildingSection?.items?.length || !spatialBuildings.length) {
+    return;
+  }
+  const spatialByNumber = new Map();
+  spatialBuildings.forEach((feature) => {
+    const props = feature.properties || {};
+    const number = normalizedText(props.bat_num || props.numbatmap || props.numbatkobo);
+    if (number && !spatialByNumber.has(number)) {
+      spatialByNumber.set(number, feature);
+    }
+  });
+
+  buildingSection.items.forEach((item) => {
+    const number = normalizedText(readValueFromFields(item.fields, "Numero"));
+    const spatialFeature = spatialByNumber.get(number);
+    if (!spatialFeature) {
+      return;
+    }
+    const area = spatialFeature.properties?.superficie;
+    setMissingFieldValue(item.fields, "Surface au sol", area, { type: "area" }, choiceIndex);
+    setMissingFieldValue(item.fields, "Geometrie", spatialFeature.geometry?.type, { type: "text" }, choiceIndex);
+  });
+}
+
+function readValueFromFields(fields, label) {
+  return (fields || []).find((field) => field.label === label)?.rawValue;
+}
+
+function setMissingFieldValue(fields, label, value, fieldConfig, choiceIndex) {
+  const field = (fields || []).find((candidate) => candidate.label === label);
+  if (!field || isMissing(value) || !isMissing(field.rawValue)) {
+    return;
+  }
+  field.rawValue = value;
+  field.value = formatFieldValue(value, fieldConfig, choiceIndex);
+  field.html = formatFieldHtml(value, fieldConfig, choiceIndex);
 }
 
 function repeatTitle(section, item, index) {
@@ -389,6 +450,12 @@ function readValue(context, fieldPath) {
   for (const candidate of [slash, dot, fieldPath]) {
     if (context && Object.prototype.hasOwnProperty.call(context, candidate)) {
       return context[candidate];
+    }
+  }
+  if (context && !String(fieldPath).includes("/") && typeof context === "object") {
+    const suffixKey = Object.keys(context).find((key) => key.endsWith(`/${fieldPath}`));
+    if (suffixKey) {
+      return context[suffixKey];
     }
   }
   return String(fieldPath).split(/[/.]/).reduce((current, part) => current?.[part], context);

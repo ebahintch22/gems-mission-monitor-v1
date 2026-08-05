@@ -47,10 +47,10 @@ body {
   background: var(--g2m-primary);
   color: #fff;
   display: grid;
-  gap: 16px;
+  gap: 14px;
   grid-column: 1 / -1;
   grid-template-columns: minmax(0, 1fr) auto;
-  padding: 24px;
+  padding: 16px 18px;
 }
 
 .submission-eyebrow {
@@ -63,7 +63,7 @@ body {
 }
 
 .submission-hero h1 {
-  font-size: 30px;
+  font-size: 26px;
   line-height: 1.15;
   margin: 0;
 }
@@ -76,21 +76,49 @@ body {
   align-content: start;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   justify-content: flex-end;
 }
 
 .submission-actions .button {
   background: #fff;
   color: var(--g2m-primary);
+  min-height: 32px;
+  padding: 6px 9px;
 }
 
 .submission-theme-select {
   align-items: center;
-  background: rgba(255, 255, 255, 0.12);
-  display: inline-flex;
-  gap: 8px;
-  padding: 6px 8px;
+  background: linear-gradient(90deg, var(--g2m-primary) 0 42%, var(--g2m-secondary) 42% 70%, var(--g2m-accent) 70% 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
+  display: inline-block;
+  flex: 0 0 auto;
+  min-height: 32px;
+  min-width: 104px;
+  padding: 0;
+  position: relative;
+  white-space: nowrap;
+}
+
+.submission-theme-select > span,
+.submission-theme-select > i {
+  display: inline-block;
+  font-weight: 800;
+  line-height: 1;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.submission-theme-select > span {
+  left: 12px;
+}
+
+.submission-theme-select > i {
+  font-size: 12px;
+  right: 12px;
 }
 
 .submission-theme-select select,
@@ -99,6 +127,23 @@ body {
   border-radius: 4px;
   color: var(--g2m-text);
   min-height: 32px;
+}
+
+.submission-theme-select select {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  height: 100%;
+  inset: 0;
+  opacity: 0;
+  padding: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.submission-theme-select select option {
+  color: var(--g2m-text);
 }
 
 .submission-sidebar {
@@ -189,6 +234,13 @@ body {
   margin-top: 12px;
 }
 
+.submission-hero .submission-badge-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(4, minmax(100px, 1fr));
+  max-width: 760px;
+}
+
 .submission-badge {
   background: var(--g2m-accent);
   border: 1px solid var(--g2m-border);
@@ -196,6 +248,33 @@ body {
   display: inline-flex;
   gap: 5px;
   padding: 4px 8px;
+}
+
+.submission-header-badge {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 6px 8px;
+}
+
+.submission-header-badge strong,
+.submission-header-badge span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.submission-header-badge strong {
+  color: var(--g2m-accent);
+  font-size: 11px;
+}
+
+.submission-header-badge span {
+  color: #fff;
+  font-weight: 800;
 }
 
 .submission-badge.is-yes {
@@ -346,6 +425,31 @@ body {
   width: 100%;
 }
 
+.submission-media-frame {
+  display: block;
+  position: relative;
+}
+
+.submission-media-source {
+  border: 1px solid rgba(255, 255, 255, 0.88);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 6px;
+  position: absolute;
+  right: 6px;
+  top: 6px;
+}
+
+.submission-media-source.is-kobo {
+  background: #174a7e;
+}
+
+.submission-media-source.is-wasabi {
+  background: #28643b;
+}
+
 .submission-media-item.is-missing img {
   display: none;
 }
@@ -404,6 +508,11 @@ body {
     justify-content: flex-start;
   }
 
+  .submission-hero .submission-badge-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: none;
+  }
+
   .submission-sidebar {
     display: none;
   }
@@ -425,6 +534,12 @@ body {
 
   .interactive-submission-map {
     height: 320px;
+  }
+}
+
+@media (max-width: 430px) {
+  .submission-hero .submission-badge-row {
+    grid-template-columns: 1fr;
   }
 }
 

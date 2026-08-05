@@ -1,6 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const KoboMediaUploadLog = require("../models/KoboMediaUploadLog");
+const KoboMediaAttachment = require("../models/KoboMediaAttachment");
 const MediaFile = require("../models/MediaFile");
 const SoumissionCollecte = require("../models/SoumissionCollecte");
 const { DEFAULT_DOWNLOAD_ROOT } = require("./koboAssetDownloadService");
@@ -165,11 +166,18 @@ async function uploadLocalKoboAssetsToWasabi({
       });
 
       if (existing) {
+        const mapping = upsertKoboMediaAttachment({
+          file,
+          submission,
+          mediaFile: existing,
+          checksumSha256: metadata.checksum_sha256
+        });
         summary.skipped += 1;
         summary.files.push({
           ...file,
           status: "skipped_existing_media",
           media_file_id: existing.id,
+          kobo_media_attachment_id: mapping?.id || null,
           checksum_sha256: metadata.checksum_sha256,
           local_size_bytes: metadata.size_bytes,
           size_bytes: existing.size_bytes,
@@ -203,10 +211,17 @@ async function uploadLocalKoboAssetsToWasabi({
       });
 
       summary.uploaded += 1;
+      const mapping = upsertKoboMediaAttachment({
+        file,
+        submission,
+        mediaFile: result.mediaFile,
+        checksumSha256: result.mediaFile.checksum_sha256 || metadata.checksum_sha256
+      });
       const entry = {
         ...file,
         status: "uploaded",
         media_file_id: result.mediaFile.id,
+        kobo_media_attachment_id: mapping?.id || null,
         object_key: result.mediaFile.object_key,
         checksum_sha256: result.mediaFile.checksum_sha256,
         local_size_bytes: metadata.size_bytes,
@@ -353,6 +368,75 @@ function buildKoboMediaLinks({ file, submission } = {}) {
   }
 
   return links;
+}
+
+function upsertKoboMediaAttachment({ file, submission, mediaFile, checksumSha256 } = {}) {
+  if (!file?.submission_id || !mediaFile?.id) {
+    return null;
+  }
+  const attachment = findKoboAttachmentForLocalFile({ file, submission });
+  return KoboMediaAttachment.upsert({
+    media_file_id: mediaFile.id,
+    kobo_asset_uid: file.asset_uid,
+    source_submission_id: file.submission_id,
+    submission_id: submission?.id,
+    question_xpath: attachment?.question_xpath || attachment?.question_name || attachment?.field || file.field_path || "",
+    attachment_filename: attachmentName(attachment) || file.filename,
+    media_file_basename: attachment?.media_file_basename || file.filename,
+    source_url: attachmentUrl(attachment) || file.url || "",
+    mime_type: attachment?.mimetype || attachment?.mime_type || mediaFile.mime_type || "",
+    checksum_sha256: checksumSha256 || mediaFile.checksum_sha256 || "",
+    attachment_json: attachment || null,
+    match_status: attachment ? "linked" : "fallback_filename"
+  });
+}
+
+function findKoboAttachmentForLocalFile({ file, submission } = {}) {
+  const raw = parseJson(submission?.raw_data_json);
+  const attachments = Array.isArray(raw._attachments) ? raw._attachments : [];
+  if (!attachments.length) {
+    return null;
+  }
+  const fileNames = new Set([
+    normalizedFilename(file.filename),
+    normalizedFilename(file.original_filename),
+    normalizedFilename(file.media_file_basename)
+  ].filter(Boolean));
+  const sourceUrl = String(file.url || "").trim();
+  return attachments.find((attachment) => {
+    const candidates = [
+      attachmentName(attachment),
+      attachment.media_file_basename,
+      fileNameFromUrl(attachmentUrl(attachment))
+    ].map(normalizedFilename).filter(Boolean);
+    return candidates.some((candidate) => fileNames.has(candidate))
+      || (sourceUrl && sourceUrl === attachmentUrl(attachment));
+  }) || null;
+}
+
+function attachmentName(attachment = {}) {
+  attachment = attachment || {};
+  return attachment.filename || attachment.media_file_basename || attachment.name || "";
+}
+
+function attachmentUrl(attachment = {}) {
+  attachment = attachment || {};
+  return attachment.download_url || attachment.download_large_url || attachment.download_medium_url || attachment.url || "";
+}
+
+function fileNameFromUrl(url) {
+  if (!url) {
+    return "";
+  }
+  try {
+    return path.basename(new URL(url).pathname);
+  } catch {
+    return path.basename(String(url).split("?")[0]);
+  }
+}
+
+function normalizedFilename(value) {
+  return sanitizePathSegment(path.basename(String(value || ""))).toLowerCase();
 }
 
 function ensureMediaLinks(mediaFileId, links) {
@@ -573,6 +657,7 @@ module.exports = {
   KOBO_MEDIA_ROLE,
   SITE_MEDIA_ROLE,
   buildKoboMediaLinks,
+  findKoboAttachmentForLocalFile,
   getLocalKoboMediaUploadManifest,
   getLocalKoboMediaUploadStatus,
   cancelLocalKoboMediaUploadJob,
@@ -580,5 +665,6 @@ module.exports = {
   listLocalKoboAssetFiles,
   listLocalKoboMediaUploadManifests,
   startLocalKoboMediaUploadJob,
+  upsertKoboMediaAttachment,
   uploadLocalKoboAssetsToWasabi
 };

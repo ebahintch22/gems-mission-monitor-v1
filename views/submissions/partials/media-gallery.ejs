@@ -7,8 +7,13 @@
       <% } %>
       <div class="submission-media-grid">
         <% category.items.forEach((item) => { %>
+          <% const sourceCode = item.source === "wasabi" ? "WS" : "KB"; %>
+          <% const sourceLabel = item.source === "wasabi" ? "Stockage Wasabi" : "Stockage Kobo"; %>
           <button class="submission-media-item" type="button" data-media-large="<%= item.largeUrl %>" data-media-caption="<%= item.caption %>">
-            <img src="<%= item.thumbnailUrl %>" alt="<%= item.caption %>" loading="lazy" onerror="this.closest('.submission-media-item').classList.add('is-missing')">
+            <span class="submission-media-frame">
+              <img src="<%= item.thumbnailUrl %>" alt="<%= item.caption %>" loading="lazy" onerror="this.closest('.submission-media-item').classList.add('is-missing')">
+              <span class="submission-media-source is-<%= item.source === "wasabi" ? "wasabi" : "kobo" %>" title="<%= sourceLabel %>" aria-label="<%= sourceLabel %>"><%= sourceCode %></span>
+            </span>
             <span><%= item.caption %></span>
           </button>
         <% }) %>

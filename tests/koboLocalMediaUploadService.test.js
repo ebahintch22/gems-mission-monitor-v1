@@ -6,6 +6,7 @@ const fs = require("node:fs");
 const os = require("node:os");
 const path = require("node:path");
 const db = require("../config/database");
+const KoboMediaAttachment = require("../models/KoboMediaAttachment");
 const MediaFile = require("../models/MediaFile");
 const { checksumSha256 } = require("../services/wasabiStorageService");
 const {
@@ -223,6 +224,7 @@ test("uploadLocalKoboAssetsToWasabi televerse et renseigne les tables media", as
     assert.equal(summary.errors.length, 0);
     assert.equal(summary.files[0].status, "uploaded");
     assert.equal(summary.files[0].media_file_id, "media-local-upload-test");
+    assert.ok(summary.files[0].kobo_media_attachment_id);
     assert.equal(summary.files[0].local_size_bytes, 14);
     assert.equal(summary.files[0].size_bytes, 14);
 
@@ -239,6 +241,14 @@ test("uploadLocalKoboAssetsToWasabi televerse et renseigne les tables media", as
     assert.equal(links[1].entity_type, "site");
     assert.equal(links[1].entity_ref, "PADCI-SITE-002");
     assert.equal(links[1].role, "photo_batiment");
+    const mappings = KoboMediaAttachment.listForSubmission({
+      kobo_asset_uid: "asset-002",
+      source_submission_id: "submission-002"
+    });
+    assert.equal(mappings.length, 1);
+    assert.equal(mappings[0].media_file_id, "media-local-upload-test");
+    assert.equal(mappings[0].attachment_filename, "photo-batiment.jpg");
+    assert.equal(mappings[0].match_status, "fallback_filename");
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -378,6 +388,7 @@ test("uploadLocalKoboAssetsToWasabi ignore un fichier deja lie a la soumission",
     assert.equal(summary.skipped, 1);
     assert.equal(summary.files[0].status, "skipped_existing_media");
     assert.equal(summary.files[0].media_file_id, "media-existing-kobo");
+    assert.ok(summary.files[0].kobo_media_attachment_id);
     assert.equal(summary.files[0].local_size_bytes, 10);
     assert.equal(summary.files[0].size_bytes, 10);
   } finally {

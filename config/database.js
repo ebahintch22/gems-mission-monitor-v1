@@ -636,6 +636,41 @@ db.exec(`
 
   CREATE UNIQUE INDEX IF NOT EXISTS idx_media_variants_file_type
     ON media_variants(media_file_id, variant_type);
+
+  CREATE TABLE IF NOT EXISTS kobo_media_attachments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    media_file_id TEXT NOT NULL,
+    kobo_asset_uid TEXT,
+    source_submission_id TEXT NOT NULL,
+    submission_id TEXT,
+    attachment_key TEXT NOT NULL UNIQUE,
+    question_xpath TEXT,
+    attachment_filename TEXT,
+    media_file_basename TEXT,
+    source_url TEXT,
+    mime_type TEXT,
+    checksum_sha256 TEXT,
+    attachment_json TEXT,
+    match_status TEXT NOT NULL DEFAULT 'linked'
+      CHECK (match_status IN ('linked', 'fallback_filename')),
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (media_file_id) REFERENCES media_files(id)
+      ON UPDATE CASCADE
+      ON DELETE CASCADE,
+    FOREIGN KEY (submission_id) REFERENCES soumissions_collecte(id)
+      ON UPDATE CASCADE
+      ON DELETE SET NULL
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_kobo_media_attachments_submission
+    ON kobo_media_attachments(kobo_asset_uid, source_submission_id);
+
+  CREATE INDEX IF NOT EXISTS idx_kobo_media_attachments_media_file
+    ON kobo_media_attachments(media_file_id);
+
+  CREATE INDEX IF NOT EXISTS idx_kobo_media_attachments_question
+    ON kobo_media_attachments(question_xpath);
 `);
 
 const submissionColumns = db.prepare("PRAGMA table_info('soumissions_collecte')").all()

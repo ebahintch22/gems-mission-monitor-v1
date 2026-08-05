@@ -7,6 +7,7 @@
     document.documentElement.setAttribute("data-g2m-theme", nextTheme);
     document.querySelectorAll("[data-theme-switcher]").forEach((select) => {
       select.value = nextTheme;
+      select.closest("[data-theme-current]")?.setAttribute("data-theme-current", nextTheme);
     });
   }
 
